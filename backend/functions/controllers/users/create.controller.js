@@ -1,5 +1,7 @@
 // Importación del metodo Decrypt y el admin sdk
 const { Decrypt, Encrypt } = require("./../../helpers/cipher");
+
+const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 
 // Objeto controllers que contendra los metodos
@@ -12,7 +14,7 @@ const controllers = {};
  * @param {import("express").Response} res objeto reponse
  * @returns mensaje informativo al usuario o el data del usuario
  */
-controllers.whoami = async (req, res) => {
+/* controllers.whoami = async (req, res) => {
     let { uid } = res.locals;
 
     let auth = admin.auth();
@@ -57,7 +59,54 @@ controllers.whoami = async (req, res) => {
 
         return;
     });
-};
+}; */
+
+controllers.whoami = functions.https.onRequest(async (req, res) => {
+    let { uid } = res.locals;
+
+    let auth = admin.auth();
+
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+
+    let object = {
+        email: "",
+        displayName: ""
+    };
+
+    await auth.getUser(uid)
+    .then(result => {
+        object.displayName = Encrypt(result.displayName);
+        object.email = Encrypt(result.email);
+
+        code = "PROCESS_OK";
+        data = Encrypt(object);
+        type = "success";
+        status = 200;
+    })
+    .catch(error => {
+        code = "FIREBASE_GET_USER_ERROR";
+        message = error.message;
+        type = "error";
+        status = 404;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        code = null;
+        data = null;
+        message = null;
+        type = null;
+        auth = null;
+        status = null;
+
+        return;
+    });
+});
 
 
 /**

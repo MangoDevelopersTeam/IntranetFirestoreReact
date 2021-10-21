@@ -72,7 +72,7 @@ export const initAxiosInterceptors = () => {
         return response;
     }, async error => {
         // Se rechaza la petición si es que se recibe un error inusual
-        if (error.response.status !== 401) {
+        /* if (error.response.status !== 401) {
             return Promise.reject(error);
         }
 
@@ -96,6 +96,6 @@ export const initAxiosInterceptors = () => {
                 clearUserRedux();
                 return Promise.reject(error);
             })
-            .finally(initAxiosInterceptors);
+            .finally(initAxiosInterceptors); */
     });
 };

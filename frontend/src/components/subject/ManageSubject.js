@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 
-import { Breadcrumbs, Button, Card, CardContent, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, FormControl, InputLabel, List, ListItem, ListItemText, MenuItem, Paper, Select, TextField, Typography, useMediaQuery, useTheme } from '@material-ui/core';
+import { Breadcrumbs, Button, Card, CardContent, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, FormControl, InputLabel, List, ListItem, ListItemText, MenuItem, Paper, Select, TextField, Typography, useMediaQuery, useTheme } from '@material-ui/core';
 import { NavigateNext } from '@material-ui/icons';
 
 import { hideNewCourseDialog, showNewCourseDialog } from '../../helpers/dialogs/handleDialogs';
@@ -27,8 +27,9 @@ const ManageSubject = () => {
     const fullScreen = useMediaQuery(themeApp.breakpoints.down('sm'));
     const newCourse = useSelector(SELECT_NEW_COURSE);
 
+
     // useStates
-    const [courses, setCourses] = useState([]);
+    const [courses, setCourses] = useState(null);
     const [mutableGrades, setMutableGrades] = useState(myNumberGrades);
 
     const [type, setType] = useState("");
@@ -40,119 +41,147 @@ const ManageSubject = () => {
     const [letter, setLetter] = useState("");
     const [disabled, setDisabled] = useState(true);
 
-    // functions
-    /**
-     * Función para limpiar los campos de texto
-     */
-    const clearFields = () => {
-        setType("");
-        setGrade("");
-        setCourseName("");
-        setDescription("");
-        setNumber(1);
-        setDisabled(true);
-        setLetter("");
-    };
-
-    /**
-     * Función para cerrar el dialogo de crear nuevo curso
-     * @param {Event} event tipo de evento
-     * @param {string} reason tipo de razón de cierre del dialogo
-     * @returns no retorna nada
-     */
-    const handleCloseNewCourse = (event, reason) => {
-        if (reason === 'backdropClick' || reason === "EscapeKeyDown") 
-        {
-            return;
-        }
-
-        clearFields();
-        hideNewCourseDialog();
-    };
-
-    /**
-     * Función para setear los numeros del curso dependiendo del grado
-     * @param {String} grade grado del curso
-     * @returns numeros correspondientes al grado
-     */
-    const handleNumberCourseGrade = (grade) => {
-        setGrade(grade);
-        setDisabled(false);
-
-        if (myGrades.find(x => x === grade) === "Media")
-        {
-            setMutableGrades(myNumberGrades.slice(0, 4));
-            return;
-        }
-        else
-        {
-            setMutableGrades(myNumberGrades);
-            return;
-        }
-    };
+    const [loading, setLoading] = useState(true);
+    const [process, setProcess] = useState(false);
+    const [error, setError] = useState(false);
+   
 
     // useCallbacks
     /**
-     * use callback para agregar el curso a la base de datos
+     * useCallback para limpiar los campos de texto
+     */
+    const handleClearFields = useCallback(
+        () => {
+            setCourseName("");
+            setDescription("");
+            setLetter("");
+            setType("");
+            setGrade("");
+            setNumber(1);
+            setDisabled(true);
+        },
+        [setCourseName, setDescription, setLetter, setType, setGrade, setNumber, setDisabled],
+    );
+
+    /**
+     * useCallback para cerrar el dialogo de crear una nueva asignatura
+     */
+    const handleHideNewCourseDialog = useCallback(
+        (event, reason) => {
+            if (reason === 'backdropClick' || reason === "EscapeKeyDown") 
+            {
+                return;
+            }
+
+            handleClearFields();
+            hideNewCourseDialog();
+        },
+        [handleClearFields],
+    );
+
+    /**
+     * useCallback para manejar el cambio de numeros de curso por el tipo de nivel, si es Básica o Media
+     */
+    const handleNumberCourseGrade = useCallback(
+        (grade) => {
+            setGrade(grade);
+            setDisabled(false);
+
+            if (myGrades.find(x => x === grade) === "Media")
+            {
+                setMutableGrades(myNumberGrades.slice(0, 4));
+                return;
+            }
+            else
+            {
+                setMutableGrades(myNumberGrades);
+                return;
+            }
+        },
+        [setGrade, setDisabled, setMutableGrades],
+    );
+
+    /**
+     * use callback para crear la asignatura en la base de datos
      */
     const handleCreateCourse = useCallback(
-        /**
-         * Función para añadir el curso en la base de datos
-         */
         async () => {
-            if (type !== "" && grade !== "" && letter !== "" && courseName !== "" && description !== "")
+            if (type === "" || grade === "" || letter === "" || courseName === "" || description === "")
             {
-                if (myNumberGrades.find(x => x === number) !== undefined)
+                return showMessage("Complete todos los Datos", "info");
+            }
+
+            if (myNumberGrades.find(x => x === number) === undefined)
+            {
+                return showMessage("Verifique el Numero Seleccionado del Curso", "info");
+            }
+
+            if (myGrades.find(x => x === grade) === undefined || myLetterGrades.find(x => x === letter) === undefined)
+            {
+                return showMessage("Verifique los Datos Seleccionados del Curso", "info");
+            }
+
+            let courseIntranet = new course(null, Encrypt(type), Encrypt(grade), Encrypt(number), Encrypt(letter), Encrypt(courseName), Encrypt(description));
+
+            setProcess(true);            
+
+            await axios.post("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/create-course", {
+                course: courseIntranet,
+            }, {
+                headers: {
+                    "content-type": "application/json"
+                }
+            })
+            .then(result => {
+                console.log(result);
+                if (result?.data?.code === "PROCESS_OK")
                 {
-                    if (myGrades.find(x => x === grade) !== undefined && myLetterGrades.find(x => x === letter) !== undefined)
-                    {
-                        const newCourse = new course(null, Encrypt(type), Encrypt(grade), Encrypt(number), Encrypt(letter), Encrypt(courseName), Encrypt(description));
-                        console.log(newCourse);
+                    setCourses(Decrypt(result?.data?.data));
 
-                        await axios.post("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/create-course", {
-                            course: newCourse
-                        })
-                        .then(result => {
-                            console.log(result);
-                            if (result.data.code === "PROCESS_OK")
-                            {
-                                clearFields();
-                                hideNewCourseDialog();
-                                setCourses(Decrypt(result.data.data));
-                            }
-                            else
-                            {
-                                setCourses([]);
-                            }
-
-                            showMessage(result?.data?.message, result?.data?.type);
-                        })
-                        .catch((error) => {
-                            showMessage(error.message, "error");
-                            setCourses([]);
-                        })
-                        .finally(() =>  {
-                            return () => {
-                                setCourses(null);
-                            }
-                        });
-                    }
-                    else
-                    {
-                        return showMessage("Verifique los Datos del Curso", "warning");
-                    }
+                    hideNewCourseDialog();
+                    handleClearFields();
+                    showMessage(result?.data?.message, result?.data?.type);            
+                }
+                else if (result?.data?.code === "EXISTING_COURSE")
+                {   
+                    showMessage(result?.data?.message, result?.data?.type);
                 }
                 else
                 {
-                    return showMessage("Verifique el numero del curso", "warning");
+                    showMessage("Ha ocurrido un error inesperado mientras se procesaba la solicitud", "error");
                 }
-            }   
-            else
-            {
-                return showMessage("Complete todos los datos", "warning");
-            }
+            })
+            .catch(error => {
+                if (error?.response?.data?.code === "COURSE_PARAMS_INVALID")
+                {
+                    showMessage("Asegurese de que los tipos de datos sean correctos", "error");
+                }
+                else if (error?.response?.data?.code === "COURSE_DATA_NULL")
+                {
+                    showMessage("Asegurese de enviar el curso correctamente", "error");
+                }
+                else if (error?.response?.data?.code === "EXISTING_COURSE")
+                {
+                    showMessage("El curso que ha tratado de crear ya existe", "warning");
+                }
+                else if (error?.response?.data?.code === "FIREBASE_CHECK_CODE_ERROR")
+                {
+                    showMessage("Ha ocurrido un error al procesar la petición")
+                }
+                else
+                {
+                    showMessage("Ha ocurrido un error inesperado mientras se procesaba la solicitud", "error");
+                }
+            })
+            .finally(() => {
+                setProcess(false);
+
+                return () => {
+                    setCourses(null);
+                }
+            });
         },
-        [type, grade, letter, number, courseName, description],
+        [type, grade, letter, number, courseName, description, setCourses, handleClearFields],
     );
 
     /**
@@ -163,6 +192,8 @@ const ManageSubject = () => {
          * Función para realizar la petición hacia la API de firebase para obtener los cursos
          */
         async () => {
+            setLoading(true);
+
             await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/testing-get-course", {
                 params: {
                     page: 1
@@ -171,25 +202,36 @@ const ManageSubject = () => {
             .then(response => {
                 if (response.data.code === "PROCESS_OK")
                 {
-                    setCourses(Decrypt(response.data.data))
+                    setCourses(Decrypt(response.data.data));
+
+                    setLoading(false);
+                    setError(false);
                 }
                 else
                 {
                     showMessage(response.data.message, response.data.type);
                     setCourses([]);
+
+                    setLoading(false);
+                    setError(true);
                 }
             })
             .catch(error => {
                 showMessage(error.message, "error");
                 setCourses([]);
+
+                setLoading(false);
+                setError(true);
             })
             .finally(() => {
                 return () => {
                     setCourses(null);
+                    setLoading(null);
+                    setError(null);
                 }
             });
         },
-        [],
+        [setLoading, setError, setCourses],
     );
 
     // useEffects
@@ -209,11 +251,23 @@ const ManageSubject = () => {
         return callQuery();
     }, []);
 
+    useEffect(() => {
+        let callQuery = async () => {
+            await handleGetCourses()
+        }
+
+        callQuery();
+
+        return () => {
+            setCourses(null);
+        }
+    }, [setCourses, handleGetCourses]);
+
     return (
         <div>
             <Paper variant="outlined" style={{ padding: 20, marginBottom: 20 }}>
                 <Breadcrumbs separator={<NavigateNext fontSize="small" />}>
-                    <Link to="/" style={{ textDecoration: "none", color: "#333" }}>Administrador</Link>
+                    <Link to="/" style={{ textDecoration: "none", color: "#333" }}>Home</Link>
                     <Typography style={{ color: "#2074d4" }}>Manejar Asignaturas</Typography>
                 </Breadcrumbs>
             </Paper> 
@@ -222,108 +276,157 @@ const ManageSubject = () => {
                 <CardContent>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                         <Typography variant="h6">Todas las asignaturas</Typography>
-                        <Button variant="text" style={{ color: "#2074d4" }} onClick={() => showNewCourseDialog()}>Añadir nuevo curso</Button>   
+                        <Button variant="text" style={{ color: "#2074d4" }} onClick={showNewCourseDialog}>Añadir nueva asignatura</Button>   
                     </div>       
 
                     <Divider style={{ marginTop: 15, marginBottom: 15 }} />
                                     
                     <div>
                     {
-                        courses !== null ? (
-                            courses?.length > 0 ? (
-                                <div style={{ marginTop: 6 }}>
-                                    <List>
-                                    {
-                                        courses?.map(course => (
-                                            <Link key={course.id} to={`/subjects/${course?.id}`} style={{ color: "#333", textDecoration: "none" }}>
-                                                <ListItem button key={course.id}>
-                                                    <ListItemText primary={Decrypt(Decrypt(course.data).courseName)} secondary={Decrypt(course.data).code} />
-                                                </ListItem>
-                                            </Link>
-                                            
-                                        ))
-                                    }
-                                    </List>
-                                </div>
-                            ) : (
-                                <Typography>Aun no hay Cursos Creados Aquí</Typography>
-                            )
+                        loading === true ? (
+                            <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                <CircularProgress style={{ color: "#2074d4" }} />
+                            </div>
                         ) : (
-                            <Typography>Cargando Cursos</Typography>
-                        )    
+                            error === true ? (
+                                <>
+                                    <Typography style={{ textAlign: "center" }}>Ha ocurrido un error cuando se estaba obteniendo las asignturas</Typography>
+
+                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                        <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                        <Button onClick={async () => await handleGetCourses()} style={{ color: "#2074d4" }}>Recargar Asignaturas</Button>
+                                    </div>
+                                </>
+                            ) : (
+                                courses === null ? (
+                                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                        <CircularProgress style={{ color: "#2074d4" }} />
+                                    </div>
+                                ) : (
+                                    courses.length > 0 ? (
+                                        <>
+                                            <List style={{ marginTop: 6 }}>
+                                            {
+                                                courses.map(doc => (
+                                                    <div key={doc.id}>
+                                                        <Link to={`/subjects/${doc.id}`} style={{ color: "#333", textDecoration: "none" }}>
+                                                            <ListItem button>
+                                                                <ListItemText primary={Decrypt(Decrypt(doc.data).courseName)} secondary={Decrypt(doc.data).code} />
+                                                            </ListItem>
+                                                        </Link>
+                                                        <Divider />
+                                                    </div>
+                                                ))
+                                            }
+                                            </List>
+
+                                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                <Button onClick={async () => await handleGetCourses()} style={{ color: "#2074d4" }}>Recargar Asignaturas</Button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Typography style={{ textAlign: "center" }}>No existen Asiguantuas aún</Typography>
+
+                                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                <Button onClick={async () => await handleGetCourses()} style={{ color: "#2074d4" }}>Recargar Asignaturas</Button>
+                                            </div>
+                                        </>
+                                    )
+                                )
+                            )
+                        )
                     }
                     </div>                     
                 </CardContent>
             </Card>  
 
-            <button onClick={handleGetCourses}>obtener asignaturas</button>
-
-            <Dialog open={newCourse} fullScreen={fullScreen} scroll="paper" onClose={handleCloseNewCourse}>
+            <Dialog open={newCourse} fullScreen={fullScreen} scroll="paper" onClose={handleHideNewCourseDialog}>
                 <DialogTitle>Crear Asignatura</DialogTitle>
-                <DialogContent>
-                    <DialogContentText>
-                        Completa los campos de texto para crear una nueva asignatura en intranet
-                    </DialogContentText>
+            {
+                process === true ? (
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: 478 }}>
+                        <Paper elevation={0} style={{ marginLeft: 300, marginRight: 300 }}>
+                            <CircularProgress style={{ color: "#2074d4", margin: "auto" }} />
+                        </Paper>   
+                    </div>
+                ) : (
                     <>
-                        <TextField variant="outlined" type="text" security="true" value={courseName} label="Nombre de la Asignatura" fullWidth onChange={(e) => setCourseName(e.target.value)} />
+                        <DialogContent>
+                            <DialogContentText>
+                                Completa los valores en el formulario para crear una nueva asignatura en intranet, que este vinculada a un curso
+                            </DialogContentText>
+                            <>
+                                <Typography style={{ color: "#2074d4" }}>Datos de la Asignatura</Typography>
+                                <Divider style={{ height: 2, marginBottom: 15, backgroundColor: "#2074d4" }} />
 
-                        <FormControl variant="outlined" fullWidth style={{ marginTop: 15 }}>
-                            <InputLabel>Tipo de Asignatura</InputLabel>
-                            <Select onChange={(e) => setType(e.target.value)} value={type} label="Tipo de Asignatura" security="true">
-                            {
-                                myArrayCourses?.map(myCourse => (
-                                    <MenuItem key={myCourse} value={myCourse}>{myCourse}</MenuItem>
-                                ))
-                            }
-                            </Select>
-                        </FormControl>
+                                <TextField variant="outlined" type="text" security="true" value={courseName} label="Nombre de la Asignatura" fullWidth onChange={(e) => setCourseName(e.target.value)} />
 
-                        <div style={{ display: "flex" }}>
-                            <FormControl variant="outlined" style={{ marginTop: 15, width: "calc(100vh - 30px)", marginRight: 7.5 }}>
-                                <InputLabel>Grado del Curso</InputLabel>
-                                <Select onChange={(e) => handleNumberCourseGrade(e.target.value)} value={grade} label="Grado del curso" security="true">
-                                {
-                                    myGrades.map(myGrade => (
-                                        <MenuItem key={myGrade} value={myGrade}>{myGrade}</MenuItem>
-                                    ))
-                                }
-                                </Select>
-                            </FormControl>
+                                <FormControl variant="outlined" fullWidth style={{ marginTop: 15 }}>
+                                    <InputLabel>Materia de la Asignatura</InputLabel>
+                                    <Select value={type} label="Tipo de Asignatura" security="true" onChange={(e) => setType(e.target.value)}>
+                                    {
+                                        myArrayCourses.map(doc => (
+                                            <MenuItem key={doc} value={doc}>{doc}</MenuItem>
+                                        ))
+                                    }
+                                    </Select>
+                                </FormControl>
 
-                            <FormControl variant="outlined" style={{ marginTop: 15, width: "calc(100vh - 30px)", marginRight: 7.5, marginLeft: 7.5 }}>
-                                <InputLabel>Numero del Curso</InputLabel>
-                                <Select disabled={disabled} onChange={(e) => setNumber(e.target.value)} value={number} label="Numero del curso" security="true">
-                                {
-                                    mutableGrades.map(myNumberGrade => (
-                                        <MenuItem key={myNumberGrade} value={myNumberGrade}>{myNumberGrade}</MenuItem>
-                                    ))
-                                }
-                                </Select>
-                            </FormControl>
+                                <TextField variant="outlined" type="text" value={description} label="Descripción de la Asignatura" style={{ marginTop: 15 }} security="true" fullWidth multiline onChange={(e) => setDescription(e.target.value)} />
+                                
+                                <Typography style={{ marginTop: 15, color: "#2074d4" }}>Datos del Curso de la Asignatura</Typography>
+                                <Divider style={{ height: 2, backgroundColor: "#2074d4" }} />
 
-                            <FormControl variant="outlined" style={{ marginTop: 15, width: "calc(100vh - 30px)", marginLeft: 7.5 }}>
-                                <InputLabel>Letra del Curso</InputLabel>
-                                <Select onChange={(e) => setLetter(e.target.value)} value={letter} label="Letra del curso" security="true">
-                                {
-                                    myLetterGrades.map(myLetterGrade => (
-                                        <MenuItem key={myLetterGrade} value={myLetterGrade}>{myLetterGrade}</MenuItem>
-                                    ))
-                                }
-                                </Select>
-                            </FormControl>
-                        </div>
+                                <div style={{ display: "flex" }}>
+                                    <FormControl variant="outlined" style={{ marginTop: 15, width: "calc(100vh - 30px)", marginRight: 7.5 }}>
+                                        <InputLabel>Grado del Curso</InputLabel>
+                                        <Select value={grade} label="Grado del curso" security="true" onChange={(e) => handleNumberCourseGrade(e.target.value)}>
+                                        {
+                                            myGrades.map(doc => (
+                                                <MenuItem key={doc} value={doc}>{doc}</MenuItem>
+                                            ))
+                                        }
+                                        </Select>
+                                    </FormControl>
 
-                        <TextField variant="outlined" style={{ marginTop: 15 }} value={description} label="Descripción de la Asignatura" onChange={(e) => setDescription(e.target.value)} type="text" security="true" fullWidth multiline />
+                                    <FormControl variant="outlined" style={{ marginTop: 15, width: "calc(100vh - 30px)", marginRight: 7.5, marginLeft: 7.5 }}>
+                                        <InputLabel>Numero del Curso</InputLabel>
+                                        <Select value={number} label="Numero del curso" security="true" disabled={disabled} onChange={(e) => setNumber(e.target.value)}>
+                                        {
+                                            mutableGrades.map(doc => (
+                                                <MenuItem key={doc} value={doc}>{doc}</MenuItem>
+                                            ))
+                                        }
+                                        </Select>
+                                    </FormControl>
+
+                                    <FormControl variant="outlined" style={{ marginTop: 15, width: "calc(100vh - 30px)", marginLeft: 7.5 }}>
+                                        <InputLabel>Letra del Curso</InputLabel>
+                                        <Select value={letter} label="Letra del curso" security="true" onChange={(e) => setLetter(e.target.value)}>
+                                        {
+                                            myLetterGrades.map(doc => (
+                                                <MenuItem key={doc} value={doc}>{doc}</MenuItem>
+                                            ))
+                                        }
+                                        </Select>
+                                    </FormControl>
+                                </div>
+                            </>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button color="inherit" onClick={handleHideNewCourseDialog}>
+                                Cerrar Ventana
+                            </Button>
+                            <Button style={{ color: "#2074d4" }} onClick={handleCreateCourse}>
+                                Crear Asignatura
+                            </Button>
+                        </DialogActions>
                     </>
-                </DialogContent>
-                <DialogActions>
-                    <Button color="inherit" onClick={() => handleCloseNewCourse()}>
-                        Cerrar Ventana
-                    </Button>
-                    <Button color="primary" style={{ color: "#2074d4" }} onClick={() => handleCreateCourse()}>
-                        Crear Asignatura
-                    </Button>
-                </DialogActions>
+                )
+            }
             </Dialog> 
         </div>
     );

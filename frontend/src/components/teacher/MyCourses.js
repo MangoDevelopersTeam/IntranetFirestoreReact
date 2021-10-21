@@ -27,23 +27,35 @@ const MyCourses = () => {
 
             await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-user-courses")
             .then(result => {
-                setLoading(false);
-                setError(false);
+                if (result?.data?.code === "PROCESS_OK")
+                {
+                    setCourses(Decrypt(result?.data?.data));
+                    setError(false);
+                }
+                else if (result?.data?.code === "NO_COURSES")
+                {
+                    setError(true);
+                }
+                else
+                {
+                    showMessage("Ha ocurrido un error mientras se obtenian sus asignaturas", "info");
+                    setError(true);
+                }
 
-                setCourses(Decrypt(result.data.data));
+                setLoading(false);
             })
             .catch(error => {
+                if (error?.response?.code === "FIREBASE_GET_COURSES_ERROR")
+                {
+                    showMessage(error.response.message, error.response.type);
+                }
+                else
+                {
+                    showMessage("Ha ocurrido un error mientras se obtenian sus asignaturas", "info");
+                }
+
                 setLoading(false);
                 setError(true);
-
-                if (error.response.data.code === "NO_COURSES")
-                {
-                    showMessage(error.response.data.message, error.response.data.type);
-                }
-                else if (error.response.data.code === "FIREBASE_GET_COURSES_ERROR")
-                {
-                    showMessage(error.response.data.message, error.response.data.type);
-                }
             })
             .finally(() => {
                 return () => {
@@ -104,7 +116,7 @@ const MyCourses = () => {
                                         <List>
                                         {
                                             courses.map(doc => (
-                                                <Link to={`/subject/${doc.id}`} style={{ color: "#333", textDecoration: "none" }}>
+                                                <Link key={doc.id} to={`/subject/${doc.id}`} style={{ color: "#333", textDecoration: "none" }}>
                                                     <ListItem key={doc.id} button>
                                                         <ListItemText primary={Decrypt(Decrypt(doc.data).name)} secondary={Decrypt(doc.data).code} />
                                                     </ListItem>

@@ -210,6 +210,7 @@ const Subject = () => {
                     showMessage(result.data.message, result.data.type);
                 }
 
+                console.log(Decrypt(result.data.data));
                 setCourse(result.data.data);
             })
             .catch(error => {
@@ -603,6 +604,10 @@ const Subject = () => {
         };
     }, [handleGetCourse, setCourse]);
 
+
+
+
+
     useEffect(() => {
         let callQuery = async () => {
             await handleGetTeachersCourse(id);
@@ -811,6 +816,9 @@ const Subject = () => {
                             </DialogActions>
                         </Dialog>
 
+
+
+
                         <Dialog open={studentsDialog} maxWidth={"md"} fullWidth={true} onClose={handleCloseStudentsDialog} fullScreen={fullScreen} scroll="paper">
                             <DialogTitle>Asignar estudiantes a la asignatura {Decrypt(Decrypt(course)?.courseName)}</DialogTitle>
                             <DialogContent>
@@ -867,6 +875,9 @@ const Subject = () => {
                                 </Button>
                             </DialogActions>
                         </Dialog>
+
+
+
 
                         <Dialog open={unitsDialog} maxWidth={"md"} fullWidth={true} onClose={handleCloseUnitsDialog} fullScreen={fullScreen} scroll="paper">
                             <DialogTitle>Crear unidades en el curso {Decrypt(Decrypt(course)?.courseName)}</DialogTitle>

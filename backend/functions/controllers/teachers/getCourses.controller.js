@@ -63,7 +63,7 @@ controllers.getUserCourses = async (req, res) => {
                 code = "NO_COURSES";
                 message = "No existen cursos asignados";
                 type = "error";
-                status = 404;
+                status = 200;
             }
         })
         .catch(error => {
@@ -172,6 +172,98 @@ controllers.getDetailedCourse = async (req,res)=>{
 
         return;
     })
-}
+};
+
+
+controllers.getAuthorizedAccess = async (req, res) => {
+    let { idCourse } = req.query;
+    let { uid } = res.locals;
+
+    let db = admin.firestore();
+
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+
+    if (idCourse === null || uid === null)
+    {
+        code = "DATA_SENT_NULL";
+        message = "No puede enviar parametros nulos";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        message = null;
+        status = null;
+        code = null;  
+        data = null;
+        type = null;
+        db = null;
+
+        return;
+    }
+
+    let courseId = Decrypt(idCourse);
+
+    if (typeof(courseId) !== "string")
+    {
+        code = "BAD_TYPE_PARAM";
+        message = "El parametro del id de la asignatura debe ser valida";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        message = null;
+        status = null;
+        code = null;  
+        data = null;
+        type = null;
+        db = null;
+
+        return;
+    }
+
+    await db.collection("users").doc(uid).collection("courses").doc(courseId).get()
+    .then(result => {
+        if (result.exists)
+        {
+            code = "PROCESS_OK";
+            data = true;
+            type = "success";
+            status = 200;
+        }
+        else
+        {
+            code = "NO_ADDED";
+            data = false;
+            message = "No estas asignado a este curso";
+            type = "info";
+            status = 200;
+        }
+    })
+    .catch(() => {
+        code = "CHECK_ADDED_IN_SUBJECT_ERROR";
+        message = "Ha ocurrido un error mientras se verificaba el acceso";
+        type = "error";
+        status = 400;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        message = null;
+        status = null;
+        code = null;  
+        data = null;
+        type = null;
+        db = null;
+
+        return;
+    });
+};
+
 
 module.exports = controllers;

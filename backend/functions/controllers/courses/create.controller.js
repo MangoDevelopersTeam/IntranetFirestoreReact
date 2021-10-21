@@ -120,6 +120,7 @@ const clearVariablesCreateCourse = (message, code, data, type, db, course) => {
  */
 controllers.createCourse = async (req, res) => {
     let { course } = req.body;
+    let { uid } = res.locals;
 
     let db = admin.firestore();
 
@@ -127,131 +128,150 @@ controllers.createCourse = async (req, res) => {
     let data = null;
     let message = "";
     let type = "";
+    let status = 0;
 
-    if (course !== null)
+    if (course === null)
     {
-        let subjectName = Decrypt(course.courseName);
-        subjectName = subjectName.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
-
-        let subjectType = Decrypt(course.type);
-        subjectType = subjectType.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
-
-        let courseGrade = Decrypt(course.grade);
-        courseGrade = courseGrade.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
-
-        let courseNumber = Decrypt(course.number);
-        let courseLetter = Decrypt(course.letter);
-
-        let verifyCode = await verifyExistCourse(subjectName, courseGrade, courseNumber, courseLetter);
-
-        if (verifyCode.error === false)
-        {
-            code = verifyCode.code;
-            message = verifyCode.message; 
-            type = "error";
-
-            res.send({ code: code, message: message, data: data, type: type });
-
-            clearVariablesCreateCourse(message, code, data, type, db, course);
-            courseGrade = null;
-            courseLetter = null;
-            courseNumber = null;
-
-            subjectName = null;
-            return;
-        }
-
-        if (verifyCode.exist === false)
-        {
-            course.code = generateCode(subjectName, courseGrade, courseNumber, courseLetter);
-            course.created_at = admin.firestore.FieldValue.serverTimestamp();
-
-            course.grade = courseGrade;
-            course.number = courseNumber;
-            course.letter = courseLetter; 
-            course.type = subjectType; 
-                
-            await db.collection("courses").add(course)
-            .catch(() => {
-                code = "FIREBASE_CREATE_COURSE_ERROR";
-                message = "La asignatura no se ha podido crear";
-                type = "error";
-                
-                res.send({ code: code, message: message, data: data, type: type });
-
-                message = null;
-                code = null;  
-                data = null;
-                type = null;
-                db = null;
-                course = null;
-
-                return;
-            });
-
-            await db.collection("courses").get()
-            .then(result => {
-                let array = [];
-
-                result.forEach(doc => {
-                    array.push({
-                        id: doc.id,
-                        data: Encrypt(doc.data())
-                    });
-                });
-
-                code = "PROCESS_OK";
-                message = "Asignatura creada exitosamente";
-                type = "success";
-                data = Encrypt(array);
-            })
-            .catch(error => {
-                code = "FIREBASE_GET_COURSES_ERROR";
-                message = error.message;
-                type = "error";
-            })
-            .finally(() => {
-                res.send({ code: code, message: message, data: data, type: type });
-                
-                clearVariablesCreateCourse(message, code, data, type, db, course, uid);
-                course = null;
-                courseGrade = null;
-                courseLetter = null;
-                courseNumber = null;
-        
-                subjectName = null;
-                return;
-            });
-        }
-        else
-        {
-            code = verifyCode.code;
-            message = verifyCode.message; 
-            type = "error";
-
-            res.send({ code: code, message: message, data: data, type: type });
-
-            clearVariablesCreateCourse(message, code, data, type, db, course);
-            courseGrade = null;
-            courseLetter = null;
-            courseNumber = null;
-    
-            subjectName = null;
-            return;
-        }
-    }
-    else
-    {
-        code = "NO_DATA_SEND";
+        code = "COURSE_DATA_NULL";
         message = "Asegurate de que hayas completado los campos del formulario"; 
         type = "error";
+        status = 400;
 
-        res.send({ code: code, message: message, data: data, type: type });
+        res.status(status).send({ code: code, message: message, data: data, type: type });
 
-        clearVariablesCreateCourse(message, code, data, type, db, course);
+        course = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+    }
+
+    let nameSubject = Decrypt(course.courseName);
+    let typeSubject = Decrypt(course.type);
+    let descriptionSubject = Decrypt(course.description);
+
+    let gradeCourse = Decrypt(course.grade);
+    let numberCourse = Decrypt(course.number);
+    let letterCourse = Decrypt(course.letter);
+
+    if (typeof(nameSubject) !== "string" || typeof(typeSubject) !== "string" || typeof(descriptionSubject) !== "string" || typeof(gradeCourse) !== "string" || typeof(numberCourse) !== "number" || typeof(letterCourse) !== "string")
+    {
+        code = "COURSE_PARAMS_INVALID";
+        message = "Asegurate de que los datos sean correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        course = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+    }
+
+    nameSubject = nameSubject.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
+    typeSubject = typeSubject.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
+    gradeCourse = gradeCourse.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
+
+    let verifyCode = await verifyExistCourse(nameSubject, gradeCourse, numberCourse, letterCourse);
+
+    if (verifyCode.exist === true)
+    {
+        code = verifyCode.code;
+        message = verifyCode.message; 
+        type = "error";
+        status = 200;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        course = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+    }
+
+    if (verifyCode.error === true)
+    {
+        code = verifyCode.code;
+        message = verifyCode.message; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        course = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+    }
+
+    let codeCourse = generateCode(nameSubject, gradeCourse, numberCourse, letterCourse);
+    
+    course.code = codeCourse;
+    course.created_at = admin.firestore.FieldValue.serverTimestamp();
+    course.created_by = uid;
+
+    course.grade = gradeCourse;
+    course.number = numberCourse;
+    course.letter = letterCourse; 
+    course.type = typeSubject; 
+
+    await db.collection("courses").add(course)
+    .catch(() => {
+        code = "FIREBASE_CREATE_COURSE_ERROR";
+        message = "La asignatura no se ha podido crear";
+        type = "error";
+        status = 400;
+                
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        message = null;
+        code = null;  
+        data = null;
+        type = null;
+        db = null;
 
         return;
-    }
+    });
+
+    await db.collection("courses").get()
+    .then(result => {
+        let array = [];
+
+        if (result.size > 0)
+        {
+            result.forEach(doc => {
+                array.push({
+                    id: doc.id,
+                    data: Encrypt(doc.data())
+                });
+            });
+        }
+
+        code = "PROCESS_OK";
+        message = "Asignatura creada exitosamente";
+        type = "success";
+        data = Encrypt(array);
+        status = 201;
+    })
+    .catch(error => {
+        code = "FIREBASE_GET_COURSES_ERROR";
+        message = error.message;
+        type = "error";
+        code = 400;
+    })
+    .finally(() => {
+        res.status(status).jsonp({ code: code, message: message, data: data, type: type });
+            
+        return;
+    });
 };
 
 
@@ -671,5 +691,47 @@ controllers.createUnitsCourse = async (req, res) => {
         return;
     });
 };
+
+controllers.setFileURL = async ()=>{
+    let { uid } = req.locals;
+    let { url,unitId,courseId } = req.body;
+    let db = admin.firestore();
+
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+
+    await db.collection('courses').doc(courseId).collection('units').doc(unitId).collection('archives').add({
+        created_by: uid,
+        url: url
+    })
+    .then(()=>{
+        code = "PROCESS_OK";
+        message = "Proceso realizado correctamente";
+        type = "success";
+        data = Encrypt(array);
+        status = 201;
+    })
+    .catch(()=>{
+        code = "FIREBASE_GET_UNITS_ERROR";
+        message = error.message;
+        type = "error";
+        status = 400;
+    })
+    .finally(()=>{
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+        uid = null;
+        units = null;
+        db = null;
+        code = null;            
+        message = null;
+        type = null;
+        status = null;
+            
+        return;
+    })
+}
 
 module.exports = controllers;

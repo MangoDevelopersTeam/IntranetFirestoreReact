@@ -57,18 +57,19 @@ const Main = () => {
         async () => {
             await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-access")
             .then(result => {
+                console.log("el resultado es", result);
                 if (result.data.code === "PROCESS_OK")
                 {
                     setAccess(result.data.data);
                 }
             })
             .catch(error => {
-                if (error.response.data.code === "TOKEN_MISSING")
+                if (error.response.code === "TOKEN_MISSING")
                 {
                     clearAuthData();
                     history.push("/");
                 }
-                else if (error.response.data.code === "TOKEN_INVALID")
+                else if (error.response.code === "TOKEN_INVALID")
                 {
                     deleteToken();
                     deleteRefreshToken();
