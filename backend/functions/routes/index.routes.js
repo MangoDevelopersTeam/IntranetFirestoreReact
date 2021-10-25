@@ -24,6 +24,7 @@ const teachersGet = require("./../controllers/teachers/getCourses.controller");
 
 // Controlador de Pruebas
 const testingController = require("./../controllers/testing/testingController");
+const { checkIsTeacher } = require("./../middlewares/auth.middlewares");
 
 
 // Declaraciones
@@ -89,13 +90,22 @@ app.post("/post-units-course", [authMiddlewares.checkToken, authMiddlewares.chec
 app.put("/edit-unit-course", [authMiddlewares.checkToken, authMiddlewares.checkIsAdmin], coursesEdit.editUnitCourse);
 app.delete("/delete-unit-course", [authMiddlewares.checkToken, authMiddlewares.checkIsAdmin], coursesDelete.deleteUnitCourse);
 
+app.post("/post-file-course", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacher], coursesCreate.setFileURL);
+app.get("/get-unit-files", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacherStudent], coursesGet.getUnitFiles);
+
 
 // Rutas del profesor y alumno en general
 app.get("/get-user-courses", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacherStudent], teachersGet.getUserCourses);
 app.get("/get-detailed-course", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacherStudent], teachersGet.getDetailedCourse);
 app.get("/get-authorized-access", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacherStudent], teachersGet.getAuthorizedAccess);
 
+app.get("/get-teacher-course", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacher], teachersGet.getTeacherCourse);
+app.get("/get-grades-student-course", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacher], teachersGet.getGradesStudentCourse);
 
+app.post("/post-grade-student-course", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacher], teachersGet.postGradesStudentCourse);
+
+app.post("/post-annotation-student-course", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacher], teachersGet.postAnnotationStudentCourse);
+app.get("/get-annotations-student-course", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacher], teachersGet.getAnnotationStudentCourse);
 
 // Ruta de prueba
 app.get("/test-pagination", testingController.testPagination);

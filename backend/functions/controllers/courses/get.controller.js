@@ -536,4 +536,95 @@ controllers.getUnitsCourse = async (req, res) => {
     });
 };
 
+
+
+controllers.getUnitFiles = async (req, res) => {
+    let db = admin.firestore();
+
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+
+    let { idSubjectParam, idUnitParam } = req.query;
+
+    let idSubject = Decrypt(idSubjectParam);
+    let idUnit = Decrypt(idUnitParam);
+
+    if (typeof(idSubject) !== "string" || typeof(idUnit) !== "string")
+    {
+        code = "BAD_ID_TYPE_PARAM";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    let object = {
+        idUnit: null,
+        data: []
+    };
+    object.idUnit = idUnit;
+
+    await db.collection("courses").doc(idSubject).collection("units").doc(idUnit).collection("files").get()
+    .then(result => {
+        let array = [];
+
+        if (result.size > 0)
+        {
+            result.forEach(doc => {
+                array.push({
+                    id: doc.id,
+                    data: doc.data()
+                });
+            });
+        }
+
+        object.data = array;
+        
+        code = "PROCESS_OK"; 
+        type = "success";
+        status = 200;
+    })
+    .catch(error => {
+        if (error.response)
+        {
+            code = error.response.message;
+            message = error.response.message; 
+        }
+        else
+        {
+            code = "GET_FILES_UNIT_ERROR";
+            message = "Ha ocurrido un error al obtener los archivos de la unidad"; 
+        }
+
+        type = "error";
+        status = 400;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: object, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    });
+};
+
+
 module.exports = controllers;

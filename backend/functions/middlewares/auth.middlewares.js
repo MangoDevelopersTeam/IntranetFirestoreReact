@@ -82,7 +82,7 @@ middlewares.checkIsAdmin = async (req, res, next) => {
  * @param {import("express").NextFunction} next objeto next
  * @returns mensaje de error o sigue con el programa
  */
- middlewares.checkIsTeacherStudent = async (req, res, next) => {
+middlewares.checkIsTeacherStudent = async (req, res, next) => {
     const { uid } = res.locals;
 
     await auth.getUser(uid)
@@ -100,10 +100,7 @@ middlewares.checkIsAdmin = async (req, res, next) => {
     .catch((error) => {
         return res.send({ code: "FIREBASE_GET_USER_ERROR", message: error.message, type: "error" }); 
     });
-}
-
-
-
+};
 
 /**
  * Función para verificar si el usuario tiene el nivel de admin. o profesor
@@ -112,7 +109,7 @@ middlewares.checkIsAdmin = async (req, res, next) => {
  * @param {import("express").NextFunction} next objeto next
  * @returns mensaje de error o sigue con el programa
  */
- middlewares.checkIsTeacherAdmin = async (req, res, next) => {
+middlewares.checkIsTeacherAdmin = async (req, res, next) => {
     const { uid } = res.locals;
 
     await auth.getUser(uid)
@@ -130,9 +127,33 @@ middlewares.checkIsAdmin = async (req, res, next) => {
     .catch((error) => {
         return res.send({ code: "FIREBASE_GET_USER_ERROR", message: error.message, type: "error" }); 
     });
-}
+};
 
+/**
+ * Función para verificar si el usuario es un administrador
+ * @param {import("express").Request} req objeto request
+ * @param {import("express").Response} res objeto response
+ * @param {import("express").NextFunction} next objeto next
+ * @returns mensaje de error o sigue con el programa
+ */
+middlewares.checkIsTeacher = async (req, res, next) => {
+    const { uid } = res.locals;
 
+    await auth.getUser(uid)
+    .then(async (user) => {
+        const userLevel = Decrypt(await user?.customClaims?.level);
+
+        if (userLevel === "teacher")
+        {
+            return next();
+        }
+            
+        return res.send({ code: "ACCESS_DENIED", message: "No tienes privilegios de administrador para esta operación", type: "error" });
+    })
+    .catch((error) => {
+        return res.send({ code: "FIREBASE_GET_USER_ERROR", message: error.message, type: "error" }); 
+    });
+};
 
 
 

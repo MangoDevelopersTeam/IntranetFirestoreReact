@@ -266,4 +266,491 @@ controllers.getAuthorizedAccess = async (req, res) => {
 };
 
 
+controllers.getTeacherCourse = async (req, res) => {
+    let { idCourse } = req.query;
+    let { uid } = res.locals;
+
+    let db = admin.firestore();
+
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+
+    if (idCourse === null || uid === null)
+    {
+        code = "DATA_SENT_NULL";
+        message = "No puede enviar parametros nulos";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        message = null;
+        status = null;
+        code = null;  
+        data = null;
+        type = null;
+        db = null;
+
+        return;
+    }
+
+    let courseId = Decrypt(idCourse);
+
+    if (typeof(courseId) !== "string")
+    {
+        code = "BAD_TYPE_PARAM";
+        message = "El parametro del id de la asignatura debe ser valida";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        message = null;
+        status = null;
+        code = null;  
+        data = null;
+        type = null;
+        db = null;
+
+        return;
+    }
+
+    await db.collection("courses").doc(courseId).collection("teachers").doc(uid).get()
+    .then(result => {
+        let array = [];
+
+        if (result.exists)
+        {
+            array.push({
+                id: result.id,
+                data: Encrypt(result.data())
+            });
+        }
+        
+        code = "PROCESS_OK";
+        data = Encrypt(array);
+        type = "success";
+        status = 200;    
+    })
+    .catch(() => {
+        code = "GET_TEACHER_ERROR";
+        message = "Ha ocurrido un error mientras se obtenia al docente";
+        type = "error";
+        status = 400;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        message = null;
+        status = null;
+        code = null;  
+        data = null;
+        type = null;
+        db = null;
+
+        return;
+    });
+};
+
+
+controllers.getGradesStudentCourse = async (req, res) => {
+    let { idCourse, idUser } = req.query;
+
+    let db = admin.firestore();
+
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+
+    if (idCourse === null || idUser === null)
+    {
+        code = "DATA_SENT_NULL";
+        message = "No puede enviar parametros nulos";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        message = null;
+        status = null;
+        code = null;  
+        data = null;
+        type = null;
+        db = null;
+
+        return;
+    }
+
+    let courseId = Decrypt(idCourse);
+    let userId = Decrypt(idUser);
+
+    if (typeof(courseId) !== "string" || typeof(userId) !== "string")
+    {
+        code = "BAD_TYPE_PARAM";
+        message = "El parametro del id de la asignatura debe ser valida";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        message = null;
+        status = null;
+        code = null;  
+        data = null;
+        type = null;
+        db = null;
+
+        return;
+    }
+
+    await db.collection("courses").doc(courseId).collection("students").doc(userId).collection("grades").get()
+    .then(result => {
+        let array = [];
+
+        if (result.size > 0)
+        {
+            result.forEach(doc => {
+                array.push({
+                    id: doc.id,
+                    data: doc.data()
+                });
+            });
+        }
+        
+        code = "PROCESS_OK";
+        data = Encrypt(array);
+        type = "success";
+        status = 200;    
+    })
+    .catch(() => {
+        code = "GET_GRADES_ERROR";
+        message = "Ha ocurrido un error mientras se obtenia las notas del alumno";
+        type = "error";
+        status = 400;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        message = null;
+        status = null;
+        code = null;  
+        data = null;
+        type = null;
+        db = null;
+
+        return;
+    });
+};
+
+
+controllers.postGradesStudentCourse = async (req, res) => {
+    let { idCourse, idUser, idUnit } = req.query;
+    let { gradeObject } = req.body;
+    let { uid } = res.locals;
+
+    let db = admin.firestore();
+
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+
+    if (idCourse === null || idUser === null || idUnit === null || gradeObject === null)
+    {
+        code = "DATA_SENT_NULL";
+        message = "No puede enviar parametros nulos";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        message = null;
+        status = null;
+        code = null;  
+        data = null;
+        type = null;
+        db = null;
+
+        return;
+    }
+
+    let courseId = Decrypt(idCourse);
+    let userId = Decrypt(idUser);
+    let unitId = Decrypt(idUnit);
+
+    let objectGrade = Decrypt(gradeObject);
+
+    if (typeof(courseId) !== "string" || typeof(userId) !== "string" || typeof(unitId) !== "string")
+    {
+        code = "BAD_TYPE_PARAM";
+        message = "Los parametros identificadores deben ser validos";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        message = null;
+        status = null;
+        code = null;  
+        data = null;
+        type = null;
+        db = null;
+
+        return;
+    }
+
+    objectGrade.created_at = admin.firestore.FieldValue.serverTimestamp();
+    objectGrade.created_by = uid;
+
+    await db.collection("courses").doc(courseId).collection("students").doc(userId).collection("grades").doc(unitId).set(objectGrade)
+    .catch(error => {
+        code = "CREATE_GRADE_USER_ERROR";
+        message = "Ha ocurrido un error mientras se creaba la calificación del usuario";
+        type = "error";
+        status = 400;
+    });
+
+    await db.collection("courses").doc(courseId).collection("students").doc(userId).collection("grades").get()
+    .then(result => {
+        let array = [];
+
+        if (result.size > 0)
+        {
+            result.forEach(doc => {
+                array.push({
+                    id: doc.id,
+                    data: doc.data()
+                });
+            });
+        }
+        
+        code = "PROCESS_OK";
+        data = Encrypt(array);
+        type = "success";
+        status = 201;    
+    })
+    .catch(() => {
+        code = "GET_GRADES_ERROR";
+        message = "Ha ocurrido un error mientras se obtenia las notas del alumno";
+        type = "error";
+        status = 400;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        message = null;
+        status = null;
+        code = null;  
+        data = null;
+        type = null;
+        db = null;
+
+        return;
+    });
+};
+
+controllers.postAnnotationStudentCourse = async (req, res) => {
+    let { idCourse, idUser } = req.query;
+    let { annotationObject } = req.body;
+    let { uid } = res.locals;
+
+    let db = admin.firestore();
+
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+
+    if (idCourse === null || idUser === null || annotationObject === null)
+    {
+        code = "DATA_SENT_NULL";
+        message = "No puede enviar parametros nulos";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        message = null;
+        status = null;
+        code = null;  
+        data = null;
+        type = null;
+        db = null;
+
+        return;
+    }
+
+    let courseId = Decrypt(idCourse);
+    let userId = Decrypt(idUser);
+
+    let objectAnnotation = Decrypt(annotationObject);
+
+    if (typeof(courseId) !== "string" || typeof(userId) !== "string")
+    {
+        code = "BAD_TYPE_PARAM";
+        message = "Los parametros identificadores deben ser validos";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        message = null;
+        status = null;
+        code = null;  
+        data = null;
+        type = null;
+        db = null;
+
+        return;
+    }
+
+    objectAnnotation.created_at = admin.firestore.FieldValue.serverTimestamp();
+    objectAnnotation.created_by = uid;
+
+    await db.collection("courses").doc(courseId).collection("students").doc(userId).collection("annotations").add(objectAnnotation)
+    .catch(error => {
+        code = "CREATE_ANNOTATION_ERROR";
+        message = "Ha ocurrido un error mientras se creaba la anotación al alumno";
+        type = "error";
+        status = 400;
+    });
+
+    await db.collection("courses").doc(courseId).collection("students").doc(userId).collection("annotations").get()
+    .then(result => {
+        let array = [];
+
+        if (result.size > 0)
+        {
+            result.forEach(doc => {
+                array.push({
+                    id: doc.id,
+                    data: doc.data()
+                });
+            });
+        }
+        
+        code = "PROCESS_OK";
+        data = Encrypt(array);
+        type = "success";
+        status = 201;    
+    })
+    .catch(() => {
+        code = "GET_ANNOTATIONS_ERROR";
+        message = "Ha ocurrido un error mientras se obtenia las anotaciones del alumno";
+        type = "error";
+        status = 400;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        message = null;
+        status = null;
+        code = null;  
+        data = null;
+        type = null;
+        db = null;
+
+        return;
+    });
+};
+
+controllers.getAnnotationStudentCourse = async (req, res) => {
+    let { idCourse, idUser } = req.query;
+
+    let db = admin.firestore();
+
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+
+    if (idCourse === null || idUser === null)
+    {
+        code = "DATA_SENT_NULL";
+        message = "No puede enviar parametros nulos";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        message = null;
+        status = null;
+        code = null;  
+        data = null;
+        type = null;
+        db = null;
+
+        return;
+    }
+
+    let courseId = Decrypt(idCourse);
+    let userId = Decrypt(idUser);
+
+    if (typeof(courseId) !== "string" || typeof(userId) !== "string")
+    {
+        code = "BAD_TYPE_PARAM";
+        message = "Los parametros identificadores deben ser validos";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        message = null;
+        status = null;
+        code = null;  
+        data = null;
+        type = null;
+        db = null;
+
+        return;
+    }
+
+    await db.collection("courses").doc(courseId).collection("students").doc(userId).collection("annotations").get()
+    .then(result => {
+        let array = [];
+
+        if (result.size > 0)
+        {
+            result.forEach(doc => {
+                array.push({
+                    id: doc.id,
+                    data: doc.data()
+                });
+            });
+        }
+        
+        code = "PROCESS_OK";
+        data = Encrypt(array);
+        type = "success";
+        status = 201;    
+    })
+    .catch(() => {
+        code = "GET_ANNOTATIONS_ERROR";
+        message = "Ha ocurrido un error mientras se obtenia las anotaciones del alumno";
+        type = "error";
+        status = 400;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        message = null;
+        status = null;
+        code = null;  
+        data = null;
+        type = null;
+        db = null;
+
+        return;
+    });
+};
+
+
 module.exports = controllers;

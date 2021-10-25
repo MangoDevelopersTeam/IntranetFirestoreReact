@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import ReactDOM from 'react-dom';
 
-import { useTheme } from '@material-ui/styles';
-import { ExpandMore, NavigateNext, Queue } from '@material-ui/icons';
-import { Accordion, AccordionDetails, AccordionSummary, Breadcrumbs, Button, Card, CardContent, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, Grid, IconButton, Input, List, ListItem, ListItemText, Paper, Tooltip, Typography, useMediaQuery } from '@material-ui/core';
+import { ThemeProvider, useTheme } from '@material-ui/styles';
+import { Cancel, ExpandMore, NavigateNext, Publish, Queue } from '@material-ui/icons';
+import { Accordion, AccordionDetails, AccordionSummary, Breadcrumbs, Button, Card, CardContent, CircularProgress, createTheme, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, Grid, IconButton, Input, LinearProgress, List, ListItem, ListItemText, Paper, TextField, Tooltip, Typography, useMediaQuery, withStyles } from '@material-ui/core';
 
 import history from './../../helpers/history/handleHistory';
 import { Decrypt, Encrypt } from '../../helpers/cipher/cipher';
@@ -13,8 +14,17 @@ import { deleteRefreshToken, deleteToken } from '../../helpers/token/handleToken
 
 import StudentListItem from '../subject/StudentListItem';
 
+import { storage } from './../../firebase';
+
 import axios from 'axios';
 
+const InputTheme = createTheme({
+    palette: {
+        primary: {
+            main: "#2074d4"
+        }
+    },
+});
 
 const DetailedSubject = () => {
     // uses
@@ -31,8 +41,10 @@ const DetailedSubject = () => {
 
     const [loading, setLoading] = useState(true);
     const [loadingStudents, setLoadingStudents] = useState(true);
+    const [loadingUpload,     setLoadingUpload] = useState(false);
 
     const [error,     setError] = useState(false);
+
     const [access,   setAccess] = useState(null);
     const [editor, setEditor] = useState(false);
     const [authorized, setAuthorized] = useState(null);
@@ -44,65 +56,24 @@ const DetailedSubject = () => {
     const [unitNumber, setUnitNumber] = useState(null);
     const [unitId, setUnitId] = useState(null);
 
+    const [name, setName] = useState("");
     const [file, setFile] = useState(null);
-    const [extensions, setExtensions] = useState([".gdoc", ".gsheet", ".doc", ".docx", ".xlsx", ".ppt", ".pptx", ".pdf"]);
+    const [progress, setProgress] = useState(0);
+    const [description, setDescription] = useState("");
 
-
+    const [cancel, setCancel] = useState(false);
+    const [uploadReference, setUploadReference] = useState(null);
     
+    const [extensions, setExtensions] = useState([".gdoc", ".gsheet", ".doc", ".docx", ".xlsx", ".ppt", ".pptx", ".pdf", ".zip", ".rar", ".7z", ".mp4"]);
+    
+    const [unitFiles, setUnitFiles] = useState(null);
+    const [unitFilesError, setUnitFilesError] = useState(false);
+    const [unitFilesLoading, setUnitFilesLoading] = useState(true);
+
+
+
     // useCallbacks
-    /**
-     * useCallback para setear la imagen en el estado de react
-     */
-    const handleSetFile = useCallback(
-        (e) => {
-           if (e.target.files[0])
-           {
-                setFile(e.target.files[0])
-           } 
-        },
-        [setFile],
-    );
-
-
-    /**
-     * useCallback para verificar si el alumno o profesor tiene asignación a este recurso
-     */
-    const handleGetAuthorizedAccess = useCallback(
-        async () => {
-            await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-authorized-access", {
-                params: {
-                    idCourse: Encrypt(id)
-                }
-            })
-            .then(result => {
-                if (result?.data?.data === true)
-                {
-                    setAuthorized(true);
-                }
-                else if (result?.data?.data === false)
-                {
-                    setAuthorized(false);
-                }
-                else
-                {
-                    setAuthorized(false);
-                    showMessage("Ha ocurrido un error al momento de verificar el acceso a este curso");
-                }
-                console.log(result);
-            })
-            .catch(error => {
-                setAuthorized(false);
-                showMessage("Ha ocurrido un error al momento de verificar el acceso a este curso");
-            })
-            .finally(() => {
-                return () => {
-                    setAccess(null);
-                }
-            });
-        },
-        [id, setAuthorized],
-    );
-
+    /* ------ SUBJECT CALLBACK ------ */
     /**
      * useCallback para obtener el detalle de la asignatura
      */
@@ -146,10 +117,96 @@ const DetailedSubject = () => {
         [id, setLoading, setError, setSubject],
     );
 
+    const handleGetUnitFiles = useCallback(
+        async () => {
+            let array = [];
+
+            await subject.units.forEach(async doc => {
+                await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-unit-files", {
+                    params: {
+                        idSubjectParam: Encrypt(id),
+                        idUnitParam: Encrypt(doc.id)
+                    }
+                })
+                .then(result => {
+                    array.push(result.data.data);
+
+                    if (array.length === subject.units.length)
+                    {
+                        setUnitFilesError(false);
+                        setUnitFilesLoading(false);
+
+                        setUnitFiles(array);
+                    }
+                })
+                .catch(error => {
+                    if (error.response)
+                    {
+                        showMessage(error.response.message, "error");
+                    }
+
+                    setUnitFilesError(true);
+                    setUnitFilesLoading(false);
+                })
+                .finally(() => {
+                    return () => {
+                        setUnitFiles(null);
+                        setUnitFilesError(null);
+                        setUnitFilesLoading(null);
+                    }
+                });
+            })
+        },
+        [id, subject, setUnitFiles, setUnitFilesError, setUnitFilesLoading],
+    )
+    /* ------ SUBJECT CALLBACK ------ */
+
+
+    
+    /* ------ ACCESS CALLBACKS ------ */
+    /**
+     * useCallback para verificar si el alumno o profesor tiene asignación a este recurso
+     */
+    const handleGetAuthorizedAccess = useCallback(
+        async () => {
+            await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-authorized-access", {
+                params: {
+                    idCourse: Encrypt(id)
+                }
+            })
+            .then(result => {
+                if (result?.data?.data === true)
+                {
+                    setAuthorized(true);
+                }
+                else if (result?.data?.data === false)
+                {
+                    setAuthorized(false);
+                }
+                else
+                {
+                    setAuthorized(false);
+                    showMessage("Ha ocurrido un error al momento de verificar el acceso a este curso");
+                }
+                console.log(result);
+            })
+            .catch(error => {
+                setAuthorized(false);
+                showMessage("Ha ocurrido un error al momento de verificar el acceso a este curso");
+            })
+            .finally(() => {
+                return () => {
+                    setAuthorized(null);
+                }
+            });
+        },
+        [id, setAuthorized],
+    );
+
     /**
      * useCallback para obtener el nivel de acceso del usuario
      */
-    const handleGetAccess = useCallback(
+     const handleGetAccess = useCallback(
         async () => {
             await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-access")
             .then(result => {
@@ -185,7 +242,11 @@ const DetailedSubject = () => {
         },
         [setAccess],
     );
+    /* ------ ACCESS CALLBACKS ------ */
 
+
+
+    /* ------ STUDENTS CALLBACK ------ */
     /**
      * useCallback para obtener los estudiantes de la asignatura relacionadas con el curso
      */
@@ -265,8 +326,11 @@ const DetailedSubject = () => {
         },
         [subject, setStudents, setLoadingStudents, handleGetStudentsCourse],
     );
+    /* ------ STUDENTS CALLBACK ------ */
 
 
+
+    /* ------ DIALOG CALLBACKS ------ */
     /**
      * useCallback para mostrar el dialogo de estudiantes
      */
@@ -330,7 +394,55 @@ const DetailedSubject = () => {
         },
         [setUnitsFileDialog, setUnitId, setUnitName, setUnitNumber],
     );
+    /* ------ DIALOG CALLBACKS ------ */
 
+
+
+    /* ------ HANDLE FILE CALLBACKS ------ */
+    /**
+     * useCallback para cancelar la suba del archivo
+     */
+    const handleCancelUpload = useCallback(
+        () => {
+            if (uploadReference !== null)
+            {
+                uploadReference.cancel();
+                setProgress(0);
+            }
+
+            return;
+        },
+        [uploadReference, setProgress],
+    );
+
+    /**
+     * useCallback para limpiar los useState y campos de texto del formulario cargar archivo
+     */
+    const handleClearFileParams = useCallback(
+        () => {
+            setDescription("");
+            setFile(null);
+            setName("");
+
+            setCancel(false);
+            setLoadingUpload(false);
+            setProgress(0);
+        },
+        [setDescription, setFile, setName, setCancel, setLoadingUpload, setProgress],
+    );
+
+    /**
+     * useCallback para setear la imagen en el estado de react
+     */
+    const handleSetFile = useCallback(
+        (e) => {
+           if (e.target.files[0])
+           {
+                setFile(e.target.files[0])
+           } 
+        },
+        [setFile],
+    );
 
     /**
      * useCallback para verificar si la extensión del archivo es valida o no
@@ -349,13 +461,94 @@ const DetailedSubject = () => {
      * useCallback para subir un archivo que retornará el enlace y lo enviará al backend
      */
     const handleUploadFile = useCallback(
-        () => {
-            let xd = handleVerifyFileExtension();
-            
-            console.log(xd);
+        async () => {
+            if (subject === null || id === null)
+            {
+                showMessage("No puede realizar esta operación, se requieren datos importantes, intentelo nuevamente", "error");
+            }
+
+            if (file === null || name === "" || description === "")
+            {
+                return showMessage("Complete todos los valores", "info");
+            }
+
+            if (handleVerifyFileExtension() !== true)
+            {
+                return showMessage("La extensión del archivo es invalido, intentelo nuevamente", "info");
+            }
+
+            let uploadFile = storage.ref(`course/${id}/unit/${unitId}/${file.name}`).put(file);
+            setUploadReference(uploadFile);
+            setLoadingUpload(true);
+            setCancel(true);
+
+            let object = {
+                name: null,
+                description: null,
+                url: null
+            };
+
+            uploadFile.on('state_changed', snapshot => {
+                let progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+                setProgress(progress);
+            }, (error) => {
+                if (error.code === "storage/canceled")
+                {
+                    showMessage("La subida del archivo ha sido cancelada", "info");
+                }
+                else
+                {
+                    showMessage(error.code, "error");
+                }
+
+                setUploadReference(null);
+                setLoadingUpload(false);
+                setCancel(false);
+            }, async () => {
+                await storage.ref(`course/${id}/unit/${unitId}`).child(file.name).getDownloadURL()
+                .then(async url => {
+                    object.url = Encrypt(url);
+                    object.name = Encrypt(name);
+                    object.description = Encrypt(description);
+
+                    await axios.post("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/post-file-course", {
+                        objectData: Encrypt(object)
+                    }, {
+                        params: {
+                            idSubjectParam: Encrypt(id),
+                            idUnitParam: Encrypt(unitId)
+                        }
+                    })
+                    .then(async () => {
+                        await handleGetUnitFiles();
+                    })
+                    .catch(error => {
+                        if (error.response)
+                        {
+                            showMessage(error.response.message, "error");
+                        }
+
+                        setUnitFilesError(true);
+                        setUnitFilesLoading(false);
+                    })
+                    .finally(() => {
+                        console.log("request finished");
+                    });
+
+                    handleClearFileParams();
+                })
+                .catch(error => {
+                    showMessage(error, "error");
+
+                    handleClearFileParams();
+                    
+                    return;
+                });
+            });
         },
-        [handleVerifyFileExtension],
+        [id, subject, unitId, file, name, description, handleVerifyFileExtension, setUploadReference, setCancel, setLoadingUpload, setProgress, handleClearFileParams, handleGetUnitFiles],
     );
+    /* ------ HANDLE FILE CALLBACKS ------ */
 
 
 
@@ -413,6 +606,16 @@ const DetailedSubject = () => {
         }
     }, [authorized, handleGetStudentsCourse, setStudentsCourse]);
 
+    useEffect(() => {
+        let callQuery = async () => {
+            await handleGetUnitFiles();
+        }
+
+        if (authorized === true && subject !== null)
+        {
+            return callQuery();
+        }
+    }, [authorized, subject, handleGetUnitFiles]);
 
 
     return (
@@ -451,7 +654,14 @@ const DetailedSubject = () => {
                                 </div>
                             </div>
                         ) : (
-                            subject !== null && access !== null ? (
+                            subject === null || access === null ? (
+                                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
+                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                        <CircularProgress style={{ color: "#2074d4" }} />
+                                        <Typography style={{ marginTop: 15 }}>Cargando</Typography>
+                                    </div>
+                                </div>
+                            ) : (
                                 <>
                                     <Paper style={{ padding: 20, marginBottom: 15 }} variant="outlined">
                                         <Breadcrumbs separator={<NavigateNext fontSize="small" />}>
@@ -480,6 +690,7 @@ const DetailedSubject = () => {
                                                                     <ListItemText primary={`Unidad ${doc.unit.numberUnit} : ${doc.unit.unit}`} />
                                                                 </ListItem>
 
+                                                                <>
                                                                 {
                                                                     editor === true && (
                                                                         <Tooltip title={<Typography variant="subtitle1">{`Añadir archivos en la unidad ${doc.unit.numberUnit}`}</Typography>}>
@@ -489,6 +700,49 @@ const DetailedSubject = () => {
                                                                         </Tooltip>
                                                                     )
                                                                 }
+                                                                </>
+
+                                                                <>
+                                                                {
+                                                                    unitFilesLoading === true ? (
+                                                                        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: 5 }}>
+                                                                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                                                <CircularProgress style={{ color: "#2074d4" }} />
+                                                                                <Typography style={{ marginTop: 15 }}>Cargando</Typography>
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        unitFilesError === true ? (
+                                                                            <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                                                                <Typography style={{ textAlign: "center" }}>Ha ocurrido un error al obtener las unidades</Typography>
+                                                                            </div>
+                                                                        ) : (
+                                                                            unitFiles === null ? (
+                                                                                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: 5 }}>
+                                                                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                                                        <CircularProgress style={{ color: "#2074d4" }} />
+                                                                                        <Typography style={{ marginTop: 15 }}>Cargando Archivos</Typography>
+                                                                                    </div>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <ListItem>
+                                                                                    <List>
+                                                                                    {
+                                                                                        unitFiles.filter(x => x.idUnit === doc.id)[0].data.length > 0 && (
+                                                                                            unitFiles.filter(x => x.idUnit === doc.id)[0].data.map(doc => (
+                                                                                                <ListItem key={doc.id} component="a" href={Decrypt(doc.data.url)} style={{ width: "fit-content", height: "fit-content" }}>
+                                                                                                    <ListItemText primary={<Typography>{Decrypt(doc.data.name)}</Typography>} />
+                                                                                                </ListItem>
+                                                                                            ))
+                                                                                        )
+                                                                                    }
+                                                                                    </List>
+                                                                                </ListItem>
+                                                                            )
+                                                                        )
+                                                                    )                                       
+                                                                }
+                                                                </>
 
                                                                 <Divider style={{ marginTop: 5, marginBottom: 15 }} /> 
                                                             </div>
@@ -504,11 +758,11 @@ const DetailedSubject = () => {
                                                 {
                                                     Decrypt(access) === "teacher" && (
                                                         <>
-                                                            <Button fullWidth style={{ color: "#2074d4" }} onClick={handleOpenStudentsDialog}>
+                                                            <Button fullWidth style={{ color: "#2074d4", marginBottom: 15 }} onClick={handleOpenStudentsDialog}>
                                                                 <Typography>Asignar Estudiantes</Typography>
                                                             </Button>
 
-                                                            <Button fullWidth style={{ color: "#34495E", marginTop: 15 }} onClick={() => setEditor(!editor)}>
+                                                            <Button fullWidth style={{ color: "#34495E", marginBottom: 15 }} onClick={() => setEditor(!editor)}>
                                                             {
                                                                 editor === false ? (
                                                                     <Typography>Abrir editor para subir archivos</Typography>
@@ -517,6 +771,12 @@ const DetailedSubject = () => {
                                                                 )
                                                             }
                                                             </Button>
+
+                                                            <Link to={`/subject/students/${id}`} style={{ textDecoration: "none", marginBottom: 15 }}>
+                                                                <Button fullWidth style={{ color: "#2074d4" }}>
+                                                                    <Typography>Ver Estudiantes</Typography>
+                                                                </Button>
+                                                            </Link>
                                                         </>
                                                     )
                                                 }
@@ -601,7 +861,7 @@ const DetailedSubject = () => {
                                                 }
                                                 </Dialog>
 
-                                                <Dialog open={unitsFileDialog} maxWidth={"md"} fullWidth={true} onClose={handleCloseFilesUnitDialog} fullScreen={fullScreen} scroll="paper">
+                                                <Dialog open={unitsFileDialog} maxWidth={"md"} onClose={handleCloseFilesUnitDialog} fullScreen={fullScreen} scroll="paper">
                                                 {
                                                     unitId === null || unitName === null || unitNumber === null ? (
                                                         <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
@@ -611,13 +871,56 @@ const DetailedSubject = () => {
                                                         <>
                                                             <DialogTitle>Asigna archivos de estudio para la unidad Nº{unitNumber} : {unitName}</DialogTitle>
                                                             <DialogContent>
-                                                                <Input aria-label="File" type="file" onChange={handleSetFile} />
-                                                                <Button variant="text" color="inherit" type="submit" onClick={() => handleUploadFile()}>verify</Button>
+                                                                <div style={{ display: "flex", flexDirection: "column" }}>
+                                                                    {
+                                                                        loadingUpload === true ? (
+                                                                            <div style={{ display: "flex", alignItems: "center", flexDirection: "column" }}>
+                                                                                <CircularProgress style={{ color: "#2074d4" }} />
+                                                                                <Typography style={{ textAlign: "center", marginTop: 15 }}>El archivo se esta subiendo, espere un momento</Typography>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <>
+                                                                                <Typography style={{ color: "#2074d4" }}>Datos del Archivo</Typography>
+                                                                                <Divider style={{ height: 2, marginBottom: 15, backgroundColor: "#2074d4" }} />
+                                                                                    
+                                                                                <ThemeProvider theme={InputTheme}>
+                                                                                    <TextField type="text" label="Nombre"      variant="outlined" security="true" value={name} fullWidth onChange={(e) => setName(e.target.value)} style={{ marginBottom: 15 }} />
+                                                                                    <TextField type="text" label="Descripción" variant="outlined" security="true" value={description} fullWidth onChange={(e) => setDescription(e.target.value)} style={{ marginBottom: 15 }} />
+                                                                                    <TextField type="file" variant="outlined"  security="true" fullWidth onChange={handleSetFile} style={{ marginBottom: 15 }} />
+                                                                                </ThemeProvider>
+                                                                            </>
+                                                                        )
+                                                                    }
+                                                                
+                                                                    <Typography style={{ marginTop: 15, color: "#2074d4" }}>Progreso de la Carga</Typography>
+                                                                    <Divider style={{ height: 2, backgroundColor: "#2074d4" }} />
+
+                                                                    <ThemeProvider theme={InputTheme}>
+                                                                        <div style={{ display: "flex", justifyContent: "center", marginTop: 15 }}>
+                                                                            <Typography>{`${progress}%`}</Typography>
+                                                                            <LinearProgress variant="determinate" style={{ marginLeft: "auto", marginTop: 8, width: "calc(100% - 50px)" }} value={progress} />
+                                                                        </div>
+                                                                    </ThemeProvider>
+                                                                </div>
                                                             </DialogContent>
                                                             <DialogActions>
-                                                                <Button color="inherit" onClick={() => handleCloseFilesUnitDialog()}>
-                                                                    <Typography>Cerrar Esta Ventana</Typography>
-                                                                </Button>
+                                                            {
+                                                                cancel === true ? (
+                                                                    <Button style={{ color: "#34495E" }} onClick={() => handleCancelUpload()}>
+                                                                        <Typography>Cancelar Subida</Typography>
+                                                                    </Button>
+                                                                ) : (
+                                                                    <>
+                                                                        <Button style={{ color: "#2074d4" }} onClick={() => handleUploadFile()}>
+                                                                            <Typography>Subir Archivo</Typography>
+                                                                        </Button>
+
+                                                                        <Button color="inherit" onClick={() => handleCloseFilesUnitDialog()}>
+                                                                            <Typography>Cerrar Esta Ventana</Typography>
+                                                                         </Button>
+                                                                    </>                    
+                                                                )
+                                                            }
                                                             </DialogActions>
                                                         </>
                                                     )
@@ -627,13 +930,6 @@ const DetailedSubject = () => {
                                         )
                                     }
                                 </>
-                            ) : (
-                                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
-                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                        <CircularProgress style={{ color: "#2074d4" }} />
-                                        <Typography style={{ marginTop: 15 }}>Cargando</Typography>
-                                    </div>
-                                </div>
                             )
                         )
                     )

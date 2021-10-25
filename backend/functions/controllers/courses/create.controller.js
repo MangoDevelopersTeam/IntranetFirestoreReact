@@ -1,7 +1,7 @@
 // Importación del metodo Decrypt y el admin sdk
 const { Decrypt, Encrypt } = require("./../../helpers/cipher");
 const admin = require("firebase-admin");
-const { response } = require("../../routes/index.routes");
+const funcions = require("firebase-functions");
 
 // Objeto controllers que contendra los metodos
 const controllers = {};
@@ -90,25 +90,6 @@ const verifyExistCourse = async (subjectName, courseGrade, courseNumber, courseL
     });
 
     return data;
-};
-
-
-/**
- * Función para limpiar valores de crear curso
- * @param {string} message mensaje a limpiar
- * @param {string} code codigo a limpiar
- * @param {any} data objeto a limpiar
- * @param {string} type tipo de mensaje a limpiar
- * @param {any} db objeto firebase a limpiar
- * @param {object} course objeto usuario a limpiar
- */
-const clearVariablesCreateCourse = (message, code, data, type, db, course) => {
-    message = null;
-    code = null;  
-    data = null;
-    type = null;
-    db = null;
-    course = null;
 };
 
 
@@ -576,11 +557,6 @@ controllers.setStudentsCourse = async (req, res) => {
 };
 
 
-
-
-
-
-
 /**
  * Función para agregar unidades al curso en intranet
  * @param {import("express").Request} req objeto request
@@ -692,9 +668,14 @@ controllers.createUnitsCourse = async (req, res) => {
     });
 };
 
-controllers.setFileURL = async ()=>{
-    let { uid } = req.locals;
-    let { url,unitId,courseId } = req.body;
+
+
+controllers.setFileURL = async (req, res) => {
+    let { uid } = res.locals;
+
+    let { objectData } = req.body;
+    let { idSubjectParam, idUnitParam } = req.query;
+
     let db = admin.firestore();
 
     let code = "";
@@ -703,35 +684,137 @@ controllers.setFileURL = async ()=>{
     let type = "";
     let status = 0;
 
-    await db.collection('courses').doc(courseId).collection('units').doc(unitId).collection('archives').add({
-        created_by: uid,
-        url: url
-    })
-    .then(()=>{
-        code = "PROCESS_OK";
-        message = "Proceso realizado correctamente";
-        type = "success";
-        data = Encrypt(array);
-        status = 201;
-    })
-    .catch(()=>{
-        code = "FIREBASE_GET_UNITS_ERROR";
-        message = error.message;
+    let object = Decrypt(objectData);
+    let idSubject = Decrypt(idSubjectParam);
+    let idUnit = Decrypt(idUnitParam);
+
+    if (typeof(idSubject) !== "string" || typeof(idUnit) !== "string")
+    {
+        code = "BAD_ID_TYPE_PARAM";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
         type = "error";
         status = 400;
-    })
-    .finally(()=>{
+
         res.status(status).send({ code: code, message: message, data: data, type: type });
+
         uid = null;
-        units = null;
         db = null;
-        code = null;            
+        code = null;
         message = null;
         type = null;
         status = null;
-            
+
         return;
+    }
+
+    if (typeof(Decrypt(object.url)) !== "string" || typeof(Decrypt(object.name)) !== "string" || typeof(Decrypt(object.description)) !== "string")
+    {
+        code = "BAD_TYPE_BODY_VALUES";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    await db.collection("courses").doc(idSubject).collection("units").doc(idUnit).collection("files").add({
+        url: object.url,
+        name: object.name, 
+        description: object.description,
+        created_at: admin.firestore.FieldValue.serverTimestamp(),
+        created_by: uid,
     })
-}
+    .catch(error => {
+        if (error.response)
+        {
+            code = error.response.message;
+            message = error.response.message; 
+        }
+        else
+        {
+            code = "ADD_FILE_ERROR";
+            message = "Ha ocurrido un error al añadir el archivo en el la unidad"; 
+        }
+
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    });
+
+
+    let unitObject = {
+        idUnit: null,
+        data: []
+    };
+    unitObject.idUnit = idUnit;
+
+    await db.collection("courses").doc(idSubject).collection("units").doc(idUnit).collection("files").get()
+    .then(result => {
+        let array = [];
+
+        if (result.size > 0)
+        {
+            result.forEach(doc => {
+                array.push({
+                    id: doc.id,
+                    data: doc.data()
+                });
+            });
+        }
+
+        unitObject.data = array;
+        
+        code = "PROCESS_OK"; 
+        type = "success";
+        status = 201;
+    })
+    .catch(error => {
+        if (error.response)
+        {
+            code = error.response.message;
+            message = error.response.message; 
+        }
+        else
+        {
+            code = "GET_FILES_UNIT_ERROR";
+            message = "Ha ocurrido un error al obtener los archivos de la unidad"; 
+        }
+
+        type = "error";
+        status = 400;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: unitObject, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    });
+};
+
 
 module.exports = controllers;

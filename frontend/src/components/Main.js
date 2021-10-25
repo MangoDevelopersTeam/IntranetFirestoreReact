@@ -13,18 +13,26 @@ import Subject from './subject/Subject';
 import MyCourses from './teacher/MyCourses';
 import Dialogs from './../templates/Dialogs';
 import Message from './../templates/Message';
+import Navigation from './../templates/Navigation';
+
 import Profile from './../components/Profile';
 import Users from './../components/admin/Users';
-import HomeTeacher from './teacher/HomeTeacher';
-import Navigation from './../templates/Navigation';
-import ManageSubject from './subject/ManageSubject';
 import HomeAdmin from './../components/admin/HomeAdmin';
 import UserDetail from './../components/admin/UserDetail';
 
-import axios from 'axios';
-import HomeStudent from './student/HomeStudent';
-import Testing from './others/Testing';
+import HomeTeacher from './teacher/HomeTeacher';
 import DetailedSubject from './teacher/DetailedSubject';
+
+import ManageSubject from './subject/ManageSubject';
+
+import HomeStudent from './student/HomeStudent';
+
+import Testing from './others/Testing';
+import ErrorMain from './others/ErrorMain';
+import RouteNotFound from './others/RouteNotFound';
+
+import axios from 'axios';
+import StudentsSubject from './teacher/StudentsSubject';
 
 const useStyles = makeStyles((theme) => ({
     root: {
@@ -49,47 +57,68 @@ const Main = () => {
     const classes = useStyles();
     const theme = MuiThemeUS();
 
+
     // useState
     const [access, setAccess] = useState(null);
+    const [error, setError] = useState(false);
+
 
     // useCallback
+    /**
+     * useCallback para obtener el nivel de acceso del usuario
+     */
     const handleGetAccess = useCallback(
         async () => {
             await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-access")
             .then(result => {
-                console.log("el resultado es", result);
-                if (result.data.code === "PROCESS_OK")
-                {
+                if (result.status === 200 && result.data.code === "PROCESS_OK")
+                {   
+                    setError(false);
                     setAccess(result.data.data);
-                }
-            })
-            .catch(error => {
-                if (error.response.code === "TOKEN_MISSING")
-                {
-                    clearAuthData();
-                    history.push("/");
-                }
-                else if (error.response.code === "TOKEN_INVALID")
-                {
-                    deleteToken();
-                    deleteRefreshToken();
-
-                    clearAuthData();
-                    history.push("/");
+                    
+                    return;
                 }
                 else
                 {
-                    console.log("EROR : ", error.response.data.code);
+                    return setError(true);
+                }
+            })
+            .catch(error => {
+                if (error.response)
+                {
+                    if (error.response.code === "TOKEN_MISSING")
+                    {
+                        clearAuthData();
+                        history.push("/");
+
+                        return;
+                    }
+                    else if (error.response.code === "TOKEN_INVALID")
+                    {
+                        deleteToken();
+                        deleteRefreshToken();
+
+                        clearAuthData();
+                        history.push("/");
+
+                        return;
+                    }
+                    else
+                    {
+                        return setError(true);
+                    }
                 }
             })
             .finally(() => {
                 return () => {
                     setAccess(null);
+                    setError(null);
                 }
             });
         },
-        [setAccess],
+        [setAccess, setError],
     );
+
 
     // useEffects
     useEffect(() => {
@@ -104,6 +133,7 @@ const Main = () => {
         }
     }, [handleGetAccess, setAccess]);
 
+
     return (
         <div className={classes.root}>
             <ThemeProvider theme={theme}>
@@ -116,6 +146,10 @@ const Main = () => {
                         <Switch>
                             <Route exact path="/profile" component={Profile} />    
                 
+                            { error === true && (
+                                <Route component={ErrorMain} />
+                            ) }
+
                             { access === null && (
                                 <Route component={Loading} /> 
                             ) }
@@ -128,6 +162,7 @@ const Main = () => {
                                     <Route exact path="/subjects" component={ManageSubject} />
                                     <Route exact path="/subjects/:id" component={Subject} />
                                     <Route exact path="/testing" component={Testing} />
+                                    <Route component={RouteNotFound} />
                                 </Switch>
                             ) }
                                                       
@@ -136,6 +171,7 @@ const Main = () => {
                                     <Route exact path="/" component={HomeTeacher}/> 
                                     <Route exact path="/my-subjects" component={MyCourses}/> 
                                     <Route exact path="/subject/:id" component={DetailedSubject}/> 
+                                    <Route exact path="/subject/students/:id" component={StudentsSubject}/> 
                                 </Switch>
                             ) }  
 

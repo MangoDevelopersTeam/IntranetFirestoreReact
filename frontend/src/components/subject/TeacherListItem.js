@@ -20,36 +20,36 @@ const TeacherListItem = ({ subjectId, course, teacher, teachers, teachersCourse,
      * useCalback para añadir profesor en el curso
      */
     const handlePostTeacherCourse = useCallback(
-        async (id, name, surname, email) => {
+        async () => {
 
-            let teacher = {
-                id: id,
-                name: name,
-                surname: surname,
-                email: email,
+            let teacherData = {
+                id: teacher.id,
+                name: Decrypt(teacher.data).name,
+                surname: Decrypt(teacher.data).surname,
+                email: Decrypt(teacher.data).email,
                 courseCode: Decrypt(course)?.code,
                 courseName: Decrypt(course)?.courseName,
                 courseType: Decrypt(course)?.type,
                 helper: false,
             };
 
-            if (document.getElementById(`checkbox-${id}`) !== null)
+            if (document.getElementById(`checkbox-${teacher.id}`) !== null)
             {
-                if (document.getElementById(`checkbox-${id}`).checked === true)
+                if (document.getElementById(`checkbox-${teacher.id}`).checked === true)
                 {
-                    teacher.helper = true;
+                    teacherData.helper = true;
                 }
                 else
                 {
-                    teacher.helper = false;
+                    teacherData.helper = false;
                 }
             }
             else
             {
-                teacher.helper = false;
+                teacherData.helper = false;
             }
 
-            let teacherObject = Encrypt(teacher);
+            let teacherObject = Encrypt(teacherData);
             let courseIdParam = Encrypt(subjectId);
 
             await axios.post("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/set-teachers-course", {
@@ -80,15 +80,15 @@ const TeacherListItem = ({ subjectId, course, teacher, teachers, teachersCourse,
                 }
             });
         },
-        [course, subjectId, setTeachersCourse],
+        [course, teacher, subjectId, setTeachersCourse],
     );
 
     /**
      * useCallback para remover el profesor en el curso
      */
     const handleRemoveTeacherCourse = useCallback(
-        async (id) => {
-            let teacherIdParam = Encrypt(id);
+        async () => {
+            let teacherIdParam = Encrypt(teacher.id);
             let courseIdParam = Encrypt(subjectId);
 
             await axios.delete("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/remove-teacher-course", {
@@ -118,7 +118,7 @@ const TeacherListItem = ({ subjectId, course, teacher, teachers, teachersCourse,
                 }
             });
         },
-        [ subjectId, setTeachersCourse],
+        [subjectId, teacher.id, setTeachersCourse],
     );
 
     /**
@@ -239,7 +239,7 @@ const TeacherListItem = ({ subjectId, course, teacher, teachers, teachersCourse,
                         )
                     }
                         <Tooltip title="Eliminar Docente">
-                            <IconButton edge="end" onClick={() => handleRemoveTeacherCourse(teacher?.id)}>
+                            <IconButton edge="end" onClick={handleRemoveTeacherCourse}>
                                 <PersonAddDisabled />
                             </IconButton>
                         </Tooltip>
@@ -247,7 +247,7 @@ const TeacherListItem = ({ subjectId, course, teacher, teachers, teachersCourse,
                 ) : (                    
                     <FormGroup row>
                         <Tooltip title="Añadir Docente">
-                            <IconButton edge="end" onClick={() => handlePostTeacherCourse(teacher.id, teacher.data.name, teacher.data.surname, teacher.data.email)}>
+                            <IconButton edge="end" onClick={handlePostTeacherCourse}>
                                 <PersonAdd />
                             </IconButton>
                         </Tooltip>

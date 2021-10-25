@@ -21,9 +21,9 @@ const StudentListItem = ({ subjectId, course, student, studentsCourse, setStuden
         async () => {
             let object = {
                 id: student.id,
-                name: student.name,
-                surname: student.surname,
-                email: student.email,
+                name: Decrypt(student.data).name,
+                surname: Decrypt(student.data).surname,
+                email: Decrypt(student.data).email,
                 courseCode: Decrypt(course)?.code,
                 courseName: Decrypt(course)?.courseName,
                 courseType: Decrypt(course)?.type,

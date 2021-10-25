@@ -68,9 +68,11 @@ export const initAxiosInterceptors = () => {
         return config;
     });
 
-    const interceptor = axios.interceptors.response.use(response => {
+    axios.interceptors.response.use(response => {
         return response;
     }, async error => {
+        return Promise.reject(error);
+
         // Se rechaza la petición si es que se recibe un error inusual
         /* if (error.response.status !== 401) {
             return Promise.reject(error);

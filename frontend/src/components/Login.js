@@ -2,11 +2,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 
 import { Button, Card, CardContent, CardMedia, CircularProgress, Grid, TextField, Typography } from '@material-ui/core';
 
-import { setRefreshToken, setToken } from '../helpers/token/handleToken';
+import { getToken, setRefreshToken, setToken } from '../helpers/token/handleToken';
 import { showNewAdminDialog } from '../helpers/dialogs/handleDialogs';
 import { showMessage } from '../helpers/message/handleMessage';
 import { setUserRedux } from '../helpers/auth/handleAuth';
-import { Decrypt } from '../helpers/cipher/cipher';
+import { Decrypt, Encrypt } from '../helpers/cipher/cipher';
 
 import axios from 'axios';
 
@@ -33,64 +33,64 @@ const Login = () => {
             {
                 return showMessage("Ingresa un formato valido de correo", "info");
             }
-        
+
             setLoading(true);
 
             await axios.post("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyCxtlob-iIvGtuz6Syc0kexsKW8Es_NIT8", {
                 email: email,
                 password: password,
                 returnSecureToken: true
+            }, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
             })
-            .then(async result => {
-                setToken(result.data.idToken);
-                setRefreshToken(result.data.refreshToken);
+            .then(response => {
+                if (response.status === 200)
+                {
+                    setToken(response.data.idToken);
+                    setRefreshToken(response.data.refreshToken);
 
-                await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/whoami")
-                .then(result => {
-                    if (result.data.code === "PROCESS_OK")
-                    {
-                        setUserRedux(result.data.data);
+                    let object = {
+                        email: Encrypt(response.data.email),
+                        displayName: Encrypt(response.data.displayName)
+                    };
+                    setUserRedux(Encrypt(object));
 
-                        showMessage(`Bienvenido/a ${Decrypt(Decrypt(result.data.data).displayName)}`, result.data.type);
-                        setLoading(false);
-
-                        return () => {
-                            setEmail(null);
-                            setPassword(null);
-                            setLoading(null);
-                        }
-                    }
-                    else
-                    {
-                        showMessage(result.data.message, result.data.type); 
-                        setLoading(false);
-
-                        return;
-                    }  
-                })
-                .catch(error => {
-                    showMessage(error.response.data.message, error.response.data.type);
-
+                    showMessage(`Bienvenido/a ${response.data.displayName}`, "success");
                     setLoading(false);
-                    return;
-                });
+
+                    return () => {
+                        setEmail(null);
+                        setPassword(null);
+                        setLoading(null);
+                    }
+                }
             })
             .catch(error => {
-                if (error.response.data.error.message === "EMAIL_NOT_FOUND")
+                if (error.response)
                 {
-                    showMessage("El email que ha ingresado no existe en el sistema", "error");
+                    if (error.response.data.error.message === "INVALID_PASSWORD")
+                    {
+                        return showMessage("La contraseña que ha ingresado ha sido incorrecta", "error");
+                    }
+                    else if (error.response.data.error.message === "EMAIL_NOT_FOUND")
+                    {
+                        return showMessage("El email que ha ingresado no existe", "error");
+                    }
+                    else if (error.response.data.error.message.startsWith("TOO_MANY_ATTEMPTS_TRY_LATER"))
+                    {
+                        return showMessage("Se ha fallado en el intento de loguearse, el acceso se ha bloqueado temporalmente, espere a que se habilite nuevamente e intenelo nuevamente, o bien, puede reestablecer su contraseña", "error");
+                    }
+                    else
+                    {                
+                        return showMessage("Ha ocurrido un error al procesar la solicitud, intentelo nuevamente", "error");
+                   }
                 }
-                else if (error.response.data.error.message === "INVALID_PASSWORD")
-                {
-                    showMessage("Datos Incorrectos", "error");
-                }
-                else
-                {
-                    console.log(error);
-                }
-
+            })
+            .finally(() => {
                 setLoading(false);
-                return;
             });
         },
         [email, password, setLoading, setEmail, setPassword],
@@ -103,21 +103,19 @@ const Login = () => {
         async () => {
             await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-numbers-admin")
             .then(result => {
-                if (result.data.code === "PROCESS_OK")
+                if (result.status === 200 && result.data.code === "PROCESS_OK")
                 {
-                    console.log(result);
                     if (result.data.data > 0)
                     {
-                        setEnable(false);
+                        return setEnable(false);
                     }
                     else
                     {
-                        setEnable(true);
+                        return setEnable(true);
                     }
                 }
             })
             .catch(error => {
-                console.log(error);
                 setEnable(false);
             })
             .finally(() => {
@@ -143,6 +141,7 @@ const Login = () => {
         }
     }, [setEnable, handleGetNumberAdmins]);
 
+    
     return (
         <>
             <Grid container direction="row" justifyContent="space-evenly" alignItems="flex-start">
