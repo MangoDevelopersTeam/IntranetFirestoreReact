@@ -72,172 +72,174 @@ controllers.editTeacherHelper = async (req, res) => {
     let data = null;
     let message = "";
     let type = "";
+    let status = 0;
 
-    if (courseId !== "" && teacherId !== "" && helperState !== "")
-    {
-        let idCourse = Decrypt(courseId);
-        let idTeacher = Decrypt(teacherId);
-        let helperValue = !helperState;
-
-        if (helperState === false)
-        {
-            let helpersLength = await db.collection("courses").doc(idCourse).collection("teachers").where("helper", "==", true).get();
-
-            if (helpersLength?.docs?.length === 0)
-            {
-                await db.collection('courses').doc(idCourse).collection('teachers').doc(idTeacher).update({
-                    helper: helperValue
-                })
-                .catch(error => {
-                    code = "FIREBASE_AUTH_CREATE_ERROR";
-                    message = error.message;
-                    type = "error";
-    
-                    res.send({ code: code, message: message, data: data, type: type });
-                            
-                    message = null;
-                    code = null;  
-                    data = null;
-                    type = null;
-                    db = null;
-                    courseId = null;
-                    teacherId = null;
-                    uid = null;
-                    idCourse = null;
-                    idTeacher = null;
-    
-                    return;
-                })
-    
-                await db.collection("courses").doc(idCourse).collection("teachers").get()
-                .then(result => {
-                    let array = [];
-    
-                    if (result.docs.length > 0)
-                    {
-                        result.forEach(doc => {
-                            array.push({
-                                id: doc.id,
-                                data: Encrypt(doc.data())
-                            });
-                        });
-                    }
-    
-                    code = "PROCESS_OK";
-                    message = "Datos modificados";
-                    type = "success";
-                    data = Encrypt(array);
-                })
-                .catch(error => {
-                    code = "FIREBASE_GET_USERS_HELPERS_ERROR";
-                    message = error.message;
-                    type = "error";
-                })
-                .finally(() => {
-                    res.send({ code: code, message: message, data: data, type: type });
-    
-                    message = null;
-                    code = null;  
-                    data = null;
-                    type = null;
-                    db = null;
-                    courseId = null;
-                    teacherId = null;
-                    helperState = null;
-    
-                    return;
-                });
-            }
-            else
-            {
-                return res.send({ code: "HELPER_EXIST", message: "Ya existe un ayudante en el curso", type: "info" });
-            }
-        }
-        else
-        {
-            await db.collection('courses').doc(idCourse).collection('teachers').doc(idTeacher).update({
-                helper: helperValue
-            })
-            .catch(error => {
-                code = "FIREBASE_AUTH_CREATE_ERROR";
-                message = error.message;
-                type = "error";
-
-                res.send({ code: code, message: message, data: data, type: type });
-                        
-                message = null;
-                code = null;  
-                data = null;
-                type = null;
-                db = null;
-                courseId = null;
-                teacherId = null;
-                uid = null;
-                idCourse = null;
-                idTeacher = null;
-
-                return;
-            })
-
-            await db.collection("courses").doc(idCourse).collection("teachers").get()
-            .then(result => {
-                let array = [];
-
-                if (result.docs.length > 0)
-                {
-                    result.forEach(doc => {
-                        array.push({
-                            id: doc.id,
-                            data: Encrypt(doc.data())
-                        });
-                    });
-                }
-
-                code = "PROCESS_OK";
-                type = "success";
-                message = "Datos modificados";
-                data = Encrypt(array);
-            })
-            .catch(error => {
-                code = "FIREBASE_GET_USERS_HELPERS_ERROR";
-                message = error.message;
-                type = "error";
-            })
-            .finally(() => {
-                res.send({ code: code, message: message, data: data, type: type });
-
-                message = null;
-                code = null;  
-                data = null;
-                type = null;
-                db = null;
-                courseId = null;
-                teacherId = null;
-                helperState = null;
-
-                return;
-            });
-        }
-    }
-    else
+    if (courseId == null || teacherId == null || helperState == null)
     {
         code = "NO_DATA_SEND";
         message = "Asegurate de que hayas completado los campos del formulario"; 
         type = "error";
+        status = 400;
 
-        res.send({ code: code, message: message, data: data, type: type });
+        res.status(status).send({ code: code, message: message, data: data, type: type });
 
-        message = null;
-        code = null;  
-        data = null;
-        type = null;
         db = null;
-        courseId = null;
-        teacherId = null;
-        helperState = null;
+        code = null;
+        data = null;
+        message = null;
+        type = null;
+        status = null;
 
         return;
     }
+
+    let idCourse = Decrypt(courseId);
+    let idTeacher = Decrypt(teacherId);
+    let dataHelper = helperState;
+
+    await db.collection("courses").doc(idCourse).collection("teachers").get()
+    .then(async result => {
+        if (result.size > 1)
+        {
+            let findHelpers = result.docs.filter(x => x.data().helper == true)
+
+            if (findHelpers.length > 0)
+            {
+                if (dataHelper == true)
+                {
+                    message = "No pueden existir 2 profesores dentro de la asignatura";
+                    code = error.code;
+                    type = "error";
+                    status = 400;
+
+                    res.status(status).send({ code: code, message: message, data: data, type: type });
+
+                    db = null;
+                    code = null;
+                    data = null;
+                    message = null;
+                    type = null;
+                    status = null;
+
+                    return;
+                }
+                else
+                {
+                    let userHelperId = result.docs.find(x => x.data().helper == true).id;
+
+                    await db.collection("courses").doc(idCourse).collection("teachers").doc(userHelperId).update({
+                        helper: false
+                    })
+                    .catch(error => {
+                        code = error.code;
+                        type = "error";
+                        status = 500;
+        
+                        res.status(status).send({ code: code, message: message, data: data, type: type });
+                                
+                        db = null;
+                        code = null;
+                        data = null;
+                        message = null;
+                        type = null;
+                        status = null;
+        
+                        return;
+                    });
+
+                    await db.collection("courses").doc(idCourse).collection("teachers").doc(idTeacher).update({
+                        helper: true
+                    })
+                    .catch(error => {
+                        code = error.code;
+                        type = "error";
+                        status = 500;
+        
+                        res.status(status).send({ code: code, message: message, data: data, type: type });
+                                
+                        db = null;
+                        code = null;
+                        data = null;
+                        message = null;
+                        type = null;
+                        status = null;
+        
+                        return;
+                    });
+
+                    await db.collection("courses").doc(idCourse).collection("teachers").get()
+                    .then(result => {
+                        let array = [];
+
+                        if (result.docs.length > 0)
+                        {
+                            result.forEach(doc => {
+                                array.push({
+                                    id: doc.id,
+                                    data: Encrypt(doc.data())
+                                });
+                            });
+                        }
+
+                        code = "PROCESS_OK";
+                        type = "success";
+                        message = "Datos modificados";
+                        data = Encrypt(array);
+                        status = 200;
+                    })
+                    .catch(error => {
+                        code = error.code;
+                        type = "error";
+                        status = 500;
+                    })
+                    .finally(() => {
+                        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+                        db = null;
+                        code = null;
+                        data = null;
+                        message = null;
+                        type = null;
+                        status = null;
+
+                        return;
+                    });
+                }
+            }
+        }
+        else
+        {
+            code = "POST_HELPER_ERROR";
+            message = "No puede haber ayudantes en el curso si no hay un profesor principal asignado"; 
+            type = "error";
+            status = 400;
+
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+
+            db = null;
+            code = null;
+            data = null;
+            message = null;
+            type = null;
+            status = null;
+
+            return;
+        }
+    })
+    .catch(error => {
+        code = error.code;
+        type = "error";
+        status = 500;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        db = null;
+        code = null;
+        data = null;
+        message = null;
+        type = null;
+        status = null;
+    });
 };
 
 

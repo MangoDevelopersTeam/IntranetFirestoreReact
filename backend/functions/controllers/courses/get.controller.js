@@ -1,5 +1,6 @@
 const { Decrypt, Encrypt } = require("./../../helpers/cipher");
 const admin = require("firebase-admin");
+const functions = require("firebase-functions");
 
 const db = admin.firestore();
 const auth = admin.auth();
@@ -174,7 +175,8 @@ controllers.getCourses = async (req, res) => {
             return res.send({ code: "TOKEN_INVALID", message: "El token provisto es invalido", type: "error" });
         }
     }
-}
+};
+
 
 
 /**
@@ -434,6 +436,26 @@ controllers.getStudentsCourse = async (req, res) => {
     let data = null;
     let message = "";
     let type = "";
+    let status = 0;
+
+    if (id == null)
+    {
+        code = "COURSE_ID_NULL";
+        message = "El id no puede ser nulo";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
 
     await db.collection("courses").doc(id).collection("students").get()
     .then((result) => {
@@ -477,6 +499,7 @@ controllers.getStudentsCourse = async (req, res) => {
         return;
     });
 };
+
 
 
 /**
@@ -549,6 +572,44 @@ controllers.getUnitFiles = async (req, res) => {
 
     let { idSubjectParam, idUnitParam } = req.query;
 
+    if (idSubjectParam == null || idUnitParam == null)
+    {
+        code = "PARAMS_NULL";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (idSubjectParam.startsWith("U2FsdGVkX") == false || idUnitParam.startsWith("U2FsdGVkX") == false)
+    {
+        code = "PARAMS_BAD_FORMATING";
+        message = "El id esta mal formateado";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
     let idSubject = Decrypt(idSubjectParam);
     let idUnit = Decrypt(idUnitParam);
 
@@ -616,6 +677,256 @@ controllers.getUnitFiles = async (req, res) => {
         res.status(status).send({ code: code, message: message, data: object, type: type });
 
         uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    });
+};
+
+
+
+controllers.deleteUnitFile = async (req, res) => {
+    let db = admin.firestore();
+
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+
+    let { idSubjectParam, idUnitParam, idFileParam } = req.query;
+
+    if (idSubjectParam == null || idUnitParam == null || idFileParam == null)
+    {
+        code = "PARAMS_NULL";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (idSubjectParam.startsWith("U2FsdGVkX") == false || idUnitParam.startsWith("U2FsdGVkX") == false || idFileParam.startsWith("U2FsdGVkX") == false)
+    {
+        code = "PARAMS_BAD_FORMATING";
+        message = "El id esta mal formateado";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    let idSubject = Decrypt(idSubjectParam);
+    let idUnit = Decrypt(idUnitParam);
+    let idFile = Decrypt(idFileParam);
+
+    if (typeof(idSubject) != "string" || typeof(idUnit) != "string" || typeof(idFile) != "string")
+    {
+        code = "BAD_ID_TYPE_PARAM";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    await db.collection("courses").doc(idSubject).collection("units").doc(idUnit).collection("files").doc(idFile).delete()
+    .then(() => {
+        code = "PROCESS_OK"; 
+        type = "success";
+        status = 200;
+    })
+    .catch(error => {
+        code = error.code;
+        type = "error";
+        status = 500;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    });
+};
+
+
+
+controllers.editUnitFile = async (req, res) => {
+    let db = admin.firestore();
+
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+
+    let { uid } = res.locals;
+    let { objectData, editFileData } = req.body;
+    let { idSubjectParam, idUnitParam, idUnitFileParam } = req.query;
+
+    if (objectData == null || objectData == null || idSubjectParam == null || idUnitParam == null || idUnitFileParam == null)
+    {
+        code = "PARAMS_NULL";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (objectData.startsWith("U2FsdGVkX") == false || editFileData.startsWith("U2FsdGVkX") == false || idSubjectParam.startsWith("U2FsdGVkX") == false || idUnitParam.startsWith("U2FsdGVkX") == false  || idUnitFileParam.startsWith("U2FsdGVkX") == false)
+    {
+        code = "PARAMS_BAD_FORMATING";
+        message = "El id esta mal formateado";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    let dataObject = Decrypt(objectData);
+    let editFile = Decrypt(editFileData);
+
+    let idSubject = Decrypt(idSubjectParam);
+    let idUnit = Decrypt(idUnitParam);
+    let idFile = Decrypt(idUnitFileParam);
+
+    if (typeof(idSubject) != "string" || typeof(idUnit) != "string" || typeof(idFile) != "string" || typeof(editFile) != "boolean")
+    {
+        code = "BAD_TYPES_PARAM";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (typeof(Decrypt(dataObject.name)) != "string" || typeof(Decrypt(dataObject.description)) != "string")
+    {
+        code = "BAD_UNIT_FILE_TYPES_PARAM";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (editFile == true)
+    {
+        if (typeof(Decrypt(dataObject.url)) != "string")
+        {
+            code = "BAD_UNIT_FILE_TYPES_PARAM";
+            message = "Asegurese de enviar los tipos de datos correctos"; 
+            type = "error";
+            status = 400;
+
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+
+            uid = null;
+            db = null;
+            code = null;
+            message = null;
+            type = null;
+            status = null;
+
+            return;
+        }
+    }
+
+    if (editFile == false)
+    {
+        delete dataObject.url;
+    }
+
+    dataObject.updated_at = admin.firestore.FieldValue.serverTimestamp();
+    dataObject.updated_by = uid;
+
+    await db.collection("courses").doc(idSubject).collection("units").doc(idUnit).collection("files").doc(idFile).update(dataObject)
+    .then(() => {
+        code = "PROCESS_OK"; 
+        type = "success";
+        status = 200;
+    })
+    .catch(error => {
+        code = error.code;
+        type = "error";
+        status = 500;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
         db = null;
         code = null;
         message = null;

@@ -263,6 +263,8 @@ controllers.createCourse = async (req, res) => {
  */
 controllers.setTeachersCourse = async (req, res) => {
     let { uid } = res.locals;
+    let { teacher } = req.body;
+    let { courseId } = req.query;
 
     let db = admin.firestore();
 
@@ -270,17 +272,15 @@ controllers.setTeachersCourse = async (req, res) => {
     let data = null;
     let message = "";
     let type = "";
-
-    let { teacher } = req.body;
-    let { courseId } = req.query;
+    let status = 0;
 
     let dataTeacher = Decrypt(teacher);
     let idCourse = Decrypt(courseId);
 
-    let idTeacher = dataTeacher?.id;
-    let codeCourse = dataTeacher?.courseCode;
-    let nameCourse = dataTeacher?.courseName;
-    let typeCourse = dataTeacher?.courseType;
+    let idTeacher = dataTeacher.id;
+    let codeCourse = dataTeacher.courseCode;
+    let nameCourse = dataTeacher.courseName;
+    let typeCourse = dataTeacher.courseType;
 
     delete dataTeacher.id;
     delete dataTeacher.courseCode;
@@ -290,40 +290,24 @@ controllers.setTeachersCourse = async (req, res) => {
     dataTeacher.created_at = admin.firestore.FieldValue.serverTimestamp();
     dataTeacher.created_by = uid;
 
-    let result = await db.collection("courses").doc(idCourse).collection("teachers").get();
- 
-    if (result.size <= 2)
-    {
-        let helper = false;
-
-        if (dataTeacher?.helper === true)
-        {
-            let lambda = result.docs.find(x => x.data()?.helper === true);
-        
-            if (lambda.data()?.helper === true)
-            {
-                helper = true;
-            }
-        }   
-
-        if (helper === false)
+    await db.collection("courses").doc(idCourse).collection("teachers").get()
+    .then(async result => {
+        if (result.size == 0)
         {
             await db.collection("courses").doc(idCourse).collection("teachers").doc(idTeacher).set(dataTeacher)
             .catch(error => {
-                code = "FIREBASE_SET_TEACHER_COURSE_ERROR";
-                message = error.message;
+                code = error.code;
                 type = "error";
+                status = 500;
 
-                res.send({ code: code, message: message, data: data, type: type });
+                res.status(status).send({ code: code, message: message, data: data, type: type });
 
-                message = null;
-                code = null;  
-                data = null;
-                type = null;
                 db = null;
-                teacher = null;
-                courseId = null;
-                uid = null;
+                code = null;
+                data = null;
+                message = null;
+                type = null;
+                status = null;
 
                 return;
             });
@@ -336,103 +320,110 @@ controllers.setTeachersCourse = async (req, res) => {
                 created_by: uid
             })
             .catch(error => {
-                code = "FIREBASE_SET_USER_COURSE_ERROR";
-                message = error.message;
+                code = error.code;
                 type = "error";
+                status = 500;
 
-                
-                res.send({ code: code, message: message, data: data, type: type });
+                res.status(status).send({ code: code, message: message, data: data, type: type });
 
-                message = null;
-                code = null;  
-                data = null;
-                type = null;
                 db = null;
-                teacher = null;
-                courseId = null;
-                uid = null;
-
-                return;
-            });
-
-            await db.collection("courses").doc(idCourse).collection("teachers").get()
-            .then(result => {
-                let array = [];
-                
-                if (result.docs.length > 0)
-                {
-                    result.forEach(doc => {
-                        array.push({
-                            id: doc.id,
-                            data: Encrypt(doc.data())
-                        });
-                    });
-                }
-
-                code = "PROCESS_OK";
-                message = "Profesor asignado correctamente"; 
-                data = Encrypt(array);
-                type = "success";
-            })
-            .catch(error => {
-                code = "FIREBASE_SET_USER_COURSE_ERROR";
-                message = error.message;
-                type = "error";
-            })
-            .finally(() => {
-                res.send({ code: code, message: message, data: data, type: type });
-                
-                message = null;
-                code = null;  
+                code = null;
                 data = null;
+                message = null;
                 type = null;
-                db = null;
-                teacher = null;
-                courseId = null;
-                uid = null;
-        
+                status = null;
+
                 return;
             });
         }
         else
         {
-            code = "HELPER_EXIST";
-            message = "Ya existe un ayudante en el curso"; 
-            type = "info";
+            dataTeacher.helper = true;
 
-            res.send({ code: code, message: message, data: data, type: type });
+            await db.collection("courses").doc(idCourse).collection("teachers").doc(idTeacher).set(dataTeacher)
+            .catch(error => {
+                code = error.code;
+                type = "error";
+                status = 500;
 
-            message = null;
-            code = null;  
-            data = null;
-            type = null;
-            db = null;
-            teacher = null;
-            courseId = null;
-            uid = null;
+                res.status(status).send({ code: code, message: message, data: data, type: type });
 
-            return;
+                db = null;
+                code = null;
+                data = null;
+                message = null;
+                type = null;
+                status = null;
+
+                return;
+            });
+
+            await db.collection("users").doc(idTeacher).collection("courses").doc(idCourse).set({
+                code: codeCourse,
+                name: nameCourse,
+                subject: typeCourse,
+                created_at: admin.firestore.FieldValue.serverTimestamp(),
+                created_by: uid
+            })
+            .catch(error => {
+                code = error.code;
+                type = "error";
+                status = 500;
+
+                res.status(status).send({ code: code, message: message, data: data, type: type });
+
+                db = null;
+                code = null;
+                data = null;
+                message = null;
+                type = null;
+                status = null;
+
+                return;
+            });
         }
-    }
-    else
-    {
-        code = "TEACHERS_LIMIT_REACHED";
-        message = "Ya existen 2 profesores, no puede añadir más"; 
-        type = "error";
 
-        res.send({ code: code, message: message, data: data, type: type });
+        await db.collection("courses").doc(idCourse).collection("teachers").get()
+        .then(result => {
+            let array = [];
+            
+            if (result.size > 0)
+            {
+                result.forEach(doc => {
+                    array.push({
+                        id: doc.id,
+                        data: Encrypt(doc.data())
+                    });
+                });
+            }
 
-        message = null;
-        code = null;  
-        data = null;
-        type = null;
-        db = null;
-        teacher = null;
-        courseId = null;
-        uid = null;
+            code = "PROCESS_OK";
+            message = "Profesor asignado correctamente";
+            data = Encrypt(array);
+            status = 201;
+            type = "success";
+        })
+        .catch(error => {
+            code = error.code;
+            status = 500;
+            type = "error";
+        })
+        .finally(() => {
+            res.status(status).send({ code: code, message: message, data: data, type: type });
 
-        return;
-    }
+            db = null;
+            code = null;
+            data = null;
+            message = null;
+            type = null;
+            status = null;
+    
+            return;
+        });
+    })
+    .catch(error => {
+        return res.status(404).send({ data: error.code });
+    });
 };
 
 
@@ -669,7 +660,6 @@ controllers.createUnitsCourse = async (req, res) => {
 };
 
 
-
 controllers.setFileURL = async (req, res) => {
     let { uid } = res.locals;
 
@@ -732,6 +722,300 @@ controllers.setFileURL = async (req, res) => {
         description: object.description,
         created_at: admin.firestore.FieldValue.serverTimestamp(),
         created_by: uid,
+    })
+    .catch(error => {
+        if (error.response)
+        {
+            code = error.response.message;
+            message = error.response.message; 
+        }
+        else
+        {
+            code = "ADD_FILE_ERROR";
+            message = "Ha ocurrido un error al añadir el archivo en el la unidad"; 
+        }
+
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    });
+
+
+    let unitObject = {
+        idUnit: null,
+        data: []
+    };
+    unitObject.idUnit = idUnit;
+
+    await db.collection("courses").doc(idSubject).collection("units").doc(idUnit).collection("files").get()
+    .then(result => {
+        let array = [];
+
+        if (result.size > 0)
+        {
+            result.forEach(doc => {
+                array.push({
+                    id: doc.id,
+                    data: doc.data()
+                });
+            });
+        }
+
+        unitObject.data = array;
+        
+        code = "PROCESS_OK"; 
+        type = "success";
+        status = 201;
+    })
+    .catch(error => {
+        if (error.response)
+        {
+            code = error.response.message;
+            message = error.response.message; 
+        }
+        else
+        {
+            code = "GET_FILES_UNIT_ERROR";
+            message = "Ha ocurrido un error al obtener los archivos de la unidad"; 
+        }
+
+        type = "error";
+        status = 400;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: unitObject, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    });
+};
+
+
+controllers.uploadHomeworkFileURL = async (req, res) => {
+    let { uid } = res.locals;
+
+    let { objectData } = req.body;
+    let { idSubjectParam, idUnitParam } = req.query;
+
+    let db = admin.firestore();
+
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+
+    let object = Decrypt(objectData);
+    let idSubject = Decrypt(idSubjectParam);
+    let idUnit = Decrypt(idUnitParam);
+
+    if (typeof(idSubject) !== "string" || typeof(idUnit) !== "string")
+    {
+        code = "BAD_ID_TYPE_PARAM";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (typeof(Decrypt(object.url)) !== "string" || typeof(Decrypt(object.name)) !== "string" || typeof(Decrypt(object.description)) !== "string")
+    {
+        code = "BAD_TYPE_BODY_VALUES";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+    //el object.delayState deberia ser un boolean para identificar si se atraso con la entrega
+    await db.collection("courses").doc(idSubject).collection("units").doc(idUnit).collection("files").doc(file).collection('answers').add({
+        url: object.url,
+        created_at: admin.firestore.FieldValue.serverTimestamp(),
+        created_by: uid,
+        delay:object.delayState
+    })
+    .catch(error => {
+        if (error.response)
+        {
+            code = error.response.message;
+            message = error.response.message; 
+        }
+        else
+        {
+            code = "ADD_FILE_ERROR";
+            message = "Ha ocurrido un error al añadir el archivo en el la unidad"; 
+        }
+
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    });
+
+
+    let unitObject = {
+        idUnit: null,
+        data: []
+    };
+    unitObject.idUnit = idUnit;
+
+    await db.collection("courses").doc(idSubject).collection("units").doc(idUnit).collection("files").get()
+    .then(result => {
+        let array = [];
+
+        if (result.size > 0)
+        {
+            result.forEach(doc => {
+                array.push({
+                    id: doc.id,
+                    data: doc.data()
+                });
+            });
+        }
+
+        unitObject.data = array;
+        
+        code = "PROCESS_OK"; 
+        type = "success";
+        status = 201;
+    })
+    .catch(error => {
+        if (error.response)
+        {
+            code = error.response.message;
+            message = error.response.message; 
+        }
+        else
+        {
+            code = "GET_FILES_UNIT_ERROR";
+            message = "Ha ocurrido un error al obtener los archivos de la unidad"; 
+        }
+
+        type = "error";
+        status = 400;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: unitObject, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    });
+};
+
+
+controllers.setHomeworkFileURL = async (req, res) => {
+    let { uid } = res.locals;
+
+    let { objectData } = req.body;
+    let { idSubjectParam, idUnitParam } = req.query;
+
+    let db = admin.firestore();
+
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+
+    let object = Decrypt(objectData);
+    let idSubject = Decrypt(idSubjectParam);
+    let idUnit = Decrypt(idUnitParam);
+
+    if (typeof(idSubject) !== "string" || typeof(idUnit) !== "string")
+    {
+        code = "BAD_ID_TYPE_PARAM";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (typeof(Decrypt(object.url)) !== "string" || typeof(Decrypt(object.name)) !== "string" || typeof(Decrypt(object.description)) !== "string")
+    {
+        code = "BAD_TYPE_BODY_VALUES";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    await db.collection("courses").doc(idSubject).collection("units").doc(idUnit).collection("files").add({
+        url: object.url,
+        name: object.name, 
+        description: object.description,
+        created_at: admin.firestore.FieldValue.serverTimestamp(),
+        created_by: uid,
+        type:'homework',
     })
     .catch(error => {
         if (error.response)

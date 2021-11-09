@@ -1,9 +1,6 @@
 import axios from 'axios';
 
-import { clearUserRedux } from '../auth/handleAuth';
-
 const TOKEN_KEY = "REST_TOKEN";
-const REFRESH_TOKEN_KEY = "REFRESH_REST_TOKEN";
 
 /**
  * Función para guardar una token de inicio de sesión
@@ -28,31 +25,6 @@ export const deleteToken = () => {
     localStorage.removeItem(TOKEN_KEY);
 };
 
-
-/**
- * Función para guardar una refresh token
- * @param {String} token refresh token
- */
-export const setRefreshToken = (token) => {
-    localStorage.setItem(REFRESH_TOKEN_KEY, token);
-};
-
-/**
- * Función para obtener el refresh token almacenado en la localStorage
- * @returns refresh token almacenado en la localStorage
- */
-export const getRefreshToken = () => {
-    return localStorage.getItem(REFRESH_TOKEN_KEY);
-};
-
-/**
- * Función para remover el refresh token en el localStorage
- */
-export const deleteRefreshToken = () => {
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-};
-
-
 /**
  * Interceptors que estarán a la escucha del token, par establecer una cabecera authorization
  */
@@ -62,7 +34,7 @@ export const initAxiosInterceptors = () => {
 
         if (token)
         {
-            config.headers.authorization = `Bearer ${token}`;
+            config.headers.Authorization = `Bearer ${token}`;
         }
 
         return config;

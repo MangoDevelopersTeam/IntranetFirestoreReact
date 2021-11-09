@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { ListItem, ListItemSecondaryAction, ListItemText, IconButton, Tooltip, Checkbox, FormGroup, FormControlLabel } from '@material-ui/core';
+import { ListItem, ListItemSecondaryAction, ListItemText, IconButton, Tooltip, Checkbox, FormGroup, FormControlLabel, CircularProgress } from '@material-ui/core';
 import { PersonAdd, PersonAddDisabled } from '@material-ui/icons';
 
 import { showMessage } from '../../helpers/message/handleMessage';
@@ -21,7 +21,6 @@ const TeacherListItem = ({ subjectId, course, teacher, teachers, teachersCourse,
      */
     const handlePostTeacherCourse = useCallback(
         async () => {
-
             let teacherData = {
                 id: teacher.id,
                 name: Decrypt(teacher.data).name,
@@ -60,19 +59,19 @@ const TeacherListItem = ({ subjectId, course, teacher, teachers, teachersCourse,
                 }
             })
             .then(result => {
-                if (result.data.code === "PROCESS_OK")
+                if (result.status === 201 && result.data.code === "PROCESS_OK")
                 {
                     let data = Decrypt(result.data.data);
                     setTeachersCourse(data);
                 }
 
-                let message = result.data.message;
-                let type = result.data.type;
-                showMessage(message, type);
+                showMessage(result.data.message, result.data.type);
             })
             .catch(error => {
-                let message = error.response.data.code;
-                showMessage(message, "error");
+                if (error.response)
+                {
+                    showMessage(error.response.data.message, error.response.data.type);
+                }
             })
             .finally(() => {
                 return () => {
@@ -92,25 +91,28 @@ const TeacherListItem = ({ subjectId, course, teacher, teachers, teachersCourse,
             let courseIdParam = Encrypt(subjectId);
 
             await axios.delete("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/remove-teacher-course", {
+                data: {
+                    helperState: helper
+                },
                 params: {
                     teacherId: teacherIdParam,
                     courseId: courseIdParam
                 }
             })
             .then(result => {
-                if (result.data.code === "PROCESS_OK")
+                if (result.status === 200 && result.data.code === "PROCESS_OK")
                 {   
                     let data = Decrypt(result.data.data);
                     setTeachersCourse(data);
                 }
 
-                let message = result.data.message;
-                let type = result.data.type;
-                showMessage(message, type);
+                showMessage(result.data.message, result.data.type);
             })
             .catch(error => {
-                let message = error.response.data.code;
-                showMessage(message, "error");
+                if (error.response)
+                {
+                    showMessage(error.response.data.message, error.response.data.type);
+                }
             })
             .finally(() => {
                 return () => {
@@ -118,60 +120,59 @@ const TeacherListItem = ({ subjectId, course, teacher, teachers, teachersCourse,
                 }
             });
         },
-        [subjectId, teacher.id, setTeachersCourse],
+        [helper, teacher, subjectId, setTeachersCourse],
     );
 
     /**
      * useCallback para cambiar el nivel helper del usuario
      */
     const handleChangeHelperState = useCallback(
-        /**
-         * Función para cambiar el nivel helper del usuario
-         * @param {Boolean} actualHelperState estado boolenado actual del nivel helper
-         * @param {String} teacherId id del profesor
-         */
-        async (actualHelperState, teacherId) => {
+        async () => {
             if (called === false)
             {
-                setCalled(true);
+                if (teacher !== null)
+                {
+                    setCalled(true);
 
-                let teacherIdParam = Encrypt(teacherId);
-                let courseIdParam = Encrypt(subjectId);
+                    let teacherIdParam = Encrypt(teacher.id);
+                    let courseIdParam = Encrypt(subjectId);
+                    let helperParam = helper;
 
-                await axios.put("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/change-helper-state", {
-                    helperState: actualHelperState
-                }, {
-                    params: {
-                        courseId: courseIdParam,
-                        teacherId: teacherIdParam
-                    }
-                })
-                .then((result) => {
-                    if (result.data.code === "PROCESS_OK")
-                    {
-                        let data = Decrypt(result.data.data);
-                        setTeachersCourse(data);
-                    }
+                    await axios.put("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/change-helper-state", {
+                        helperState: helperParam
+                    }, {
+                        params: {
+                            courseId: courseIdParam,
+                            teacherId: teacherIdParam
+                        }
+                    })
+                    .then((result) => {
+                        if (result.status === 200 && result.data.code === "PROCESS_OK")
+                        {
+                            let data = Decrypt(result.data.data);
+                            setTeachersCourse(data);
+                        }
 
-                    let message = result.data.message;
-                    let type = result.data.type;
-                    showMessage(message, type);
-                })
-                .catch((error) => {
-                    let message = error.response.data.code;
-                    showMessage(message, "error");
-                })
-                .finally(() => {
-                    setCalled(false);
+                        showMessage(result.data.message, result.data.type);
+                    })
+                    .catch(error => {
+                        if (error.response)
+                        {
+                            showMessage(error.response.data.message, error.response.data.type);
+                        }
+                    })
+                    .finally(() => {
+                        setCalled(false);
 
-                    return () => {
-                        setTeachersCourse(null);
-                    }
-                });
+                        return () => {
+                            setTeachersCourse(null);
+                        }
+                    });
+                }
             }
         },
-        [setTeachersCourse, subjectId, called, setCalled],
-    )
+        [called, helper, teacher, subjectId, setCalled, setTeachersCourse],
+    );
 
     // useEffects
     useEffect(() => {
@@ -217,44 +218,51 @@ const TeacherListItem = ({ subjectId, course, teacher, teachers, teachersCourse,
 
     return (
         <ListItem>
-            {
-                teachers === null ? (
-                    console.log("es null")
-                ) : (
-                    console.log("no es null")
-                )
-            }
-            
-            <ListItemText primary={`${Decrypt(Decrypt(teacher.data).name)} ${Decrypt(Decrypt(teacher.data).surname)}`} secondary={Decrypt(Decrypt(teacher.data).rut)} security="true" />
+        {
+            teacher === null ? (
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                    <CircularProgress style={{ color: "#2074d4" }} />
+                </div>
+            ) : (
+                <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
+                    <div style={{ display: "flex", flexDirection: "row", width: "100%" }}>
+                        <ListItemText primary={`${Decrypt(Decrypt(teacher.data).name)} ${Decrypt(Decrypt(teacher.data).surname)}`} secondary={Decrypt(Decrypt(teacher.data).rut)} security="true" />
 
-            <ListItemSecondaryAction security="true">
-            {
-                joined === true ? (
-                    <FormGroup row>
-                    {
-                        length > 1 && (
-                            <Tooltip title="Si presiona el selector, este Docente será ayudante del Docente principal">
-                                <FormControlLabel control={<Checkbox id={`checkbox-${teacher?.id}`} checked={helper} onChange={() => handleChangeHelperState(helper, teacher?.id)} />} label="Ayudante" />
-                            </Tooltip>
-                        )
-                    }
-                        <Tooltip title="Eliminar Docente">
-                            <IconButton edge="end" onClick={handleRemoveTeacherCourse}>
-                                <PersonAddDisabled />
-                            </IconButton>
-                        </Tooltip>
-                    </FormGroup>             
-                ) : (                    
-                    <FormGroup row>
-                        <Tooltip title="Añadir Docente">
-                            <IconButton edge="end" onClick={handlePostTeacherCourse}>
-                                <PersonAdd />
-                            </IconButton>
-                        </Tooltip>
-                    </FormGroup>
-                )   
-            }
-            </ListItemSecondaryAction>
+                        <ListItemSecondaryAction security="true">
+                        {
+                            joined === true ? (
+                                <FormGroup row>
+                                    <React.Fragment>
+                                    {
+                                        length > 1 && (
+                                            <Tooltip title="Si presiona el selector, este Docente será ayudante del Docente principal">
+                                                <FormControlLabel control={<Checkbox id={`checkbox-${teacher.id}`} checked={helper} onChange={async () => await handleChangeHelperState()} />} label="Ayudante" />
+                                            </Tooltip>
+                                        )
+                                    }   
+                                    </React.Fragment>
+                                    
+                                    <Tooltip title="Eliminar Docente">
+                                        <IconButton edge="end" onClick={handleRemoveTeacherCourse}>
+                                            <PersonAddDisabled />
+                                        </IconButton>
+                                    </Tooltip>
+                                </FormGroup>             
+                            ) : (                    
+                                <FormGroup row>
+                                    <Tooltip title="Añadir Docente">
+                                        <IconButton edge="end" onClick={handlePostTeacherCourse}>
+                                            <PersonAdd />
+                                        </IconButton>
+                                    </Tooltip>
+                                </FormGroup>
+                            )   
+                        }
+                        </ListItemSecondaryAction>
+                    </div>
+                </div>
+            )
+        }
         </ListItem>
     )
 }

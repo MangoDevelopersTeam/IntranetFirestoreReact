@@ -57,6 +57,9 @@ controllers.deleteCourse = async(req, res) => {
  */
 controllers.removeTeacherCourse = async (req, res) => {
     let { courseId, teacherId } = req.query;
+    let { helperState } = req.body;
+
+    //return res.status(200).send({ courseId: courseId, teacherId: teacherId, helper: helperState })
 
     let db = admin.firestore();
 
@@ -64,92 +67,184 @@ controllers.removeTeacherCourse = async (req, res) => {
     let data = null;
     let message = "";
     let type = "";
+    let status = 0;
+
+    if (courseId == null || teacherId == null || helperState == null)
+    {
+        code = "NO_DATA_SEND";
+        message = "Asegurate de que hayas completado los campos del formulario"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        db = null;
+        code = null;
+        data = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
 
     let idCourse = Decrypt(courseId);
     let idTeacher = Decrypt(teacherId);
-
-    await db.collection("courses").doc(idCourse).collection("teachers").doc(idTeacher).delete()
-    .catch(error => {
-        code = "FIREBASE_DELETE_TEACHER_COURSE_ERROR";
-        message = error.message;
-        type = "error";
-
-        res.send({ code: code, message: message, data: data, type: type });
-                
-        message = null;
-        code = null;  
-        data = null;
-        type = null;
-        db = null;
-        courseId = null;
-        teacherId = null;
-        idCourse = null;
-        idTeacher = null;
-
-        return;
-    });
-
-    await db.collection("users").doc(idTeacher).collection("courses").doc(idCourse).delete()
-    .catch(error => {
-        code = "FIREBASE_DELETE_USER_COURSE_ERROR";
-        message = error.message;
-        type = "error";
-
-        res.send({ code: code, message: message, data: data, type: type });
-                
-        message = null;
-        code = null;  
-        data = null;
-        type = null;
-        db = null;
-        courseId = null;
-        teacherId = null;
-        uid = null;
-        idCourse = null;
-        idTeacher = null;
-
-        return;
-    });
+    let dataHelper = helperState;
 
     await db.collection("courses").doc(idCourse).collection("teachers").get()
-    .then(result => {
-        let array = [];
+    .then(async result => {
+        let helpersLength = result.docs.filter(x => x.data().helper == true).length;
 
-        if (result.docs.length > 0)
+        if (dataHelper == true)
         {
-            result.forEach(doc => {
-                array.push({
-                    id: doc.id,
-                    data: Encrypt(doc.data())
-                });
+            await db.collection("courses").doc(idCourse).collection("teachers").doc(idTeacher).delete()
+            .catch(error => {
+                code = error.code;
+                type = "error";
+                status = 400;
+
+                res.status(status).send({ code: code, message: message, data: data, type: type });
+
+                db = null;
+                code = null;
+                data = null;
+                message = null;
+                type = null;
+                status = null;
+
+                return;
+            });
+
+            await db.collection("users").doc(idTeacher).collection("courses").doc(idCourse).delete()
+            .catch(error => {
+                code = error.code;
+                type = "error";
+                status = 400;
+
+                res.status(status).send({ code: code, message: message, data: data, type: type });
+
+                db = null;
+                code = null;
+                data = null;
+                message = null;
+                type = null;
+                status = null;
+
+                return;
             });
         }
+        else
+        {
+            if (helpersLength > 0)
+            {
+                message = "No puede eliminar al docente mientras exista el ayudante, no puede dejar un ayudante sin un docente principal";
+                code = error.code;
+                type = "error";
+                status = 400;
 
-        code = "PROCESS_OK";
-        message = "Profesor removido correctamente";
-        data = Encrypt(array);
-        type = "success";
+                res.status(status).send({ code: code, message: message, data: data, type: type });
+
+                db = null;
+                code = null;
+                data = null;
+                message = null;
+                type = null;
+                status = null;
+
+                return;
+            }
+            else
+            {
+                await db.collection("courses").doc(idCourse).collection("teachers").doc(idTeacher).delete()
+                .catch(error => {
+                    code = error.code;
+                    type = "error";
+                    status = 400;
+
+                    res.status(status).send({ code: code, message: message, data: data, type: type });
+
+                    db = null;
+                    code = null;
+                    data = null;
+                    message = null;
+                    type = null;
+                    status = null;
+
+                    return;
+                });
+
+                await db.collection("users").doc(idTeacher).collection("courses").doc(idCourse).delete()
+                .catch(error => {
+                    code = error.code;
+                    type = "error";
+                    status = 400;
+
+                    res.status(status).send({ code: code, message: message, data: data, type: type });
+
+                    db = null;
+                    code = null;
+                    data = null;
+                    message = null;
+                    type = null;
+                    status = null;
+
+                    return;
+                });
+            }
+        }
+
+        await db.collection("courses").doc(idCourse).collection("teachers").get()
+        .then(result => {
+            let array = [];
+
+            if (result.docs.length > 0)
+            {
+                result.forEach(doc => {
+                    array.push({
+                        id: doc.id,
+                        data: Encrypt(doc.data())
+                    });
+                });
+            }
+
+            code = "PROCESS_OK";
+            message = "Profesor removido correctamente";
+            data = Encrypt(array);
+            type = "success";
+            status = 200;
+        })
+        .catch(error => {
+            code = error.code;
+            type = "error";
+            status = 400;
+        })
+        .finally(() => {
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+
+            db = null;
+            code = null;
+            data = null;
+            message = null;
+            type = null;
+            status = null;
+
+            return;
+        });
     })
     .catch(error => {
-        code = "FIREBASE_GET_TEACHER_COURSES_ERROR";
-        message = error.message;
+        code = error.code;
         type = "error";
-    })
-    .finally(() => {
-        res.send({ code: code, message: message, data: data, type: type });
-                
-        message = null;
-        code = null;  
-        data = null;
-        type = null;
-        db = null;
-        courseId = null;
-        teacherId = null;
-        uid = null;
-        idCourse = null;
-        idTeacher = null;
+        status = 500;
 
-        return;
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        db = null;
+        code = null;
+        data = null;
+        message = null;
+        type = null;
+        status = null;
     });
 };
 

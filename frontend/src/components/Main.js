@@ -1,14 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Router, Route, Switch } from 'react-router-dom';
 
-import { makeStyles, ThemeProvider, unstable_createMuiStrictModeTheme as MuiThemeUS } from '@material-ui/core';
+import { makeStyles, ThemeProvider, CircularProgress, Typography, Button, unstable_createMuiStrictModeTheme as MuiThemeUS } from '@material-ui/core';
 
 import { Decrypt } from '../helpers/cipher/cipher';
 import history from './../helpers/history/handleHistory';
 import { clearAuthData } from '../helpers/auth/handleGetLevel';
-import { deleteRefreshToken, deleteToken } from '../helpers/token/handleToken';
 
-import Loading from './others/Loading';
 import Subject from './subject/Subject';
 import MyCourses from './teacher/MyCourses';
 import Dialogs from './../templates/Dialogs';
@@ -22,17 +20,18 @@ import UserDetail from './../components/admin/UserDetail';
 
 import HomeTeacher from './teacher/HomeTeacher';
 import DetailedSubject from './teacher/DetailedSubject';
+import StudentsSubject from './teacher/StudentsSubject';
 
 import ManageSubject from './subject/ManageSubject';
-
 import HomeStudent from './student/HomeStudent';
 
 import Testing from './others/Testing';
-import ErrorMain from './others/ErrorMain';
 import RouteNotFound from './others/RouteNotFound';
 
 import axios from 'axios';
-import StudentsSubject from './teacher/StudentsSubject';
+import MyGrades from './student/MyGrades';
+import MyAnnotations from './student/MyAnnotations';
+import MyAllGrades from './student/MyAllGrades';
 
 const useStyles = makeStyles((theme) => ({
     root: {
@@ -60,63 +59,51 @@ const Main = () => {
 
     // useState
     const [access, setAccess] = useState(null);
-    const [error, setError] = useState(false);
+    const [expired, setExpired] = useState(false);
+    const [errorAccess, setErrorAccess] = useState(false);
+    const [loadingAccess, setLoadingAccess] = useState(true);
+    
 
-
-    // useCallback
+    // useCallbacks
     /**
-     * useCallback para obtener el nivel de acceso del usuario
+     * useCallback para obtener el nivel del usuario
      */
     const handleGetAccess = useCallback(
         async () => {
+            setLoadingAccess(true);
+
             await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-access")
             .then(result => {
                 if (result.status === 200 && result.data.code === "PROCESS_OK")
-                {   
-                    setError(false);
+                {
                     setAccess(result.data.data);
-                    
-                    return;
+                    setErrorAccess(false);
+                    setLoadingAccess(false);
                 }
                 else
-                {
-                    return setError(true);
+                {   
+                    setAccess(null);
+                    setErrorAccess(true);
+                    setLoadingAccess(false);
                 }
             })
             .catch(error => {
+                setAccess(null);
+                setErrorAccess(true);
+                setLoadingAccess(false);
+
                 if (error.response)
                 {
-                    if (error.response.code === "TOKEN_MISSING")
-                    {
-                        clearAuthData();
-                        history.push("/");
+                    console.log("THE ERROR GET ACCESS IS : ", error.response);
 
-                        return;
-                    }
-                    else if (error.response.code === "TOKEN_INVALID")
+                    if (error.response.data.code === "FIREBASE_VERIFY_TOKEN_ERROR")
                     {
-                        deleteToken();
-                        deleteRefreshToken();
-
-                        clearAuthData();
-                        history.push("/");
-
-                        return;
+                        setExpired(true);
                     }
-                    else
-                    {
-                        return setError(true);
-                    }
-                }
-            })
-            .finally(() => {
-                return () => {
-                    setAccess(null);
-                    setError(null);
                 }
             });
         },
-        [setAccess, setError],
+        [setAccess, setErrorAccess, setLoadingAccess, setExpired],
     );
 
 
@@ -130,8 +117,10 @@ const Main = () => {
 
         return () => {
             setAccess(null);
+            setErrorAccess(null);
+            setLoadingAccess(null);
         }
-    }, [handleGetAccess, setAccess]);
+    }, [handleGetAccess, setAccess, setErrorAccess, setLoadingAccess]);
 
 
     return (
@@ -143,47 +132,86 @@ const Main = () => {
                     <main className={classes.content}>
                         <div className={classes.toolbar} />
 
-                        <Switch>
-                            <Route exact path="/profile" component={Profile} />    
-                
-                            { error === true && (
-                                <Route component={ErrorMain} />
-                            ) }
+                        <div>
+                        {
+                            loadingAccess === true ? (
+                                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
+                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                        <CircularProgress style={{ color: "#2074d4" }} />
+                                        <Typography style={{ marginTop: 15 }}>Cargando</Typography>
+                                    </div>
+                                </div>
+                            ) : (
+                                errorAccess === true ? (
+                                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
+                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                        {
+                                            expired === true ? (
+                                                <React.Fragment>
+                                                    <Typography style={{ marginTop: 15 }}>Su sesión ha expirado, necesita iniciar sesión nuevamente</Typography>
+                                                    <Button style={{ color: "#34495E", marginTop: 15 }} onClick={() => clearAuthData()}>Iniciar Sesión Nuevamente</Button>
+                                                </React.Fragment>
+                                            ) : (
+                                                <React.Fragment>
+                                                    <Typography style={{ marginTop: 15 }}>Ha ocurrido un error al momento de obtener la sesión</Typography>
+                                                    <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetAccess()}>Recargar Sesión</Button>
+                                                </React.Fragment>
+                                            )
+                                        }
+                                        </div>
+                                    </div>
+                                ) : (
+                                    access === null ? (
+                                        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
+                                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                <CircularProgress style={{ color: "#2074d4" }} />
+                                                <Typography style={{ marginTop: 15 }}>Cargando Datos de Acceso</Typography>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <Switch>
+                                            <React.Fragment>
+                                                { Decrypt(access) === "admin" && (
+                                                    <Switch>
+                                                        <Route exact path="/" component={HomeAdmin}/> 
+                                                        <Route exact path="/users" component={Users} />
+                                                        <Route exact path="/users/:id" component={UserDetail} />
+                                                        <Route exact path="/subjects" component={ManageSubject} />
+                                                        <Route exact path="/subjects/:id" component={Subject} />
+                                                        <Route exact path="/testing" component={Testing} />
+                                                        <Route exact path="/profile" component={Profile} />
+                                                        <Route component={RouteNotFound} />
+                                                    </Switch>
+                                                ) }
 
-                            { access === null && (
-                                <Route component={Loading} /> 
-                            ) }
+                                                { Decrypt(access) === "teacher" && (
+                                                    <Switch>
+                                                        <Route exact path="/" component={HomeTeacher}/> 
+                                                        <Route exact path="/my-subjects" component={MyCourses}/> 
+                                                        <Route exact path="/subject/:id" component={DetailedSubject}/> 
+                                                        <Route exact path="/subject/students/:id" component={StudentsSubject}/>
+                                                        <Route exact path="/profile" component={Profile} />
+                                                    </Switch>
+                                                ) }
 
-                            { access !== null && Decrypt(access) === "admin" && (
-                                <Switch>
-                                    <Route exact path="/" component={HomeAdmin}/> 
-                                    <Route exact path="/users" component={Users} />
-                                    <Route exact path="/users/:id" component={UserDetail} />
-                                    <Route exact path="/subjects" component={ManageSubject} />
-                                    <Route exact path="/subjects/:id" component={Subject} />
-                                    <Route exact path="/testing" component={Testing} />
-                                    <Route component={RouteNotFound} />
-                                </Switch>
-                            ) }
-                                                      
-                            { access !== null && Decrypt(access) === "teacher" && (
-                                <Switch>
-                                    <Route exact path="/" component={HomeTeacher}/> 
-                                    <Route exact path="/my-subjects" component={MyCourses}/> 
-                                    <Route exact path="/subject/:id" component={DetailedSubject}/> 
-                                    <Route exact path="/subject/students/:id" component={StudentsSubject}/> 
-                                </Switch>
-                            ) }  
-
-                            { access !== null && Decrypt(access) === "student" && (
-                                <Switch>
-                                    <Route exact path="/" component={HomeStudent}/> 
-                                    <Route exact path="/my-subjects" component={MyCourses}/> 
-                                    <Route exact path="/subject/:id" component={DetailedSubject}/>
-                                </Switch>
-                            ) }                
-                        </Switch>
-                        
+                                                { Decrypt(access) === "student" && (
+                                                    <Switch>
+                                                        <Route exact path="/" component={HomeStudent}/> 
+                                                        <Route exact path="/my-subjects" component={MyCourses}/>
+                                                        <Route exact path="/my-all-grades" component={MyAllGrades}/>
+                                                        <Route exact path="/subject/:id" component={DetailedSubject}/>
+                                                        <Route exact path="/subject/my-grades/:id" component={MyGrades}/>
+                                                        <Route exact path="/subject/my-annotations/:id" component={MyAnnotations}/>
+                                                        <Route exact path="/profile" component={Profile} />
+                                                    </Switch>
+                                                ) }
+                                            </React.Fragment>
+                                        </Switch>
+                                    )
+                                )
+                            )
+                        }  
+                        </div>
                     </main>
 
                     <Dialogs />

@@ -1,18 +1,18 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { Breadcrumbs, Button, Card, CardContent, CircularProgress, Divider, List, ListItem, ListItemText, Paper, Typography } from '@material-ui/core';
+import { NavigateNext } from '@material-ui/icons';
 
 import { Decrypt } from './../../helpers/cipher/cipher';
-import { showMessage } from './../../helpers/message/handleMessage';
 
 import axios from 'axios';
-import { NavigateNext } from '@material-ui/icons';
-import { Link } from 'react-router-dom';
 
 const MyCourses = () => {
     // useStates
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(false);
+    const [loadingCourses, setLoadingCourses] = useState(true);
+    const [errorCourses, setErrorCourses] = useState(false);
+    const [errorCode, setErrorCode] = useState(null);
 
     const [courses, setCourses] = useState(null);
 
@@ -23,47 +23,42 @@ const MyCourses = () => {
      */
     const handleGetTeacherStudentCourses = useCallback(
         async () => {
-            setLoading(true);
+            setLoadingCourses(true);
 
             await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-user-courses")
             .then(result => {
-                if (result?.data?.code === "PROCESS_OK")
+                if (result.status === 200 && result.data.code === "PROCESS_OK")
                 {
-                    setCourses(Decrypt(result?.data?.data));
-                    setError(false);
-                }
-                else if (result?.data?.code === "NO_COURSES")
-                {
-                    setError(true);
+                    setCourses(Decrypt(result.data.data));
+                    setErrorCourses(false);
                 }
                 else
                 {
-                    showMessage("Ha ocurrido un error mientras se obtenian sus asignaturas", "info");
-                    setError(true);
+                    setErrorCourses(true);
                 }
 
-                setLoading(false);
+                setLoadingCourses(false);
             })
             .catch(error => {
-                if (error?.response?.code === "FIREBASE_GET_COURSES_ERROR")
+                if (error.response)
                 {
-                    showMessage(error.response.message, error.response.type);
-                }
-                else
-                {
-                    showMessage("Ha ocurrido un error mientras se obtenian sus asignaturas", "info");
-                }
+                    setErrorCode(error.response.data.code);
+                    setLoadingCourses(false);
+                    setErrorCourses(true);
 
-                setLoading(false);
-                setError(true);
+                    console.log(error.response);
+                }
             })
             .finally(() => {
                 return () => {
+                    setLoadingCourses(null);
+                    setErrorCourses(null);
+                    setErrorCode(null);
                     setCourses(null);
                 }
             });
         },
-        [setCourses, setLoading, setError],
+        [setCourses, setErrorCode, setErrorCourses, setLoadingCourses],
     );
     
 
@@ -89,7 +84,7 @@ const MyCourses = () => {
                     <Link to="/" style={{ textDecoration: "none", color: "#333" }}>
                         Home
                     </Link>
-                    <Typography style={{ color: "#2074d4" }}>Mis Cursos</Typography>
+                    <Typography style={{ color: "#2074d4" }}>Mis Asignaturas</Typography>
                 </Breadcrumbs>
             </Paper>
 
@@ -101,18 +96,39 @@ const MyCourses = () => {
 
                     <div>
                     {
-                        loading === true ? (
+                        loadingCourses === true ? (
                             <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
                                 <CircularProgress style={{ color: "#2074d4" }} />
                             </div>
                         ) : (
-                            error === false ? (
+                            errorCourses === true ? (
+                                <React.Fragment>
+                                    <Typography style={{ textAlign: "center" }}>
+                                    {
+                                        errorCode !== null && (
+                                            errorCode === "NO_COURSES" ? (
+                                                "No existen asignaturas asignados a ti aún"
+                                            ) : errorCode === "FIREBASE_GET_COURSES_ERROR" ? (
+                                                "Ha ocurrido un error al obtener las asignaturas asignados a tí"
+                                            ) : (
+                                                "Ha ocurrido un error, intente obtener las asignaturas nuevamente"
+                                            )
+                                        )
+                                    }
+                                    </Typography>
+                                    
+                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                        <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                        <Button onClick={() => handleGetTeacherStudentCourses()} style={{ color: "#2074d4" }}>Recargar Asignaturas</Button>
+                                    </div>
+                                </React.Fragment>
+                            ) : (
                                 courses === null ? (
                                     <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
                                         <CircularProgress style={{ color: "#2074d4" }} />
                                     </div>
                                 ) : (
-                                    <>
+                                    <React.Fragment>
                                         <List>
                                         {
                                             courses.map(doc => (
@@ -129,17 +145,8 @@ const MyCourses = () => {
                                             <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
                                             <Button onClick={() => handleGetTeacherStudentCourses()} style={{ color: "#2074d4" }}>Recargar Asignaturas</Button>
                                         </div>
-                                    </>
+                                    </React.Fragment>
                                 )
-                            ) : (
-                                <>
-                                    <Typography style={{ textAlign: "center" }}>No existen cursos asignados a ti aún</Typography>
-                                    
-                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                        <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                        <Button onClick={() => handleGetTeacherStudentCourses()} style={{ color: "#2074d4" }}>Recargar Asignaturas</Button>
-                                    </div>
-                                </>
                             )
                         )
                     }
@@ -147,7 +154,7 @@ const MyCourses = () => {
                 </CardContent>
             </Card>
         </div>
-    )
-}
+    );
+};
 
-export default MyCourses
+export default MyCourses;

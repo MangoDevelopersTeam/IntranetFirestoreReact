@@ -10,7 +10,7 @@ import Message from './templates/Message';
 
 import { showMessage } from './helpers/message/handleMessage';
 import { clearUserRedux, setUserRedux } from './helpers/auth/handleAuth';
-import { initAxiosInterceptors, getToken, deleteToken, deleteRefreshToken, getRefreshToken } from './helpers/token/handleToken';
+import { initAxiosInterceptors, getToken, deleteToken } from './helpers/token/handleToken';
 
 import { SELECT_USER } from './redux/userSlice';
 
@@ -31,8 +31,10 @@ const App = () => {
     const classes = useStyles();
     const user = useSelector(SELECT_USER);
 
+
     // useStates
     const [loading, setLoading] = useState(true);
+
 
     // useCallbacks
     /**
@@ -40,116 +42,114 @@ const App = () => {
      */
     const verifyAuthCallback = useCallback(
         async () => {
-            if (!getToken() || !getRefreshToken())
+            if (!getToken())
             {
-                if (getToken())
-                {
-                    deleteToken();
-                }
-                else if (getRefreshToken())
-                {
-                    deleteRefreshToken();
-                }
-
                 clearUserRedux();
+
                 return setLoading(false);
             }
-            else
-            {
-                await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/whoami")
-                .then(result => {
-                    if (result.data.code === "PROCESS_OK")
-                    {                    
-                        if (user === null)
+
+            await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/whoami")
+            .then(result => {
+                if (result.status === 200 && result.data.code === "PROCESS_OK")
+                {
+                    if (user === null)
+                    {
+                        setUserRedux(result.data.data);
+                    }
+
+                    return setLoading(false);
+                }
+                else
+                {
+                    if (result.data.code === "TOKEN_MISSING")
+                    {
+                        clearUserRedux();
+                        showMessage("La sesión se ha terminado debido a falta de credenciales", "info");
+                        
+                        return setLoading(false);           
+                    }
+                    else if (result.data.code === "FIREBASE_GET_USER_ERROR")
+                    {
+                        clearUserRedux();   
+                        showMessage("Ha ocurrido un error al momento de obtener el usuario", "info");
+                        
+                        if (getToken())
                         {
-                            setUserRedux(result.data.data);
+                            deleteToken();
                         }
 
                         return setLoading(false);
                     }
-                    else
-                    {
-                        if (result.data.code === "TOKEN_MISSING")
-                        {
-                            clearUserRedux();
-                            setLoading(false);
-                                
-                            return showMessage("La sesión se ha terminado debido a falta de credenciales", "info");
-                        }
-                        else if (result.data.code === "FIREBASE_GET_USER_ERROR")
-                        {
-                            clearUserRedux();   
+                    else if (result.data.code === "FIREBASE_VERIFY_TOKEN_ERROR" || result.data.code === "TOKEN_REVOKED" || result.data.code === "TOKEN_INVALID")
+                    {              
+                        clearUserRedux();   
+                        showMessage("La sesión ha acabado debido a que la sesión se ha vencido", "info");
 
-                            if (getToken())
-                            {
-                                deleteToken();
-                            }
-
-                            setLoading(false);
-                            return showMessage("Ha ocurrido un error al momento de obtener el usuario", "info");
-                        }
-                        else if (result.data.code === "FIREBASE_VERIFY_TOKEN_ERROR" || result.data.code === "TOKEN_REVOKED" || result.data.code === "TOKEN_INVALID")
-                        {              
-                            clearUserRedux();   
+                        if (getToken())
+                        {
                             deleteToken();
-
-                            setLoading(false);
-                            return showMessage("La sesión ha acabado debido a que la sesión se ha vencido", "info");
                         }
+
+                        return setLoading(false);
                     }
-                })
-                .catch(error => {
-                    clearUserRedux(); 
-                
-                    if (getToken())
+                }
+            })
+            .catch(error => {
+                if (error.response)
+                {
+                    if (error.response.data.code === "FIREBASE_VERIFY_TOKEN_ERROR")
                     {
-                        deleteRefreshToken();
-                        deleteToken();
+                        showMessage("Necesita iniciar sesión nuevamente, debido a que la sesión se ha vencido", "error");
                     }
+                }
+
+                clearUserRedux(); 
+
+                if (getToken())
+                {
+                    deleteToken();
+                }
                 
-                    setLoading(false);
-                    return showMessage(error.message, "error");
-                });
-            }            
+                return setLoading(false);
+            });
         },  
         [user, setLoading],
     );
 
+
     // useEffects
     useEffect(() => {
-        let callCallback = async () => {
+        let callQuery = async () => {
             await verifyAuthCallback();
         }
 
-        callCallback();
+        return callQuery();
+    }, [verifyAuthCallback]);
 
-        return () => {
-            setLoading(null);
-        }
-    }, [verifyAuthCallback, setLoading]);
 
     return (    
         <ThemeProvider theme={theme}>
-            <>
+            <React.Fragment>
             {
-                loading ? (
+                loading === true ? (
                     <Backdrop className={classes.backdrop} open={loading}>
                         <CircularProgress color="inherit" />
                     </Backdrop>        
                 ) : (
-                    user ? (
+                    user !== null ? (
                         <Main />
                     ) : (
-                        <>
+                        <React.Fragment>
                             <Login />
                             <Dialogs />
                             <Message />
-                        </>
+                        </React.Fragment>
                     )   
                 )
             }
-            </>
-            {/** This is a roboto font */}
+            </React.Fragment>
+            
             <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
         </ThemeProvider>
     );

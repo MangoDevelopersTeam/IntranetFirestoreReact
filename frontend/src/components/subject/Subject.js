@@ -231,6 +231,7 @@ const Subject = () => {
      */
     const handleGetTeachers = useCallback(
         async (nameCourse) => {
+            console.log("NAME COURSE", nameCourse);
             setLoadingTeachers(true);
 
             await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-teachers", {

@@ -1,18 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import ReactDOM from 'react-dom';
 
 import { ThemeProvider, useTheme } from '@material-ui/styles';
-import { Cancel, ExpandMore, NavigateNext, Publish, Queue } from '@material-ui/icons';
-import { Accordion, AccordionDetails, AccordionSummary, Breadcrumbs, Button, Card, CardContent, CircularProgress, createTheme, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, Grid, IconButton, Input, LinearProgress, List, ListItem, ListItemText, Paper, TextField, Tooltip, Typography, useMediaQuery, withStyles } from '@material-ui/core';
+import { Delete, Edit, ExpandMore, NavigateNext, Queue, Unarchive } from '@material-ui/icons';
+import { Accordion, AccordionDetails, AccordionSummary, Breadcrumbs, Button, Card, CardContent, Checkbox, CircularProgress, createTheme, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, FormControlLabel, Grid, IconButton, Input, LinearProgress, List, ListItem, ListItemSecondaryAction, ListItemText, Paper, TextField, Tooltip, Typography, useMediaQuery, withStyles } from '@material-ui/core';
 
-import history from './../../helpers/history/handleHistory';
 import { Decrypt, Encrypt } from '../../helpers/cipher/cipher';
-import { clearAuthData } from '../../helpers/auth/handleGetLevel';
 import { showMessage } from '../../helpers/message/handleMessage';
-import { deleteRefreshToken, deleteToken } from '../../helpers/token/handleToken';
 
 import StudentListItem from '../subject/StudentListItem';
+
+import { myExtensions } from './../../utils/allExtensions'
 
 import { storage } from './../../firebase';
 
@@ -36,22 +34,37 @@ const DetailedSubject = () => {
 
     // useStates
     const [subject, setSubject] = useState(null);
-    const [students, setStudents] = useState(null);
-    const [studentsCourse, setStudentsCourse] = useState(null);
+    const [errorSubject, setErrorSubject] = useState(false);
+    const [loadingSubject, setLoadingSubject] = useState(true);
+    const [errorCode, setErrorCode] = useState(null);
 
-    const [loading, setLoading] = useState(true);
-    const [loadingStudents, setLoadingStudents] = useState(true);
-    const [loadingUpload,     setLoadingUpload] = useState(false);
+    const [unitFiles, setUnitFiles] = useState(null);
+    const [errorUnitFiles, setErrorUnitFiles] = useState(false);
+    const [loadingUnitFiles, setLoadingUnitFiles] = useState(true);
 
-    const [error,     setError] = useState(false);
+    const [authorized,   setAuthorized] = useState(null);
+    const [errorAuthorized, setErrorAuthorized] = useState(false);
+    const [loadingAuthorized, setLoadingAuthorized] = useState(true);
 
     const [access,   setAccess] = useState(null);
-    const [editor, setEditor] = useState(false);
-    const [authorized, setAuthorized] = useState(null);
+    const [errorAccess, setErrorAccess] = useState(false);
+    const [loadingAccess, setLoadingAccess] = useState(true);
+
+    const [students, setStudents] = useState(null);
+    const [loadingStudents, setLoadingStudents] = useState(true);
+    const [studentsCourse, setStudentsCourse] = useState(null);
 
     const [studentsDialog, setStudentsDialog] = useState(false);
     const [unitsFileDialog, setUnitsFileDialog] = useState(false);
-    
+    const [errorFileDialog, setErrorFileDialog] = useState(false);
+
+    const [editUnitFileDialog, setEditUnitFileDialog] = useState(false);
+
+    const [editFile, setEditFile] = useState(false);
+    const [actualUrlFile, setActualUrlFile] = useState("");
+    const [selectedUnitFile, setSelectedUnitFile] = useState(null);
+    const [selectedUnit, setSelectedUnit] = useState(null);
+
     const [unitName, setUnitName] = useState(null);
     const [unitNumber, setUnitNumber] = useState(null);
     const [unitId, setUnitId] = useState(null);
@@ -62,14 +75,10 @@ const DetailedSubject = () => {
     const [description, setDescription] = useState("");
 
     const [cancel, setCancel] = useState(false);
+    const [editor, setEditor] = useState(false);
     const [uploadReference, setUploadReference] = useState(null);
+    const [loadingUpload, setLoadingUpload] = useState(false);
     
-    const [extensions, setExtensions] = useState([".gdoc", ".gsheet", ".doc", ".docx", ".xlsx", ".ppt", ".pptx", ".pdf", ".zip", ".rar", ".7z", ".mp4"]);
-    
-    const [unitFiles, setUnitFiles] = useState(null);
-    const [unitFilesError, setUnitFilesError] = useState(false);
-    const [unitFilesLoading, setUnitFilesLoading] = useState(true);
-
 
 
     // useCallbacks
@@ -79,168 +88,238 @@ const DetailedSubject = () => {
      */
     const handleGetDetailedSubject = useCallback(
         async () => {
-            await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-detailed-course", {
-                params: {
-                    courseID: id
-                }
-            })
-            .then(result => {
-                console.log(result.data.data.course[0].data);
-                console.log(result.data.data.units);
+            if (id !== null)
+            {
+                setLoadingSubject(true);
 
-                if (result.data.data.course[0].data === undefined)
-                {
-                    setLoading(false);
-                    setError(true);
-                }
-                else
-                {
-                    setLoading(false);
-                    setError(false);
-                    setSubject(result.data.data);
-                }
-            })
-            .catch(error => {
-                console.log(error);
-                setLoading(false);
-                setError(false);
-                setSubject(undefined);
-            })
-            .finally(() => {
-                return () => {
-                    setSubject(null); 
-                    setError(null);
-                    setLoading(null);
-                }
-            })
-        },
-        [id, setLoading, setError, setSubject],
-    );
-
-    const handleGetUnitFiles = useCallback(
-        async () => {
-            let array = [];
-
-            await subject.units.forEach(async doc => {
-                await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-unit-files", {
+                await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-detailed-course", {
                     params: {
-                        idSubjectParam: Encrypt(id),
-                        idUnitParam: Encrypt(doc.id)
+                        courseID: Encrypt(id)
                     }
                 })
                 .then(result => {
-                    array.push(result.data.data);
-
-                    if (array.length === subject.units.length)
+                    if (Decrypt(Decrypt(result.data.data).subject)[0].data === undefined)
                     {
-                        setUnitFilesError(false);
-                        setUnitFilesLoading(false);
-
-                        setUnitFiles(array);
+                        setErrorSubject(true);
+                        setSubject(undefined);
+                        setErrorCode(result.data.code);
                     }
+                    else
+                    {
+                        setErrorSubject(false);
+                        setSubject(Decrypt(result.data.data));
+                        setErrorCode(null);
+                    }
+
+                    setLoadingSubject(false);
                 })
                 .catch(error => {
+                    setErrorSubject(true);
+                    setSubject(undefined);
+                    
                     if (error.response)
                     {
-                        showMessage(error.response.message, "error");
+                        setErrorCode(error.response.data.code);
+                    }
+                    else
+                    {
+                        setErrorCode("GET_DETAILED_SUBJECT_ERROR");
                     }
 
-                    setUnitFilesError(true);
-                    setUnitFilesLoading(false);
+                    setLoadingSubject(false);   
                 })
                 .finally(() => {
                     return () => {
-                        setUnitFiles(null);
-                        setUnitFilesError(null);
-                        setUnitFilesLoading(null);
+                        setSubject(null); 
+                        setErrorSubject(null);
+                        setErrorCode(null);
+                        setLoadingSubject(null);
                     }
                 });
-            })
+            }
         },
-        [id, subject, setUnitFiles, setUnitFilesError, setUnitFilesLoading],
-    )
+        [id, setSubject, setErrorSubject, setErrorCode, setLoadingSubject],
+    );
+
+    /**
+     * useCallback para obtener los archivos de las unidades de la asignatura
+     */
+    const handleGetUnitFiles = useCallback(
+        async () => {
+            if (subject !== null && id !== null)
+            {
+                setLoadingUnitFiles(true);
+
+                let array = [];
+                
+                await Decrypt(subject.units).forEach(async doc => {
+                    await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-unit-files", {
+                        params: {
+                            idSubjectParam: Encrypt(id),
+                            idUnitParam: Encrypt(doc.id)
+                        }
+                    })
+                    .then(result => {
+                        console.log("RESULT IS: ", result);
+                        if (result.status === 200 && result.data.code === "PROCESS_OK")
+                        {
+                            array.push(result.data.data);
+
+                            if (array.length === Decrypt(subject.units).length)
+                            {
+                                console.log("the results are", array);
+                                setErrorUnitFiles(false);
+                                setLoadingUnitFiles(false);
+                                setUnitFiles(array);
+                            }
+                        }
+                        else
+                        {
+                            setErrorUnitFiles(true);
+                            setUnitFiles(null);
+                            setErrorCode(result.data.code);
+                            setLoadingUnitFiles(false);
+                        }
+                    })
+                    .catch(error => {
+                        setErrorUnitFiles(true);
+                        setUnitFiles(null);    
+
+                        if (error.response)
+                        {
+                            setErrorCode(error.response.data.code);
+                        }
+                        else
+                        {
+                            setErrorCode("GET_UNIT_FILES_ERROR");
+                        }
+
+                        setLoadingUnitFiles(false); 
+                    })
+                    .finally(() => {
+                        return () => {
+                            setErrorCode(null);
+                            setErrorUnitFiles(null);
+                            setLoadingUnitFiles(null);
+                        }
+                    });
+                });
+            }
+        },
+        [id, subject, setErrorCode ,setUnitFiles, setErrorUnitFiles, setLoadingUnitFiles],
+    );
     /* ------ SUBJECT CALLBACK ------ */
 
 
-    
+
     /* ------ ACCESS CALLBACKS ------ */
     /**
      * useCallback para verificar si el alumno o profesor tiene asignación a este recurso
      */
     const handleGetAuthorizedAccess = useCallback(
         async () => {
-            await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-authorized-access", {
-                params: {
-                    idCourse: Encrypt(id)
-                }
-            })
-            .then(result => {
-                if (result?.data?.data === true)
-                {
-                    setAuthorized(true);
-                }
-                else if (result?.data?.data === false)
-                {
+            if (id !== null)
+            {
+                setLoadingAuthorized(true);
+
+                await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-authorized-access", {
+                    params: {
+                        idCourse: Encrypt(id)
+                    }
+                })
+                .then(result => {
+                    console.log("the result is:", result);
+                    if (result.data.data !== null && typeof(result.data.data) === "boolean")
+                    {
+                        setErrorAuthorized(false);
+                        setAuthorized(result.data.data);
+                        setErrorCode(null);
+                    }
+                    else
+                    {
+                        setErrorAuthorized(true);
+                        setAuthorized(false);
+                        setErrorCode(result.data.code);
+                    }
+
+                    setLoadingAuthorized(false);
+                })
+                .catch(error => {
+                    setErrorAuthorized(true);
                     setAuthorized(false);
-                }
-                else
-                {
-                    setAuthorized(false);
-                    showMessage("Ha ocurrido un error al momento de verificar el acceso a este curso");
-                }
-                console.log(result);
-            })
-            .catch(error => {
-                setAuthorized(false);
-                showMessage("Ha ocurrido un error al momento de verificar el acceso a este curso");
-            })
-            .finally(() => {
-                return () => {
-                    setAuthorized(null);
-                }
-            });
+
+                    if (error.response)
+                    {
+                        setErrorCode(error.response.data.code);
+                    }
+                    else
+                    {
+                        setErrorCode("GET_UNIT_FILES_ERROR");
+                    }
+
+                    setLoadingAuthorized(false);
+                })
+                .finally(() => {
+                    return () => {
+                        setAuthorized(null);
+                        setErrorAuthorized(null);
+                        setErrorCode(null);
+                    }
+                });
+            }
         },
-        [id, setAuthorized],
+        [id, setAuthorized, setErrorAuthorized, setErrorCode],
     );
 
     /**
      * useCallback para obtener el nivel de acceso del usuario
      */
-     const handleGetAccess = useCallback(
+    const handleGetAccess = useCallback(
         async () => {
+            setLoadingAccess(true);
+
             await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-access")
             .then(result => {
-                if (result.data.code === "PROCESS_OK")
+                if (result.status === 200 && result.data.code === "PROCESS_OK")
                 {
+                    setErrorAccess(false);
                     setAccess(result.data.data);
-                }
-            })
-            .catch(error => {
-                if (error.response.data.error.message === "TOKEN_MISSING")
-                {
-                    clearAuthData();
-                    history.push("/");
-                }
-                else if (error.response.data.error.message === "TOKEN_INVALID")
-                {
-                    deleteToken();
-                    deleteRefreshToken();
-
-                    clearAuthData();
-                    history.push("/");
+                    setErrorCode(null);
                 }
                 else
                 {
-                    console.log(error.response.data.error.message);
+                    setErrorAccess(true);
+                    setAccess(null);
+                    setErrorCode(result.data.code);
                 }
+
+                setLoadingAccess(false);
+            })
+            .catch(error => {
+                setErrorAccess(true);
+                setAccess(null);
+
+                if (error.response)
+                {
+                    setErrorCode(error.response.data.code);
+                }
+                else
+                {
+                    setErrorCode("GET_ACCESS_ERROR");
+                }
+
+                setLoadingAccess(false);
             })
             .finally(() => {
                 return () => {
                     setAccess(null);
+                    setErrorAccess(null);
+                    setErrorCode(null);
+                    setLoadingAccess(null);
                 }
             });
         },
-        [setAccess],
+        [setAccess, setErrorAccess, setErrorCode, setLoadingAccess],
     );
     /* ------ ACCESS CALLBACKS ------ */
 
@@ -294,9 +373,9 @@ const DetailedSubject = () => {
 
                 await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-students", {
                     params: {
-                        number: subject.course[0].data.number,
-                        letter: subject.course[0].data.letter,
-                        grade: subject.course[0].data.grade
+                        number: Decrypt(subject.subject)[0].data.number,
+                        letter: Decrypt(subject.subject)[0].data.letter,
+                        grade: Decrypt(subject.subject)[0].data.grade
                     }
                 })
                 .then(async result => {
@@ -394,6 +473,57 @@ const DetailedSubject = () => {
         },
         [setUnitsFileDialog, setUnitId, setUnitName, setUnitNumber],
     );
+
+
+    /**
+     * useCallback para mostrar el dialogo de editar archivo de la unidad
+     */
+    const handleOpenEditFileUnitDialog = useCallback(
+        async (id, name, number, unitFile, unit) => {
+            if (id !== null && name !== null && number !== null && unitFile !== null && unit !== null)
+            {
+                if (typeof(id) === "string" && typeof(name) === "string" && typeof(number) === "number")
+                {
+                    setUnitId(id);
+                    setUnitName(name);
+                    setUnitNumber(number);
+                    
+                    setName(Decrypt(unitFile.data.name));
+                    setDescription(Decrypt(unitFile.data.description));
+                    setActualUrlFile(Decrypt(unitFile.data.url));
+
+                    setSelectedUnitFile(unitFile);
+                    setSelectedUnit(unit);
+
+                    setEditUnitFileDialog(true);
+                }
+            }
+        },
+        [setUnitId, setUnitName, setUnitNumber, setName, setDescription, setActualUrlFile, setSelectedUnitFile, setEditUnitFileDialog],
+    );
+
+    /**
+     * useCallback para cerrar el dialogo de editar archivo de la unidad
+     */
+    const handleCloseEditFileUnitDialog = useCallback(
+        (event, reason) => {
+            if (reason === 'backdropClick' || reason === "escapeKeyDown") 
+            {
+                return;
+            }
+
+            setUnitId(null);
+            setUnitName(null);
+            setUnitNumber(null);
+                    
+            setName("");
+            setFile(null);
+            setDescription("");
+
+            setEditUnitFileDialog(false);
+        },
+        [setUnitId, setUnitName, setUnitNumber, setName, setFile, setDescription, setEditUnitFileDialog],
+    );
     /* ------ DIALOG CALLBACKS ------ */
 
 
@@ -449,12 +579,12 @@ const DetailedSubject = () => {
      */
     const handleVerifyFileExtension = useCallback(
         () => {
-            if (file !== null && extensions !== null)
+            if (file !== null && myExtensions !== null)
             {
-                return (new RegExp('(' + extensions.join('|').replace(/\./g, '\\.') + ')$', "i")).test(file.name);
+                return (new RegExp('(' + myExtensions.join('|').replace(/\./g, '\\.') + ')$', "i")).test(file.name);
             }
         },  
-        [file, extensions],
+        [file],
     );
 
     /**
@@ -477,7 +607,9 @@ const DetailedSubject = () => {
                 return showMessage("La extensión del archivo es invalido, intentelo nuevamente", "info");
             }
 
-            let uploadFile = storage.ref(`course/${id}/unit/${unitId}/${file.name}`).put(file);
+            let fileName = file.name.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
+            let uploadFile = storage.ref(`course/${id}/unit/${unitId}/${fileName}`).put(file);
+
             setUploadReference(uploadFile);
             setLoadingUpload(true);
             setCancel(true);
@@ -505,7 +637,7 @@ const DetailedSubject = () => {
                 setLoadingUpload(false);
                 setCancel(false);
             }, async () => {
-                await storage.ref(`course/${id}/unit/${unitId}`).child(file.name).getDownloadURL()
+                await storage.ref(`course/${id}/unit/${unitId}`).child(fileName).getDownloadURL()
                 .then(async url => {
                     object.url = Encrypt(url);
                     object.name = Encrypt(name);
@@ -521,24 +653,33 @@ const DetailedSubject = () => {
                     })
                     .then(async () => {
                         await handleGetUnitFiles();
+                        
+                        setErrorUnitFiles(false);
+
+                        setUnitName(null);
+                        setUnitNumber(null);
+                        setUnitId(null);
+                        setUploadReference(null);
+
+                        setUnitsFileDialog(false);
                     })
                     .catch(error => {
                         if (error.response)
                         {
-                            showMessage(error.response.message, "error");
+                            console.log(error.message);
+                            //showMessage(error.response.message, "error");
                         }
 
-                        setUnitFilesError(true);
-                        setUnitFilesLoading(false);
-                    })
-                    .finally(() => {
-                        console.log("request finished");
+                        setErrorUnitFiles(true);
                     });
 
                     handleClearFileParams();
                 })
                 .catch(error => {
-                    showMessage(error, "error");
+                    if (error.response)
+                    {
+                        console.log("GET DOWNLOAD URL", error.response);
+                    }
 
                     handleClearFileParams();
                     
@@ -547,6 +688,303 @@ const DetailedSubject = () => {
             });
         },
         [id, subject, unitId, file, name, description, handleVerifyFileExtension, setUploadReference, setCancel, setLoadingUpload, setProgress, handleClearFileParams, handleGetUnitFiles],
+    );
+
+    const handleEditFile = useCallback(
+        async () => {
+            if (subject !== null && id !== null && selectedUnitFile !== null && selectedUnit !== null)
+            {
+                if (name === "" || description === "")
+                {
+                    return showMessage("Complete todos los campos", "info");
+                }
+
+                let object = {
+                    name: null,
+                    description: null,
+                    url: null
+                };
+
+                if (editFile === true)
+                {
+                    if (file === null)
+                    {
+                        return showMessage("Complete el campo de archivo", "info");
+                    }
+
+                    let fileName = decodeURI(actualUrlFile.split(RegExp("%2..*%2F(.*?)alt"))[1].replace("?", ""));
+
+                    if (handleVerifyFileExtension() !== true)
+                    {
+                        return showMessage("La extensión del archivo es invalido, intentelo nuevamente", "info");
+                    }
+
+                    await storage.ref(`course/${id}/unit/${selectedUnit.id}/${fileName}`).delete()
+                    .catch(error => {
+                        if (error.response)
+                        {
+                            console.log("DELETE FILE ERROR", error.response);
+                        }
+                    });
+
+
+                    let uploadFile = storage.ref(`course/${id}/unit/${selectedUnit.id}/${file.name}`).put(file);
+                    
+                    setUploadReference(uploadFile);
+                    setLoadingUpload(true);
+                    setCancel(true);
+
+                    uploadFile.on('state_changed', snapshot => {
+                        let progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+                        setProgress(progress);
+                    }, (error) => {
+                        if (error.code === "storage/canceled")
+                        {
+                            showMessage("La subida del archivo ha sido cancelada", "info");
+                        }
+                        else
+                        {
+                            showMessage(error.code, "error");
+                        }
+
+                        setUploadReference(null);
+                        setLoadingUpload(false);
+                        setCancel(false);
+                    }, async () => {
+                        await storage.ref(`course/${id}/unit/${selectedUnit.id}`).child(file.name).getDownloadURL()
+                        .then(async url => {
+                            object.name = Encrypt(name);
+                            object.description = Encrypt(description);
+                            object.url = Encrypt(url);
+
+                            await axios.put("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/edit-unit-file", {
+                                objectData: Encrypt(object),
+                                editFileData: Encrypt(editFile)
+                            }, {
+                                params: {
+                                    idSubjectParam: Encrypt(id),
+                                    idUnitParam: Encrypt(selectedUnit.id),
+                                    idUnitFileParam: Encrypt(selectedUnitFile.id) 
+                                }
+                            })
+                            .then(async result => {
+                                console.log(result);
+
+                                if (result.status === 200 && result.data.code === "PROCESS_OK")
+                                {
+                                    setErrorFileDialog(false);
+                                    setErrorCode(null);
+
+                                    setSelectedUnit(null);
+                                    setSelectedUnitFile(null);
+
+                                    setUnitName(null);
+                                    setUnitNumber(null);
+                                    setUnitId(null);
+                                    
+                                    setName("");
+                                    setDescription("");
+                                    setFile(null);
+                                    setUploadReference(null);
+                                    setEditUnitFileDialog(false);
+                                    setEditFile(false);
+
+                                    handleClearFileParams();
+                                    await handleGetUnitFiles();
+
+                                    showMessage("Archivo editado Exitosamente", "success");
+                                }
+                                else
+                                {
+                                    setErrorFileDialog(true);
+                                    setLoadingUpload(false);
+                                    setErrorCode(result.data.code);
+                                }
+                            })
+                            .catch(error => {
+                                if (error.response)
+                                {
+                                    console.log(error.response);
+
+                                    if (error.response.status === 400)
+                                    {
+                                        showMessage(error.response.data.message, error.response.data.type);
+                                    }
+                                    else if (error.response.status === 500)
+                                    {
+                                        setErrorCode(error.response.data.code);
+                                        setErrorFileDialog(true);
+                                        setLoadingUpload(false);
+                                    }                   
+                                }
+                                else
+                                {
+                                    setErrorCode(error.response.data.code);
+                                    setErrorFileDialog(true);
+                                    setLoadingUpload(false);
+                                }
+                            })
+                            .finally(() => {
+                                return () => {
+                                    setErrorFileDialog(null);
+                                    setErrorCode(null);
+                                    setLoadingUpload(null);
+                                }
+                            });
+                        })
+                        .catch(error => {
+                            setErrorCode(error.response.data.code);
+                            setErrorFileDialog(true);
+                            setLoadingUpload(false);
+                        });
+                    });
+                }
+                else
+                {
+                    object.name = Encrypt(name);
+                    object.description = Encrypt(description);
+
+                    await axios.put("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/edit-unit-file", {
+                        objectData: Encrypt(object),
+                        editFileData: Encrypt(editFile)
+                    }, {
+                        params: {
+                            idSubjectParam: Encrypt(id),
+                            idUnitParam: Encrypt(selectedUnit.id),
+                            idUnitFileParam: Encrypt(selectedUnitFile.id) 
+                        }
+                    })
+                    .then(async result => {
+                        if (result.status === 200 && result.data.code === "PROCESS_OK")
+                        {
+                            console.log(result);
+
+                            setErrorFileDialog(false);
+                            setErrorCode(null);
+
+                            setSelectedUnit(null);
+                            setSelectedUnitFile(null);
+
+                            setUnitName(null);
+                            setUnitNumber(null);
+                            setUnitId(null);
+                                    
+                            setName("");
+                            setDescription("");
+                            setEditUnitFileDialog(false);
+                            setEditFile(false);
+
+                            handleClearFileParams();
+                            await handleGetUnitFiles();
+
+                            showMessage("Archivo editado Exitosamente", "success");
+                        }
+                        else
+                        {
+                            setErrorFileDialog(true);
+                            setLoadingUpload(false);
+                            setErrorCode(result.data.code);
+                        }
+                    })
+                    .catch(error => {
+                        if (error.response)
+                        {
+                            console.log(error.response);
+
+                            if (error.response.status === 400)
+                            {
+                                showMessage(error.response.data.message, error.response.data.type);
+                            }
+                            else if (error.response.status === 500)
+                            {
+                                setErrorCode(error.response.data.code);
+                                setErrorFileDialog(true);
+                                setLoadingUpload(false);
+                            }                   
+                        }
+                        else
+                        {
+                            setErrorCode(error.response.data.code);
+                            setErrorFileDialog(true);
+                            setLoadingUpload(false);
+                        }
+                    })
+                    .finally(() => {
+                        return () => {
+                            setErrorFileDialog(null);
+                            setErrorCode(null);
+                            setLoadingUpload(null);
+                        }
+                    });
+                }     
+            }
+        },
+        [subject, id, file, name, description, editFile, selectedUnitFile, selectedUnit, actualUrlFile, handleVerifyFileExtension, handleGetUnitFiles, handleClearFileParams],
+    )
+
+    /**
+     * useCallback para remover el archivo
+     */
+    const handleRemoveFile = useCallback(
+        async (fileId, unitId) => {
+            if (id !== null)
+            {
+                await axios.delete("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/delete-unit-file", {
+                    params: {
+                        idSubjectParam: Encrypt(id),
+                        idUnitParam: Encrypt(unitId),
+                        idFileParam: Encrypt(fileId)
+                    }
+                })
+                .then(async result => {
+                    if (result.status === 200 && result.data.code === "PROCESS_OK")
+                    {   
+                        showMessage("Archivo borrado exitosamente", "success");
+
+                        await handleGetUnitFiles()
+                    }
+                    else
+                    {
+                        setErrorUnitFiles(true);
+                        setUnitFiles(null);
+                        setErrorCode(result.data.code);
+                    }
+                })
+                .catch(error => {
+                    if (error.response)
+                    {
+                        if (error.response.status === 400)
+                        {
+                            showMessage(error.response.data.message, error.response.data.type);
+                        }
+                        else if (error.response.status === 500)
+                        {
+                            setErrorCode(error.response.data.code);
+                            setErrorUnitFiles(true);
+                            setUnitFiles(null);
+
+                            setLoadingUnitFiles(false);
+                        }                   
+                    }
+                    else
+                    {
+                        setErrorCode(error.response.data.code);
+                        setErrorUnitFiles(true);
+                        setUnitFiles(null);
+                                
+                        setLoadingUnitFiles(false);
+                    }
+                })
+                .finally(() => {
+                    return () => {
+                        setErrorCode(null);
+                        setErrorUnitFiles(null);
+                        setLoadingUnitFiles(null);
+                    }
+                });
+            }
+        },
+        [id, setErrorCode, setErrorUnitFiles, setLoadingUnitFiles, handleGetUnitFiles],
     );
     /* ------ HANDLE FILE CALLBACKS ------ */
 
@@ -618,10 +1056,11 @@ const DetailedSubject = () => {
     }, [authorized, subject, handleGetUnitFiles]);
 
 
+
     return (
         <div>
         {
-            authorized === null ? (
+            authorized === null || loadingAuthorized === true ? (
                 <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                         <CircularProgress style={{ color: "#2074d4" }} />
@@ -636,7 +1075,7 @@ const DetailedSubject = () => {
                         </div>
                     </div>
                 ) : (
-                    loading === true ? (
+                    loadingSubject === true || loadingAccess === true ? (
                         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
                             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                                 <CircularProgress style={{ color: "#2074d4" }} />
@@ -644,7 +1083,7 @@ const DetailedSubject = () => {
                             </div>
                         </div>
                     ) : (
-                        error === true ? (
+                        errorSubject === true || errorAuthorized === true || errorAccess === true ? (
                             <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
                                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                                     <Typography>Ha ocurrido un error al momento de cargar la asignatura</Typography>
@@ -662,16 +1101,16 @@ const DetailedSubject = () => {
                                     </div>
                                 </div>
                             ) : (
-                                <>
+                                <React.Fragment>
                                     <Paper style={{ padding: 20, marginBottom: 15 }} variant="outlined">
                                         <Breadcrumbs separator={<NavigateNext fontSize="small" />}>
                                             <Link to="/" style={{ textDecoration: "none", color: "#333" }}>
                                                 Home
                                             </Link>
                                             <Link to="/my-subjects" style={{ textDecoration: "none", color: "#333" }}>
-                                                Mis Cursos
+                                                Mis Asignaturas
                                             </Link>
-                                            <Typography style={{ color: "#2074d4" }}>{subject.course[0].data.code}</Typography>
+                                            <Typography style={{ color: "#2074d4" }}>{Decrypt(subject.subject)[0].data.code}</Typography>
                                         </Breadcrumbs>
                                     </Paper>
 
@@ -679,32 +1118,32 @@ const DetailedSubject = () => {
                                         <Grid item container md={9} style={{ marginTop: 15 }}>
                                             <Card variant="outlined" style={{ width: "100%" }}>
                                                 <CardContent>
-                                                    <Typography variant="h5" color="textSecondary">{Decrypt(subject.course[0].data.courseName)}</Typography>
-                                                    <Typography variant="subtitle1" style={{ marginBottom: 15 }}>{Decrypt(subject.course[0].data.description)}</Typography>
+                                                    <Typography variant="h5" color="textSecondary">{Decrypt(Decrypt(subject.subject)[0].data.courseName)}</Typography>
+                                                    <Typography variant="subtitle1" style={{ marginBottom: 15 }}>{Decrypt(Decrypt(subject.subject)[0].data.description)}</Typography>
 
                                                     <List>
                                                     {
-                                                        subject.units.map(doc => (
+                                                        Decrypt(subject.units).map(doc => (
                                                             <div key={doc.id}>
                                                                 <ListItem>
-                                                                    <ListItemText primary={`Unidad ${doc.unit.numberUnit} : ${doc.unit.unit}`} />
+                                                                    <ListItemText primary={`Unidad ${doc.data.numberUnit} : ${doc.data.unit}`} />
                                                                 </ListItem>
 
-                                                                <>
+                                                                <React.Fragment>
                                                                 {
                                                                     editor === true && (
-                                                                        <Tooltip title={<Typography variant="subtitle1">{`Añadir archivos en la unidad ${doc.unit.numberUnit}`}</Typography>}>
-                                                                            <IconButton onClick={() => handleOpenFilesUnitDialog(doc.id, doc.unit.unit, doc.unit.numberUnit)}>
+                                                                        <Tooltip title={<Typography variant="subtitle1">{`Añadir archivos en la unidad ${doc.data.numberUnit}`}</Typography>}>
+                                                                            <IconButton onClick={() => handleOpenFilesUnitDialog(doc.id, doc.data.unit, doc.data.numberUnit)}>
                                                                                 <Queue />
                                                                             </IconButton>
                                                                         </Tooltip>
                                                                     )
                                                                 }
-                                                                </>
+                                                                </React.Fragment>
 
-                                                                <>
+                                                                <React.Fragment>
                                                                 {
-                                                                    unitFilesLoading === true ? (
+                                                                    loadingUnitFiles === true ? (
                                                                         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: 5 }}>
                                                                             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                                                                                 <CircularProgress style={{ color: "#2074d4" }} />
@@ -712,9 +1151,10 @@ const DetailedSubject = () => {
                                                                             </div>
                                                                         </div>
                                                                     ) : (
-                                                                        unitFilesError === true ? (
-                                                                            <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-                                                                                <Typography style={{ textAlign: "center" }}>Ha ocurrido un error al obtener las unidades</Typography>
+                                                                        errorUnitFiles === true ? (
+                                                                            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+                                                                                <Typography style={{ textAlign: "center" }}>Ha ocurrido un error al obtener los archivos de la unidad</Typography>
+                                                                                <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetUnitFiles()}>Recargar archivos de la unidad</Button>
                                                                             </div>
                                                                         ) : (
                                                                             unitFiles === null ? (
@@ -729,9 +1169,29 @@ const DetailedSubject = () => {
                                                                                     <List>
                                                                                     {
                                                                                         unitFiles.filter(x => x.idUnit === doc.id)[0].data.length > 0 && (
-                                                                                            unitFiles.filter(x => x.idUnit === doc.id)[0].data.map(doc => (
-                                                                                                <ListItem key={doc.id} component="a" href={Decrypt(doc.data.url)} style={{ width: "fit-content", height: "fit-content" }}>
-                                                                                                    <ListItemText primary={<Typography>{Decrypt(doc.data.name)}</Typography>} />
+                                                                                            unitFiles.filter(x => x.idUnit === doc.id)[0].data.map(docFile => (
+                                                                                                <ListItem button key={docFile.id} component="a" target="_blank" href={Decrypt(docFile.data.url)} style={{ height: "fit-content", marginBottom: 5, color: "#000" }}>
+                                                                                                    <ListItemText primary={<Typography>{Decrypt(docFile.data.name)}</Typography>} style={{ marginRight: 70 }} />
+                                                                                                    {
+                                                                                                        Decrypt(access) === "teacher" && (
+                                                                                                            editor === true && (
+                                                                                                                <ListItemSecondaryAction>
+                                                                                                                    <React.Fragment>
+                                                                                                                        <Tooltip title={<Typography>Eliminar este Archivo</Typography>}>
+                                                                                                                            <IconButton edge="end" onClick={() => handleRemoveFile(docFile.id, doc.id)}>
+                                                                                                                                <Delete />
+                                                                                                                            </IconButton>
+                                                                                                                        </Tooltip>
+                                                                                                                        <Tooltip title={<Typography>Editar este Archivo</Typography>}>
+                                                                                                                            <IconButton edge="end" onClick={() => handleOpenEditFileUnitDialog(doc.id, doc.data.unit, doc.data.numberUnit, docFile, doc)} style={{ marginLeft: 15 }}>
+                                                                                                                                <Edit />
+                                                                                                                            </IconButton>
+                                                                                                                        </Tooltip>
+                                                                                                                    </React.Fragment>
+                                                                                                                </ListItemSecondaryAction>
+                                                                                                            )
+                                                                                                        )
+                                                                                                    }
                                                                                                 </ListItem>
                                                                                             ))
                                                                                         )
@@ -742,7 +1202,7 @@ const DetailedSubject = () => {
                                                                         )
                                                                     )                                       
                                                                 }
-                                                                </>
+                                                                </React.Fragment>
 
                                                                 <Divider style={{ marginTop: 5, marginBottom: 15 }} /> 
                                                             </div>
@@ -752,42 +1212,74 @@ const DetailedSubject = () => {
                                                 </CardContent>
                                             </Card>
                                         </Grid>
+
                                         <Grid item container md={3} style={{ marginTop: 15 }}>
                                             <Card variant="outlined" style={{ width: "100%" }}>
                                                 <CardContent>
-                                                {
-                                                    Decrypt(access) === "teacher" && (
-                                                        <>
-                                                            <Button fullWidth style={{ color: "#2074d4", marginBottom: 15 }} onClick={handleOpenStudentsDialog}>
-                                                                <Typography>Asignar Estudiantes</Typography>
-                                                            </Button>
-
-                                                            <Button fullWidth style={{ color: "#34495E", marginBottom: 15 }} onClick={() => setEditor(!editor)}>
-                                                            {
-                                                                editor === false ? (
-                                                                    <Typography>Abrir editor para subir archivos</Typography>
-                                                                ) : (
-                                                                    <Typography>Cerrar Editor para subir archivos</Typography>
-                                                                )
-                                                            }
-                                                            </Button>
-
-                                                            <Link to={`/subject/students/${id}`} style={{ textDecoration: "none", marginBottom: 15 }}>
-                                                                <Button fullWidth style={{ color: "#2074d4" }}>
-                                                                    <Typography>Ver Estudiantes</Typography>
+                                                    <React.Fragment>
+                                                    {
+                                                        Decrypt(access) === "teacher" && (
+                                                            <React.Fragment>
+                                                                <Button fullWidth style={{ color: "#2074d4", marginBottom: 15 }} onClick={() => handleOpenStudentsDialog()}>
+                                                                    <Typography>Asignar Estudiantes</Typography>
                                                                 </Button>
-                                                            </Link>
-                                                        </>
-                                                    )
-                                                }
+
+                                                                <Button fullWidth style={{ color: "#34495E", marginBottom: 15 }} onClick={() => setEditor(!editor)}>
+                                                                {
+                                                                    editor === false ? (
+                                                                        <Typography>Abrir editor para subir archivos</Typography>
+                                                                    ) : (
+                                                                        <Typography>Cerrar Editor para subir archivos</Typography>
+                                                                    )
+                                                                }
+                                                                </Button>
+
+                                                                <Link to={`/subject/students/${id}`} style={{ textDecoration: "none", marginBottom: 15 }}>
+                                                                    <Button fullWidth style={{ color: "#2074d4" }}>
+                                                                        <Typography>Ver Estudiantes</Typography>
+                                                                    </Button>
+                                                                </Link>
+                                                            </React.Fragment>
+                                                        )
+                                                    }
+                                                    </React.Fragment>
+                                                
+                                                    <React.Fragment>
+                                                    {
+                                                        Decrypt(access) === "student" && (
+                                                            <React.Fragment>
+                                                                <Link to={`/subject/my-grades/${id}`} style={{ textDecoration: "none", marginBottom: 15 }}>
+                                                                    <Button fullWidth style={{ color: "#2074d4", marginBottom: 15 }}>
+                                                                        <Typography variant="button">Ver mis calificaciones</Typography>
+                                                                    </Button>
+                                                                </Link>
+
+                                                                {/* <Link to={`/subject/my-annotations/${id}`} style={{ textDecoration: "none", marginBottom: 15 }}>
+                                                                    <Button fullWidth style={{ color: "#2074d4", marginBottom: 15 }}>
+                                                                        <Typography variant="button">Ver mis anotaciones</Typography>
+                                                                    </Button>
+                                                                </Link> */}
+
+
+                                                                
+                                                                {/* <Link to={`/subject/students/${id}`} style={{ textDecoration: "none", marginBottom: 15 }}>
+                                                                    <Button fullWidth style={{ color: "#2074d4" }}>
+                                                                        <Typography>Ver Estudiantes</Typography>
+                                                                    </Button>
+                                                                </Link> */}
+                                                            </React.Fragment>
+                                                        )
+                                                    }
+                                                    </React.Fragment>
                                                 </CardContent>
                                             </Card>
                                         </Grid>
                                     </Grid>
                                     
+                                    <React.Fragment>
                                     {
                                         Decrypt(access) === "teacher" && (
-                                            <>
+                                            <React.Fragment>
                                                 <Dialog open={studentsDialog} maxWidth={"md"} fullWidth={true} onClose={handleCloseStudentsDialog} fullScreen={fullScreen} scroll="paper">
                                                 {
                                                     subject === null ? (
@@ -795,10 +1287,10 @@ const DetailedSubject = () => {
                                                             <CircularProgress style={{ color: "#2074d4" }} />
                                                         </div>
                                                     ) : (
-                                                        <>
-                                                            <DialogTitle>Asignar estudiantes a la asignatura {Decrypt(subject.course[0].data.courseName)}</DialogTitle>
+                                                        <React.Fragment>
+                                                            <DialogTitle>Asignar estudiantes a la asignatura {Decrypt(Decrypt(subject.subject)[0].data.courseName)}</DialogTitle>
                                                             <DialogContent>
-                                                                <DialogContentText>Asigna estudiantes del curso {subject.course[0].data.grade} {`${subject.course[0].data.grade} ${subject.course[0].data.number}º${subject.course[0].data.letter}`} para la asignatura {subject.course[0].data.type}</DialogContentText>
+                                                                <DialogContentText>Asigna estudiantes del curso {Decrypt(subject.subject)[0].data.grade} {`${Decrypt(subject.subject)[0].data.grade} ${Decrypt(subject.subject)[0].data.number}º${Decrypt(subject.subject)[0].data.letter}`} para la asignatura {Decrypt(subject.subject)[0].data.type}</DialogContentText>
 
                                                                 <Accordion variant="outlined">
                                                                     <AccordionSummary expandIcon={<ExpandMore />}>
@@ -814,11 +1306,11 @@ const DetailedSubject = () => {
                                                                             ) : (
                                                                                 students !== null && studentsCourse !== null ? (
                                                                                     students.length > 0 ? (
-                                                                                        <>
+                                                                                        <React.Fragment>
                                                                                             <List style={{ width: "100%" }}>
                                                                                             {
                                                                                                 students.map(doc => (
-                                                                                                    <StudentListItem key={doc.id} subjectId={id} course={Encrypt(subject.course[0].data)} student={doc} students={students} studentsCourse={studentsCourse} setStudentsCourse={setStudentsCourse} />
+                                                                                                    <StudentListItem key={doc.id} subjectId={id} course={Encrypt(Decrypt(subject.subject)[0].data)} student={doc} students={students} studentsCourse={studentsCourse} setStudentsCourse={setStudentsCourse} />
                                                                                                 ))
                                                                                             }
                                                                                             </List> 
@@ -829,16 +1321,16 @@ const DetailedSubject = () => {
                                                                                                     <Typography>Recargar Estudiantes</Typography>
                                                                                                 </Button>
                                                                                             </div>
-                                                                                        </>
+                                                                                        </React.Fragment>
                                                                                     ) : (
-                                                                                        <>
+                                                                                        <React.Fragment>
                                                                                             <Typography style={{ textAlign: "center" }}>No existen alumnos a esta asignatura del curso</Typography>
                                                                                                     
                                                                                             <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                                                                                                 <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
                                                                                                 <Button onClick={async () => await handleGetStudents()} style={{ color: "#2074d4" }}>Recargar Estudiantes</Button>
                                                                                             </div>
-                                                                                        </>
+                                                                                        </React.Fragment>
                                                                                     )
                                                                                 ) : (
                                                                                     <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
@@ -856,7 +1348,7 @@ const DetailedSubject = () => {
                                                                     <Typography>Cerrar Esta Ventana</Typography>
                                                                 </Button>
                                                             </DialogActions>
-                                                        </>
+                                                        </React.Fragment>
                                                     )
                                                 }
                                                 </Dialog>
@@ -868,7 +1360,7 @@ const DetailedSubject = () => {
                                                             <CircularProgress style={{ color: "#2074d4" }} />
                                                         </div>
                                                     ) : (
-                                                        <>
+                                                        <React.Fragment>
                                                             <DialogTitle>Asigna archivos de estudio para la unidad Nº{unitNumber} : {unitName}</DialogTitle>
                                                             <DialogContent>
                                                                 <div style={{ display: "flex", flexDirection: "column" }}>
@@ -879,7 +1371,7 @@ const DetailedSubject = () => {
                                                                                 <Typography style={{ textAlign: "center", marginTop: 15 }}>El archivo se esta subiendo, espere un momento</Typography>
                                                                             </div>
                                                                         ) : (
-                                                                            <>
+                                                                            <React.Fragment>
                                                                                 <Typography style={{ color: "#2074d4" }}>Datos del Archivo</Typography>
                                                                                 <Divider style={{ height: 2, marginBottom: 15, backgroundColor: "#2074d4" }} />
                                                                                     
@@ -888,7 +1380,7 @@ const DetailedSubject = () => {
                                                                                     <TextField type="text" label="Descripción" variant="outlined" security="true" value={description} fullWidth onChange={(e) => setDescription(e.target.value)} style={{ marginBottom: 15 }} />
                                                                                     <TextField type="file" variant="outlined"  security="true" fullWidth onChange={handleSetFile} style={{ marginBottom: 15 }} />
                                                                                 </ThemeProvider>
-                                                                            </>
+                                                                            </React.Fragment>
                                                                         )
                                                                     }
                                                                 
@@ -910,7 +1402,7 @@ const DetailedSubject = () => {
                                                                         <Typography>Cancelar Subida</Typography>
                                                                     </Button>
                                                                 ) : (
-                                                                    <>
+                                                                    <React.Fragment>
                                                                         <Button style={{ color: "#2074d4" }} onClick={() => handleUploadFile()}>
                                                                             <Typography>Subir Archivo</Typography>
                                                                         </Button>
@@ -918,18 +1410,121 @@ const DetailedSubject = () => {
                                                                         <Button color="inherit" onClick={() => handleCloseFilesUnitDialog()}>
                                                                             <Typography>Cerrar Esta Ventana</Typography>
                                                                          </Button>
-                                                                    </>                    
+                                                                    </React.Fragment>                    
                                                                 )
                                                             }
                                                             </DialogActions>
-                                                        </>
+                                                        </React.Fragment>
                                                     )
                                                 }
                                                 </Dialog>
-                                            </>
+
+                                                <Dialog open={editUnitFileDialog} maxWidth={"md"} onClose={handleCloseEditFileUnitDialog} fullScreen={fullScreen} scroll="paper">
+                                                {
+                                                    unitId === null || unitName === null || unitNumber === null ? (
+                                                        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: 15 }}>
+                                                            <CircularProgress style={{ color: "#2074d4" }} />
+                                                        </div>
+                                                    ) : (
+                                                        <React.Fragment>
+                                                            <DialogTitle>Editar Archivo de la unidad Nº{unitNumber} : {unitName}</DialogTitle>
+                                                            <DialogContent>
+                                                                <div style={{ display: "flex", flexDirection: "column" }}>
+                                                                    <React.Fragment>
+                                                                    {
+                                                                        loadingUpload === true ? (
+                                                                            <div style={{ display: "flex", alignItems: "center", flexDirection: "column" }}>
+                                                                                <CircularProgress style={{ color: "#2074d4" }} />
+                                                                                <Typography style={{ textAlign: "center", marginTop: 15 }}>El archivo se esta subiendo, espere un momento</Typography>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <React.Fragment>
+                                                                                <Typography style={{ color: "#2074d4" }}>Datos del Archivo</Typography>
+                                                                                <Divider style={{ height: 2, marginBottom: 15, backgroundColor: "#2074d4" }} />
+                                                                                                                
+                                                                                <ThemeProvider theme={InputTheme}>
+                                                                                    <TextField type="text" label="Nombre"      variant="outlined" security="true" value={name} fullWidth onChange={(e) => setName(e.target.value)} style={{ marginBottom: 15 }} />
+                                                                                    <TextField type="text" label="Descripción" variant="outlined" security="true" value={description} fullWidth onChange={(e) => setDescription(e.target.value)} style={{ marginBottom: 15 }} />
+                                                                                </ThemeProvider>
+
+                                                                                <FormControlLabel
+                                                                                    control={<Tooltip title={editFile === true ? "Si desea mantener el archivo, quite esta opción" : "Si desea cambiar el archivo, seleccione esta opción"}>
+                                                                                                <Checkbox style={{ color: "#2074d4" }} security="true" checked={editFile} onChange={(e) => setEditFile(e.target.checked)} />
+                                                                                            </Tooltip>}
+                                                                                    label="Editar Archivo Subido"
+                                                                                />
+
+                                                                                <div>
+                                                                                {
+                                                                                    editFile === true && (
+                                                                                        <React.Fragment>
+                                                                                            <Typography style={{ marginTop: 15, color: "#2074d4" }}>Archivo Actual Subido</Typography>
+                                                                                            <Divider style={{ height: 2, marginBottom: 10, backgroundColor: "#2074d4" }} />
+
+                                                                                            <ThemeProvider theme={InputTheme}>
+                                                                                                <div style={{ display: "flex", flexDirection: "row", alignItems: "center", marginBottom: 15 }}>
+                                                                                                    <Typography style={{ marginRight: 10 }}>Archivo Actual Subido :</Typography>
+                                                                                                    <Typography style={{ color: "black" }} component="a" target="_blank" href={actualUrlFile}>{decodeURI(actualUrlFile.split(RegExp("%2..*%2F(.*?)alt"))[1].replace("?", ""))}</Typography>
+                                                                                                </div>
+                                                                                                    
+                                                                                                <TextField type="file" variant="outlined" security="true" fullWidth onChange={handleSetFile} style={{ marginBottom: 15 }} />
+                                                                                            </ThemeProvider>
+                                                                                        </React.Fragment>
+                                                                                    )
+                                                                                }
+                                                                                </div>
+                                                                            </React.Fragment>
+                                                                        )
+                                                                    }
+                                                                    </React.Fragment>
+
+                                                                    <React.Fragment>
+                                                                    {
+                                                                        editFile === true && (
+                                                                            <React.Fragment>
+                                                                                <Typography style={{ marginTop: 15, color: "#2074d4" }}>Progreso de la Carga</Typography>
+                                                                                <Divider style={{ height: 2, backgroundColor: "#2074d4" }} />
+                                                                                                            
+                                                                                <ThemeProvider theme={InputTheme}>
+                                                                                    <div style={{ display: "flex", justifyContent: "center", marginTop: 15 }}>
+                                                                                        <Typography>{`${progress}%`}</Typography>
+                                                                                        <LinearProgress variant="determinate" style={{ marginLeft: "auto", marginTop: 8, width: "calc(100% - 50px)" }} value={progress} />
+                                                                                    </div>
+                                                                                </ThemeProvider>
+                                                                            </React.Fragment>
+                                                                        )
+                                                                    }
+                                                                    </React.Fragment> 
+                                                                </div>
+                                                            </DialogContent>
+                                                            <DialogActions>
+                                                            {
+                                                                cancel === true ? (
+                                                                    <Button style={{ color: "#34495E" }} onClick={() => handleCancelUpload()}>
+                                                                        <Typography variant="button">Cancelar Editar Archivo</Typography>
+                                                                    </Button>
+                                                                ) : (
+                                                                    <React.Fragment>
+                                                                        <Button style={{ color: "#2074d4" }} onClick={() => handleEditFile()}>
+                                                                            <Typography variant="button">Editar Archivo</Typography>
+                                                                        </Button>
+
+                                                                        <Button color="inherit" onClick={handleCloseEditFileUnitDialog}>
+                                                                            <Typography variant="button">Cerrar Esta Ventana</Typography>
+                                                                        </Button>
+                                                                    </React.Fragment>                    
+                                                                )
+                                                            }
+                                                            </DialogActions>
+                                                        </React.Fragment>
+                                                    )
+                                                }
+                                                </Dialog>
+                                            </React.Fragment>
                                         )
                                     }
-                                </>
+                                    </React.Fragment>
+                                </React.Fragment>
                             )
                         )
                     )
@@ -937,7 +1532,7 @@ const DetailedSubject = () => {
             )
         }
         </div>
-    )
-}
+    );
+};
 
 export default DetailedSubject;

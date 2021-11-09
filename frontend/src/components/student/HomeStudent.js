@@ -18,7 +18,7 @@ const HomeStudent = () => {
         <div>   
         {
             user !== null ? (
-                <>
+                <React.Fragment>
                     <Paper style={{ padding: 20, marginBottom: 20 }} variant="outlined">
                         <Breadcrumbs separator={<NavigateNext fontSize="small" />}>
                             <Typography style={{ color: "#2074d4" }}>Home</Typography>
@@ -34,9 +34,9 @@ const HomeStudent = () => {
                             <Button>Ir a mi Perfil</Button>
                         </Link>
                     </Paper>
-                </>
+                </React.Fragment>
             ) : (
-                <>
+                <React.Fragment>
                     <Paper style={{ padding: 20, marginBottom: 20 }} variant="outlined">
                         <Skeleton variant="text" width={130} />
                     </Paper>
@@ -49,7 +49,7 @@ const HomeStudent = () => {
                         <Skeleton variant="rect" width={120} />
                         <Skeleton variant="rect" width={120} style={{ marginLeft: 15 }} />
                     </Paper> 
-                </>
+                </React.Fragment>
             )
         }           
         </div>

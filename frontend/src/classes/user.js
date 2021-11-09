@@ -9,8 +9,9 @@ export class user {
      * @param {String} email email de la persona
      * @param {String} level el nivel de la persona
      * @param {String} password la contraseña de la persona
+     * @param {String} passwordRepeat la propiedad repetir contraseña
      */
-    constructor(run, name, surname, region, commune, email, level, password) 
+    constructor(run, name, surname, region, commune, email, level, password, passwordRepeat) 
     {
         this.rut = run;
         this.name = name;
@@ -20,6 +21,7 @@ export class user {
         this.email = email;
         this.level = level;
         this.password = password;
+        this.passwordRepeat = passwordRepeat;
     }
 
     /**
@@ -103,6 +105,18 @@ export class user {
         if(password !== "" || typeof(password) !== "number")
         {
             this.password = password;
+        }
+    }
+
+    /**
+     * Función Set para asignar la propiedad repetir contraseña contraseña
+     * @param {String} passwordRepeat propiedad repetir contraseña
+     */
+    setPasswordRepeat(passwordRepeat)
+    {
+        if(passwordRepeat !== "" || typeof(passwordRepeat) !== "number")
+        {
+            this.passwordRepeat = passwordRepeat;
         }
     }
 

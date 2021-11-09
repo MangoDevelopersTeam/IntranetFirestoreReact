@@ -2,11 +2,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 
 import { Button, Card, CardContent, CardMedia, CircularProgress, Grid, TextField, Typography } from '@material-ui/core';
 
-import { getToken, setRefreshToken, setToken } from '../helpers/token/handleToken';
+import { setToken } from '../helpers/token/handleToken';
 import { showNewAdminDialog } from '../helpers/dialogs/handleDialogs';
 import { showMessage } from '../helpers/message/handleMessage';
 import { setUserRedux } from '../helpers/auth/handleAuth';
-import { Decrypt, Encrypt } from '../helpers/cipher/cipher';
+import { Encrypt } from '../helpers/cipher/cipher';
 
 import axios from 'axios';
 
@@ -50,7 +50,6 @@ const Login = () => {
                 if (response.status === 200)
                 {
                     setToken(response.data.idToken);
-                    setRefreshToken(response.data.refreshToken);
 
                     let object = {
                         email: Encrypt(response.data.email),
@@ -143,7 +142,7 @@ const Login = () => {
 
     
     return (
-        <>
+        <React.Fragment>
             <Grid container direction="row" justifyContent="space-evenly" alignItems="flex-start">
                 <Grid item container md={7} alignItems="center" justifyContent="center">
                     <Card variant="outlined" style={{ maxWidth: 640, margin: 7 }}>
@@ -162,19 +161,19 @@ const Login = () => {
                             <TextField type="email"    label="Email"      variant="outlined" security="true" value={email}    disabled={loading} fullWidth onChange={(e) => setEmail(e.target.value)}    style={{ marginBottom: 15 }} />
                             <TextField type="password" label="Contraseña" variant="outlined" security="true" value={password} disabled={loading} fullWidth onChange={(e) => setPassword(e.target.value)} style={{ marginBottom: 15 }} />
 
-                            <>
+                            <React.Fragment>
                             {
                                 loading === false ? (
                                     <div>
                                         <Button fullWidth style={{ color: "#2074d4", marginTop: 5 }} onClick={() => handleSignIn()}>Iniciar Sesión</Button>
                                         
-                                        <>
+                                        <React.Fragment>
                                         {
                                             enable === true && (
                                                 <Button fullWidth onClick={() => enable === true ? showNewAdminDialog() : {}} style={{ color: "#E74C3C", marginTop: 5 }}>Crear un Administrador</Button>
                                             )
                                         }
-                                        </>
+                                        </React.Fragment>
 
                                         <Button fullWidth style={{ color: "#34495E", marginTop: 5 }} onClick={() => {}}>Reestablecer mi Contraseña</Button>
                                     </div>
@@ -184,12 +183,12 @@ const Login = () => {
                                     </div>
                                 )
                             }   
-                            </>
+                            </React.Fragment>
                         </CardContent>
                     </Card>
                 </Grid>
             </Grid>
-        </>
+        </React.Fragment>
     );
 };
 
