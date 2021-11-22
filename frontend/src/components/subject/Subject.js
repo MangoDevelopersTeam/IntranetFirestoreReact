@@ -226,6 +226,15 @@ const Subject = () => {
         [id, setCourse],
     );
     
+
+    /**
+     * CORREGIR ESTO, AL ASIGNAR UN CURSO, QUE SOLO SE ASIGNE EL ID, Y QUE LOS NOMBRES
+     * SE RESCATEN EN EL BACKEND, COMO EN EL DE OBTENER LAS ANOTACIONES DEL ALUMNO,
+     * HACERRRRRRRR
+     */
+
+
+
     /**
      * useCallback para obtener a los profesores en los usuarios del sistema
      */

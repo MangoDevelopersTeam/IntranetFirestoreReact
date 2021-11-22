@@ -1499,7 +1499,7 @@ controllers.getAnnotationsByTypeStudentCourse = async (req, res) => {
             code = "PROCESS_OK";
             data = Encrypt(array);
             type = "success";
-            status = 200;    
+            status = 200;
         })
         .catch(error => {
             code = error.code;

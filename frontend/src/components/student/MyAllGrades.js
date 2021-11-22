@@ -326,6 +326,10 @@ const MyAllGrades = () => {
 
                     <Divider style={{ marginTop: 15, marginBottom: 15 }} />
 
+                    {/* HACER QUE EL APODERADO PUEDA VER  LOS ALUMNOS ASIGNADOS A EL, QUE PUEDA VER LAS ANOTACIONES DEL ALUMNO Y SUS NOTAS */}
+
+                    {/** HACER QUE SE PUEDAN HACER TAREAS, RESPONDER TAREAS Y QUE PUEDAN DESCARGAR TAREAS */}
+
                     <div>
                     {
                         loadingCourses === true ? (

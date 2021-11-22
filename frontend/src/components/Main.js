@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Router, Route, Switch } from 'react-router-dom';
 
-import { makeStyles, ThemeProvider, CircularProgress, Typography, Button, unstable_createMuiStrictModeTheme as MuiThemeUS } from '@material-ui/core';
+import { makeStyles, ThemeProvider, CircularProgress, Typography, Button, unstable_createMuiStrictModeTheme as MuiThemeUS, Paper } from '@material-ui/core';
 
 import { Decrypt } from '../helpers/cipher/cipher';
 import history from './../helpers/history/handleHistory';
@@ -20,6 +20,7 @@ import UserDetail from './../components/admin/UserDetail';
 
 import HomeTeacher from './teacher/HomeTeacher';
 import DetailedSubject from './teacher/DetailedSubject';
+import DetailedTeacherHomework from './teacher/DetailedTeacherHomework';
 import StudentsSubject from './teacher/StudentsSubject';
 
 import ManageSubject from './subject/ManageSubject';
@@ -30,8 +31,10 @@ import RouteNotFound from './others/RouteNotFound';
 
 import axios from 'axios';
 import MyGrades from './student/MyGrades';
-import MyAnnotations from './student/MyAnnotations';
 import MyAllGrades from './student/MyAllGrades';
+import MyAnnotationsStudent from './student/MyAnnotationsStudent';
+import HomeProxie from './proxie/HomeProxie';
+import DetailedStudentHomework from './student/DetailedStudentHomework';
 
 const useStyles = makeStyles((theme) => ({
     root: {
@@ -124,27 +127,27 @@ const Main = () => {
 
 
     return (
-        <div className={classes.root}>
+        <Paper elevation={0} className={classes.root}>
             <ThemeProvider theme={theme}>
                 <Router history={history}>
                     <Navigation />
 
                     <main className={classes.content}>
-                        <div className={classes.toolbar} />
+                        <Paper elevation={0} className={classes.toolbar} />
 
-                        <div>
+                        <React.Fragment>
                         {
                             loadingAccess === true ? (
-                                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
-                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
+                                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                                         <CircularProgress style={{ color: "#2074d4" }} />
-                                        <Typography style={{ marginTop: 15 }}>Cargando</Typography>
-                                    </div>
-                                </div>
+                                        <Typography style={{ marginTop: 15 }}>Cargando Acceso</Typography>
+                                    </Paper>
+                                </Paper>
                             ) : (
                                 errorAccess === true ? (
-                                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
-                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                    <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
+                                        <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                                         {
                                             expired === true ? (
                                                 <React.Fragment>
@@ -158,16 +161,16 @@ const Main = () => {
                                                 </React.Fragment>
                                             )
                                         }
-                                        </div>
-                                    </div>
+                                        </Paper>
+                                    </Paper>
                                 ) : (
                                     access === null ? (
-                                        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
-                                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                        <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
+                                            <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                                                 <CircularProgress style={{ color: "#2074d4" }} />
                                                 <Typography style={{ marginTop: 15 }}>Cargando Datos de Acceso</Typography>
-                                            </div>
-                                        </div>
+                                            </Paper>
+                                        </Paper>
                                     ) : (
                                         <Switch>
                                             <React.Fragment>
@@ -190,7 +193,9 @@ const Main = () => {
                                                         <Route exact path="/my-subjects" component={MyCourses}/> 
                                                         <Route exact path="/subject/:id" component={DetailedSubject}/> 
                                                         <Route exact path="/subject/students/:id" component={StudentsSubject}/>
+                                                        <Route exact path="/subject/homework/:idHomework" component={DetailedTeacherHomework}/>
                                                         <Route exact path="/profile" component={Profile} />
+                                                        <Route component={RouteNotFound} />
                                                     </Switch>
                                                 ) }
 
@@ -198,11 +203,21 @@ const Main = () => {
                                                     <Switch>
                                                         <Route exact path="/" component={HomeStudent}/> 
                                                         <Route exact path="/my-subjects" component={MyCourses}/>
-                                                        <Route exact path="/my-all-grades" component={MyAllGrades}/>
+                                                        <Route exact path="/my-grades" component={MyAllGrades}/>
+                                                        <Route exact path="/my-annotations" component={MyAnnotationsStudent}/>
                                                         <Route exact path="/subject/:id" component={DetailedSubject}/>
                                                         <Route exact path="/subject/my-grades/:id" component={MyGrades}/>
-                                                        <Route exact path="/subject/my-annotations/:id" component={MyAnnotations}/>
+                                                        <Route exact path="/subject/homework/:idHomework" component={DetailedStudentHomework}/>
                                                         <Route exact path="/profile" component={Profile} />
+                                                        <Route component={RouteNotFound} />
+                                                    </Switch>
+                                                ) }
+
+                                                { Decrypt(access) === "proxie" && (
+                                                    <Switch>
+                                                        <Route exact path="/" component={HomeProxie}/>
+                                                        <Route exact path="/profile" component={Profile} /> 
+                                                        <Route component={RouteNotFound} />
                                                     </Switch>
                                                 ) }
                                             </React.Fragment>
@@ -211,14 +226,14 @@ const Main = () => {
                                 )
                             )
                         }  
-                        </div>
+                        </React.Fragment>
                     </main>
 
                     <Dialogs />
                     <Message />
                 </Router>
             </ThemeProvider>
-        </div>
+        </Paper>
     );
 };
 

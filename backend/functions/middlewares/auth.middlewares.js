@@ -1,10 +1,26 @@
 // Importaciones
 const admin = require("firebase-admin");
-const auth = admin.auth();
 
 const { Decrypt } = require("../helpers/cipher");
 
 const middlewares = {};
+
+const getUserLevel = async () => {
+    let auth = admin.auth();
+    let level = "";
+    
+    let { uid } = res.locals;
+
+    await auth.getUser(uid)
+    .then(user => {
+        level = Decrypt(user.customClaims.level);
+    })
+    .catch((error) => {
+        return res.send({ code: "FIREBASE_GET_USER_ERROR", message: error.message, type: "error" }); 
+    });
+
+    return level;
+};
 
 /**
  * Función para verificar si existe token
@@ -14,113 +30,29 @@ const middlewares = {};
  * @returns mensaje de error o sigue con el programa
  */
 middlewares.checkToken = async (req, res, next) => {
+    let auth = admin.auth();
+
     if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer '))
     {
         return res.status(401).send({ code: "TOKEN_MISSING", message: "Esta acción necesita de un token de autenticación", type: "error" });
     }
 
     let idToken;
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) 
-    {
-        idToken = req.headers.authorization.split('Bearer ')[1];
-    }
-
-    try 
-    {
-        await auth.verifyIdToken(idToken, true)
-        .then((token) => {
-            res.locals.uid = token.uid;
-            return next();
-        })
-        .catch(async (error) => {
-            return res.send({ code: "FIREBASE_VERIFY_TOKEN_ERROR", message: error?.message, type: "error" });     
-        });
-    } 
-    catch (error) 
-    {
-        if (error?.code == 'auth/id-token-revoked') 
-        {
-            return res.status(401).send({ code: "TOKEN_REVOKED", message: "Re-autenticate o deslogueate de la aplicación para acceder nuevamente", type: "error" });
-        } 
-        else 
-        {
-            return res.status(401).send({ code: "TOKEN_INVALID", message: "El token provisto es invalido", type: "error" });
-        }
-    }
-};
-
-
-
-
-
-
-middlewares.testingCheckToken = async (req, res, next) => {
-    let auth = admin.auth();
-    
-    let code = null;
-    let message = null;
-    let type = null;
-    let status = 0;
-
-    if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer '))
-    {
-        code = "TOKEN_MISSING";
-        message = "Necesita un token de autenticación para continuar";
-        type = "error";
-        status = 401;
-
-        return res.status(status).send({ code: code, message: message, type: type });
-    }
-
-    let idToken;
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) 
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer '))
     {
         idToken = req.headers.authorization.split('Bearer ')[1];
     }
 
     await auth.verifyIdToken(idToken, true)
-    .then(result => {
-        res.locals.uid = result.uid;
-        return next();
+    .then(token => {
+        res.locals.uid = token.uid;
+        
+        next();
     })
     .catch(error => {
-        code = "FIREBASE_VERIFY_TOKEN_ERROR";
-        message = error.message;
-        type = "error";
-        status = 401;
-
-        return res.status(status).send({ code: code, message: message, type: type });   
+        res.send({ code: "FIREBASE_VERIFY_TOKEN_ERROR", message: error.message, type: "error" });     
     });
-
-
-
-    /* try 
-    {
-        await auth.verifyIdToken(idToken, true)
-        .then((token) => {
-            res.locals.uid = token.uid;
-            return next();
-        })
-        .catch(async (error) => {
-            return res.send({ code: "FIREBASE_VERIFY_TOKEN_ERROR", message: error?.message, type: "error" });     
-        });
-    } 
-    catch (error) 
-    {
-        if (error?.code == 'auth/id-token-revoked') 
-        {
-            return res.status(401).send({ code: "TOKEN_REVOKED", message: "Re-autenticate o deslogueate de la aplicación para acceder nuevamente", type: "error" });
-        } 
-        else 
-        {
-            return res.status(401).send({ code: "TOKEN_INVALID", message: "El token provisto es invalido", type: "error" });
-        }
-    } */
 };
-
-
-
-
 
 /**
  * Función para verificar si el usuario es un administrador
@@ -130,17 +62,20 @@ middlewares.testingCheckToken = async (req, res, next) => {
  * @returns mensaje de error o sigue con el programa
  */
 middlewares.checkIsAdmin = async (req, res, next) => {
-    const { uid } = res.locals;
+    let auth = admin.auth();
+    
+    let { uid } = res.locals;
 
     await auth.getUser(uid)
-    .then(async (user) => {
-        const userLevel = Decrypt(await user?.customClaims?.level);
+    .then(user => {
+        let level = Decrypt(user.customClaims.level);
+        res.locals.level = user.customClaims.level;
 
-        if (userLevel === "admin")
+        if (level == "admin")
         {
             return next();
         }
-            
+                
         return res.send({ code: "ACCESS_DENIED", message: "No tienes privilegios de administrador para esta operación", type: "error" });
     })
     .catch((error) => {
@@ -150,111 +85,179 @@ middlewares.checkIsAdmin = async (req, res, next) => {
 
 /**
  * Función para verificar si el usuario es un profesor
- * @param {import("express").Request} req objeto request
- * @param {import("express").Response} res objeto response
- * @param {import("express").NextFunction} next objeto next
- * @returns mensaje de error o sigue con el programa
- */
-middlewares.checkIsTeacherStudent = async (req, res, next) => {
-    const { uid } = res.locals;
-
-    await auth.getUser(uid)
-    .then(async result => {
-        const userLevel = Decrypt(await result.customClaims.level);
-
-        if (userLevel === "teacher" || userLevel === "student")
-        {
-            res.locals.level = result.customClaims.level;
-            return next();
-        }
-            
-        return res.send({ code: "ACCESS_DENIED", message: "No tienes privilegios de administrador para esta operación", type: "error" });
-    })
-    .catch((error) => {
-        return res.send({ code: "FIREBASE_GET_USER_ERROR", message: error.message, type: "error" }); 
-    });
-};
-
-/**
- * Función para verificar si el usuario es un profesor
- * @param {import("express").Request} req objeto request
- * @param {import("express").Response} res objeto response
- * @param {import("express").NextFunction} next objeto next
- * @returns mensaje de error o sigue con el programa
- */
-middlewares.checkIsStudentProxie = async (req, res, next) => {
-    const { uid } = res.locals;
-
-    await auth.getUser(uid)
-    .then(async result => {
-        const userLevel = Decrypt(await result.customClaims.level);
-
-        if (userLevel === "proxie" || userLevel === "student")
-        {
-            res.locals.level = result.customClaims.level;
-            return next();
-        }
-            
-        return res.send({ code: "ACCESS_DENIED", message: "No tienes privilegios de administrador para esta operación", type: "error" });
-    })
-    .catch((error) => {
-        return res.send({ code: "FIREBASE_GET_USER_ERROR", message: error.message, type: "error" }); 
-    });
-};
-
-/**
- * Función para verificar si el usuario tiene el nivel de admin. o profesor
- * @param {import("express").Request} req objeto request
- * @param {import("express").Response} res objeto response
- * @param {import("express").NextFunction} next objeto next
- * @returns mensaje de error o sigue con el programa
- */
-middlewares.checkIsTeacherAdmin = async (req, res, next) => {
-    const { uid } = res.locals;
-
-    await auth.getUser(uid)
-    .then(async result => {
-        const userLevel = Decrypt(await result.customClaims.level);
-
-        if (userLevel === "teacher" || userLevel === "admin")
-        {
-            res.locals.level = result.customClaims.level;
-            return next();
-        }
-            
-        return res.send({ code: "ACCESS_DENIED", message: "No tienes privilegios de administrador para esta operación", type: "error" });
-    })
-    .catch((error) => {
-        return res.send({ code: "FIREBASE_GET_USER_ERROR", message: error.message, type: "error" }); 
-    });
-};
-
-/**
- * Función para verificar si el usuario es un administrador
  * @param {import("express").Request} req objeto request
  * @param {import("express").Response} res objeto response
  * @param {import("express").NextFunction} next objeto next
  * @returns mensaje de error o sigue con el programa
  */
 middlewares.checkIsTeacher = async (req, res, next) => {
-    const { uid } = res.locals;
+    let auth = admin.auth();
+    
+    let { uid } = res.locals;
 
     await auth.getUser(uid)
-    .then(async (user) => {
-        const userLevel = Decrypt(await user?.customClaims?.level);
+    .then(user => {
+        let level = Decrypt(user.customClaims.level);
+        res.locals.level = user.customClaims.level;
 
-        if (userLevel === "teacher")
+        if (level == "teacher")
         {
             return next();
         }
-            
-        return res.send({ code: "ACCESS_DENIED", message: "No tienes privilegios de administrador para esta operación", type: "error" });
+                
+        return res.send({ code: "ACCESS_DENIED", message: "No tienes privilegios de profesor para esta operación", type: "error" });
     })
     .catch((error) => {
         return res.send({ code: "FIREBASE_GET_USER_ERROR", message: error.message, type: "error" }); 
     });
 };
 
+/**
+ * Función para verificar si el usuario es un estudiante
+ * @param {import("express").Request} req objeto request
+ * @param {import("express").Response} res objeto response
+ * @param {import("express").NextFunction} next objeto next
+ * @returns mensaje de error o sigue con el programa
+ */
+middlewares.checkIsStudent = async (req, res, next) => {
+    let auth = admin.auth();
+    
+    let { uid } = res.locals;
+
+    await auth.getUser(uid)
+    .then(user => {
+        let level = Decrypt(user.customClaims.level);
+        res.locals.level = user.customClaims.level;
+
+        if (level == "student")
+        {
+            return next();
+        }
+                
+        return res.send({ code: "ACCESS_DENIED", message: "No tienes privilegios de estudiante para esta operación", type: "error" });
+    })
+    .catch((error) => {
+        return res.send({ code: "FIREBASE_GET_USER_ERROR", message: error.message, type: "error" }); 
+    });
+};
+
+/**
+ * Función para verificar si el usuario es un apoderado
+ * @param {import("express").Request} req objeto request
+ * @param {import("express").Response} res objeto response
+ * @param {import("express").NextFunction} next objeto next
+ * @returns mensaje de error o sigue con el programa
+ */
+middlewares.checkIsProxie = async (req, res, next) => {
+    let auth = admin.auth();
+    
+    let { uid } = res.locals;
+
+    await auth.getUser(uid)
+    .then(user => {
+        let level = Decrypt(user.customClaims.level);
+        res.locals.level = user.customClaims.level;
+
+        if (level == "proxie")
+        {
+            return next();
+        }
+                
+        return res.send({ code: "ACCESS_DENIED", message: "No tienes privilegios de apoderado para esta operación", type: "error" });
+    })
+    .catch((error) => {
+        return res.send({ code: "FIREBASE_GET_USER_ERROR", message: error.message, type: "error" }); 
+    });
+};
+
+
+
+/**
+ * Función para verificar si el usuario es un profesor o un estudiante
+ * @param {import("express").Request} req objeto request
+ * @param {import("express").Response} res objeto response
+ * @param {import("express").NextFunction} next objeto next
+ * @returns mensaje de error o sigue con el programa
+ */
+middlewares.checkIsTeacherStudent = async (req, res, next) => {
+    let auth = admin.auth();
+    
+    let { uid } = res.locals;
+
+    await auth.getUser(uid)
+    .then(user => {
+        let level = Decrypt(user.customClaims.level);
+        res.locals.level = user.customClaims.level;
+
+        if (level == "teacher" || level == "student")
+        {
+            return next();
+        }
+                
+        return res.send({ code: "ACCESS_DENIED", message: "No tienes los suficientes privilegios para esta operación", type: "error" });
+    })
+    .catch((error) => {
+        return res.send({ code: "FIREBASE_GET_USER_ERROR", message: error.message, type: "error" }); 
+    });
+};
+
+/**
+ * Función para verificar si el usuario es un estudiante o apoderado
+ * @param {import("express").Request} req objeto request
+ * @param {import("express").Response} res objeto response
+ * @param {import("express").NextFunction} next objeto next
+ * @returns mensaje de error o sigue con el programa
+ */
+middlewares.checkIsStudentProxie = async (req, res, next) => {
+    let auth = admin.auth();
+    
+    let { uid } = res.locals;
+
+    await auth.getUser(uid)
+    .then(user => {
+        let level = Decrypt(user.customClaims.level);
+        res.locals.level = user.customClaims.level;
+
+        if (level == "proxie" || level == "student")
+        {
+            return next();
+        }
+                
+        return res.send({ code: "ACCESS_DENIED", message: "No tienes los suficientes privilegios para esta operación", type: "error" });
+    })
+    .catch((error) => {
+        return res.send({ code: "FIREBASE_GET_USER_ERROR", message: error.message, type: "error" }); 
+    });
+};
+
+/**
+ * Función para verificar si el usuario es un profesor o un administrador
+ * @param {import("express").Request} req objeto request
+ * @param {import("express").Response} res objeto response
+ * @param {import("express").NextFunction} next objeto next
+ * @returns mensaje de error o sigue con el programa
+ */
+middlewares.checkIsTeacherAdmin = async (req, res, next) => {
+    let auth = admin.auth();
+    
+    let { uid } = res.locals;
+
+    await auth.getUser(uid)
+    .then(user => {
+        let level = Decrypt(user.customClaims.level);
+        res.locals.level = user.customClaims.level;
+
+        if (level == "teacher" || level == "admin")
+        {
+            return next();
+        }
+                
+        return res.send({ code: "ACCESS_DENIED", message: "No tienes los suficientes privilegios para esta operación", type: "error" });
+    })
+    .catch((error) => {
+        return res.send({ code: "FIREBASE_GET_USER_ERROR", message: error.message, type: "error" }); 
+    });
+};
 
 
 module.exports = middlewares;

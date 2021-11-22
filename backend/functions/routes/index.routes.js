@@ -27,6 +27,13 @@ const studentsGet = require("./../controllers/students/getStudentDataController"
 
 
 
+const homeworkGet = require("./../controllers/homework/get.controller");
+const homeworkPost = require("./../controllers/homework/post.controller");
+const homeworkDelete = require("./../controllers/homework/delete.controller");
+
+
+
+
 
 // Controlador de Pruebas
 const testingController = require("./../controllers/testing/testingController");
@@ -55,8 +62,8 @@ app.use((req, res, next) => {
 
 // Rutas
 // Rutas de Autenticación [authMiddlewares.checkToken], [authMiddlewares.checkToken],
-app.get("/whoami", authMiddlewares.testingCheckToken, userCreate.whoami);
-app.get("/get-access", authMiddlewares.testingCheckToken, userAuth.getAccess);
+app.get("/whoami", authMiddlewares.checkToken, userCreate.whoami);
+app.get("/get-access", authMiddlewares.checkToken, userAuth.getAccess);
 
 
 // Rutas de Registro
@@ -135,7 +142,29 @@ app.get("/test-pagination", testingController.testPagination);
 
 // Ruta de alumnos y apoderados
 app.get("/get-my-grades-student", [authMiddlewares.checkToken, authMiddlewares.checkIsStudentProxie], studentsGet.getStudentGrades);
+
 app.get("/get-my-annotations-student", [authMiddlewares.checkToken, authMiddlewares.checkIsStudentProxie], studentsGet.getStudentAnnotations);
+
+app.get("/get-user-info", authMiddlewares.checkToken, studentsGet.getUserInfo);
+
+
+
+
+
+app.get("/get-homework-info", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacherStudent], coursesGet.ObtenerTarea);
+
+
+app.get("/get-students-homework", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacher], homeworkGet.getStudentsWithHomework);
+app.post("/post-teacher-homework", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacher], homeworkPost.setHomeworkFileURL);
+app.post("/post-student-homework", [authMiddlewares.checkToken, authMiddlewares.checkIsStudent], homeworkPost.postStudentHomework);
+app.delete("/delete-student-homework", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacher], homeworkDelete.deleteHomework);
+app.post("/post-teacher-feedback", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacher], homeworkPost.postFeedback);
+app.get("/get-student-feedback", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacherStudent], homeworkGet.getStudentFeedback);
+
+
+
+app.get("/get-student-answer-information", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacherStudent], homeworkGet.getStudentAnswerInformation);
+/* app.get("/get-subject-students-homeworks", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacher], homeworkGet.getSubjectStudentsHomeworks); */
 
 
 

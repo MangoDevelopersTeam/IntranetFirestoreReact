@@ -58,7 +58,7 @@ const App = () => {
                         setUserRedux(result.data.data);
                     }
 
-                    return setLoading(false);
+                    setLoading(false);
                 }
                 else
                 {
@@ -67,7 +67,7 @@ const App = () => {
                         clearUserRedux();
                         showMessage("La sesión se ha terminado debido a falta de credenciales", "info");
                         
-                        return setLoading(false);           
+                        setLoading(false);           
                     }
                     else if (result.data.code === "FIREBASE_GET_USER_ERROR")
                     {
@@ -79,7 +79,7 @@ const App = () => {
                             deleteToken();
                         }
 
-                        return setLoading(false);
+                        setLoading(false);
                     }
                     else if (result.data.code === "FIREBASE_VERIFY_TOKEN_ERROR" || result.data.code === "TOKEN_REVOKED" || result.data.code === "TOKEN_INVALID")
                     {              
@@ -91,7 +91,7 @@ const App = () => {
                             deleteToken();
                         }
 
-                        return setLoading(false);
+                        setLoading(false);
                     }
                 }
             })
@@ -111,7 +111,7 @@ const App = () => {
                     deleteToken();
                 }
                 
-                return setLoading(false);
+                setLoading(false);
             });
         },  
         [user, setLoading],
@@ -137,14 +137,14 @@ const App = () => {
                         <CircularProgress color="inherit" />
                     </Backdrop>        
                 ) : (
-                    user !== null ? (
-                        <Main />
-                    ) : (
+                    user === null ? (
                         <React.Fragment>
                             <Login />
                             <Dialogs />
                             <Message />
                         </React.Fragment>
+                    ) : (
+                        <Main />
                     )   
                 )
             }

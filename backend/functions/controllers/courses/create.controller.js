@@ -662,7 +662,6 @@ controllers.createUnitsCourse = async (req, res) => {
 
 controllers.setFileURL = async (req, res) => {
     let { uid } = res.locals;
-
     let { objectData } = req.body;
     let { idSubjectParam, idUnitParam } = req.query;
 
@@ -722,78 +721,22 @@ controllers.setFileURL = async (req, res) => {
         description: object.description,
         created_at: admin.firestore.FieldValue.serverTimestamp(),
         created_by: uid,
+        type: "FILE"
     })
-    .catch(error => {
-        if (error.response)
-        {
-            code = error.response.message;
-            message = error.response.message; 
-        }
-        else
-        {
-            code = "ADD_FILE_ERROR";
-            message = "Ha ocurrido un error al añadir el archivo en el la unidad"; 
-        }
-
-        type = "error";
-        status = 400;
-
-        res.status(status).send({ code: code, message: message, data: data, type: type });
-
-        uid = null;
-        db = null;
-        code = null;
-        message = null;
-        type = null;
-        status = null;
-
-        return;
-    });
-
-
-    let unitObject = {
-        idUnit: null,
-        data: []
-    };
-    unitObject.idUnit = idUnit;
-
-    await db.collection("courses").doc(idSubject).collection("units").doc(idUnit).collection("files").get()
-    .then(result => {
-        let array = [];
-
-        if (result.size > 0)
-        {
-            result.forEach(doc => {
-                array.push({
-                    id: doc.id,
-                    data: doc.data()
-                });
-            });
-        }
-
-        unitObject.data = array;
-        
-        code = "PROCESS_OK"; 
+    .then(() => {
+        code = "PROCESS_OK";
+        message = "Archivo creado exitosamente";
         type = "success";
         status = 201;
     })
-    .catch(error => {
-        if (error.response)
-        {
-            code = error.response.message;
-            message = error.response.message; 
-        }
-        else
-        {
-            code = "GET_FILES_UNIT_ERROR";
-            message = "Ha ocurrido un error al obtener los archivos de la unidad"; 
-        }
-
+    .catch(error => { 
+        code = error.code;
+        message = "Ha ocurrido un error al añadir el archivo en la unidad"; 
         type = "error";
         status = 400;
     })
     .finally(() => {
-        res.status(status).send({ code: code, message: message, data: unitObject, type: type });
+        res.status(status).send({ code: code, message: message, data: data, type: type });
 
         uid = null;
         db = null;
@@ -953,152 +896,7 @@ controllers.uploadHomeworkFileURL = async (req, res) => {
 };
 
 
-controllers.setHomeworkFileURL = async (req, res) => {
-    let { uid } = res.locals;
 
-    let { objectData } = req.body;
-    let { idSubjectParam, idUnitParam } = req.query;
-
-    let db = admin.firestore();
-
-    let code = "";
-    let data = null;
-    let message = "";
-    let type = "";
-    let status = 0;
-
-    let object = Decrypt(objectData);
-    let idSubject = Decrypt(idSubjectParam);
-    let idUnit = Decrypt(idUnitParam);
-
-    if (typeof(idSubject) !== "string" || typeof(idUnit) !== "string")
-    {
-        code = "BAD_ID_TYPE_PARAM";
-        message = "Asegurese de enviar los tipos de datos correctos"; 
-        type = "error";
-        status = 400;
-
-        res.status(status).send({ code: code, message: message, data: data, type: type });
-
-        uid = null;
-        db = null;
-        code = null;
-        message = null;
-        type = null;
-        status = null;
-
-        return;
-    }
-
-    if (typeof(Decrypt(object.url)) !== "string" || typeof(Decrypt(object.name)) !== "string" || typeof(Decrypt(object.description)) !== "string")
-    {
-        code = "BAD_TYPE_BODY_VALUES";
-        message = "Asegurese de enviar los tipos de datos correctos"; 
-        type = "error";
-        status = 400;
-
-        res.status(status).send({ code: code, message: message, data: data, type: type });
-
-        uid = null;
-        db = null;
-        code = null;
-        message = null;
-        type = null;
-        status = null;
-
-        return;
-    }
-
-    await db.collection("courses").doc(idSubject).collection("units").doc(idUnit).collection("files").add({
-        url: object.url,
-        name: object.name, 
-        description: object.description,
-        created_at: admin.firestore.FieldValue.serverTimestamp(),
-        created_by: uid,
-        type:'homework',
-    })
-    .catch(error => {
-        if (error.response)
-        {
-            code = error.response.message;
-            message = error.response.message; 
-        }
-        else
-        {
-            code = "ADD_FILE_ERROR";
-            message = "Ha ocurrido un error al añadir el archivo en el la unidad"; 
-        }
-
-        type = "error";
-        status = 400;
-
-        res.status(status).send({ code: code, message: message, data: data, type: type });
-
-        uid = null;
-        db = null;
-        code = null;
-        message = null;
-        type = null;
-        status = null;
-
-        return;
-    });
-
-
-    let unitObject = {
-        idUnit: null,
-        data: []
-    };
-    unitObject.idUnit = idUnit;
-
-    await db.collection("courses").doc(idSubject).collection("units").doc(idUnit).collection("files").get()
-    .then(result => {
-        let array = [];
-
-        if (result.size > 0)
-        {
-            result.forEach(doc => {
-                array.push({
-                    id: doc.id,
-                    data: doc.data()
-                });
-            });
-        }
-
-        unitObject.data = array;
-        
-        code = "PROCESS_OK"; 
-        type = "success";
-        status = 201;
-    })
-    .catch(error => {
-        if (error.response)
-        {
-            code = error.response.message;
-            message = error.response.message; 
-        }
-        else
-        {
-            code = "GET_FILES_UNIT_ERROR";
-            message = "Ha ocurrido un error al obtener los archivos de la unidad"; 
-        }
-
-        type = "error";
-        status = 400;
-    })
-    .finally(() => {
-        res.status(status).send({ code: code, message: message, data: unitObject, type: type });
-
-        uid = null;
-        db = null;
-        code = null;
-        message = null;
-        type = null;
-        status = null;
-
-        return;
-    });
-};
 
 
 module.exports = controllers;

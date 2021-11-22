@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { Link, useParams } from 'react-router-dom';
 
 import { ThemeProvider, useTheme } from '@material-ui/styles';
-import { Delete, Edit, ExpandMore, NavigateNext, Queue, Unarchive } from '@material-ui/icons';
-import { Accordion, AccordionDetails, AccordionSummary, Breadcrumbs, Button, Card, CardContent, Checkbox, CircularProgress, createTheme, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, FormControlLabel, Grid, IconButton, Input, LinearProgress, List, ListItem, ListItemSecondaryAction, ListItemText, Paper, TextField, Tooltip, Typography, useMediaQuery, withStyles } from '@material-ui/core';
+import { Book, Delete, Edit, ExpandMore, InsertDriveFile, NavigateNext, PostAdd, Queue, Unarchive } from '@material-ui/icons';
+import { Accordion, AccordionDetails, AccordionSummary, Breadcrumbs, Button, Card, CardContent, Checkbox, CircularProgress, createTheme, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, FormControlLabel, Grid, IconButton, Input, LinearProgress, List, ListItem, ListItemIcon, ListItemSecondaryAction, ListItemText, Paper, TextField, Tooltip, Typography, useMediaQuery, withStyles } from '@material-ui/core';
 
 import { Decrypt, Encrypt } from '../../helpers/cipher/cipher';
 import { showMessage } from '../../helpers/message/handleMessage';
@@ -12,9 +13,12 @@ import StudentListItem from '../subject/StudentListItem';
 
 import { myExtensions } from './../../utils/allExtensions'
 
+import { SELECT_USER } from '../../redux/userSlice';
+
 import { storage } from './../../firebase';
 
 import axios from 'axios';
+
 
 const InputTheme = createTheme({
     palette: {
@@ -29,6 +33,7 @@ const DetailedSubject = () => {
     const { id } = useParams();
     const themeApp = useTheme();
     const fullScreen = useMediaQuery(themeApp.breakpoints.down('sm'));
+    const user = useSelector(SELECT_USER);
 
 
 
@@ -57,6 +62,7 @@ const DetailedSubject = () => {
     const [studentsDialog, setStudentsDialog] = useState(false);
     const [unitsFileDialog, setUnitsFileDialog] = useState(false);
     const [errorFileDialog, setErrorFileDialog] = useState(false);
+    const [homeworkDialog, setHomeworkDialog] = useState(false);
 
     const [editUnitFileDialog, setEditUnitFileDialog] = useState(false);
 
@@ -78,6 +84,9 @@ const DetailedSubject = () => {
     const [editor, setEditor] = useState(false);
     const [uploadReference, setUploadReference] = useState(null);
     const [loadingUpload, setLoadingUpload] = useState(false);
+
+    const [limitTime, setLimitTime] = useState(false);
+    const [limitDate, setLimitDate] = useState("");
     
 
 
@@ -524,6 +533,34 @@ const DetailedSubject = () => {
         },
         [setUnitId, setUnitName, setUnitNumber, setName, setFile, setDescription, setEditUnitFileDialog],
     );
+
+
+    const handleOpenHomeWorkDialog = useCallback(
+        (unit) => {
+            setSelectedUnit(unit);
+            setHomeworkDialog(true);
+        },
+        [setSelectedUnit, setHomeworkDialog],
+    )
+
+    const handleCloseHomewordDialog = useCallback(
+        (event, reason) => {
+            if (reason === 'backdropClick' || reason === "escapeKeyDown") 
+            {
+                return;
+            }
+
+            setSelectedUnit(null);
+            setName("");
+            setFile(null);
+            setDescription("");
+            setLimitDate("");
+            setLimitTime(false);
+
+            setHomeworkDialog(false);
+        },
+        [setSelectedUnit, setName, setFile, setDescription, setLimitDate, setLimitTime, setHomeworkDialog],
+    )
     /* ------ DIALOG CALLBACKS ------ */
 
 
@@ -690,6 +727,9 @@ const DetailedSubject = () => {
         [id, subject, unitId, file, name, description, handleVerifyFileExtension, setUploadReference, setCancel, setLoadingUpload, setProgress, handleClearFileParams, handleGetUnitFiles],
     );
 
+    /**
+     * useCallback para editar un archivo en la asignatura
+     */
     const handleEditFile = useCallback(
         async () => {
             if (subject !== null && id !== null && selectedUnitFile !== null && selectedUnit !== null)
@@ -920,7 +960,7 @@ const DetailedSubject = () => {
             }
         },
         [subject, id, file, name, description, editFile, selectedUnitFile, selectedUnit, actualUrlFile, handleVerifyFileExtension, handleGetUnitFiles, handleClearFileParams],
-    )
+    );
 
     /**
      * useCallback para remover el archivo
@@ -987,6 +1027,127 @@ const DetailedSubject = () => {
         [id, setErrorCode, setErrorUnitFiles, setLoadingUnitFiles, handleGetUnitFiles],
     );
     /* ------ HANDLE FILE CALLBACKS ------ */
+
+
+    /* ------ HOMEWORK CALLBACKS ------ */
+    const handleUploadHomework = useCallback(
+        async () => {
+            if (id === null || selectedUnit === null || user === null)
+            {   
+                return showMessage("No puede realizar esta operación, se requieren datos importantes, intentelo nuevamente", "error");
+            }
+
+            if (file === null || name === "" || description === "")
+            {
+                return showMessage("Complete todos los campos de texto", "info");
+            }
+
+            if (limitTime === true && limitDate === "")
+            {
+                return showMessage("Complete el campo de fecha limite porfavor", "info");
+            }
+
+            if (handleVerifyFileExtension() !== true)
+            {
+                return showMessage("La extensión del archivo es invalido, intentelo nuevamente", "info");
+            }
+
+            let objectHomework = {
+                name: null,
+                description: null,
+                url: null,
+                limitTime: null
+            };
+
+
+    
+            let fileName = file.name.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
+            let uploadFile = storage.ref(`course/${id}/unit/${selectedUnit.id}/teacher/${Decrypt(Decrypt(user).email)}/homeworks/${fileName}`).put(file);
+
+            setUploadReference(uploadFile);
+            setLoadingUpload(true);
+            setCancel(true);
+
+            uploadFile.on('state_changed', snapshot => {
+                let progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+                setProgress(progress);
+            }, (error) => {
+                if (error.code === "storage/canceled")
+                {
+                    showMessage("La subida de la tarea ha sido cancelada", "info");
+                }
+                else
+                {
+                    showMessage(error.code, "error");
+                }
+
+                setUploadReference(null);
+                setLoadingUpload(false);
+                setCancel(false);
+            }, async () => {
+                await storage.ref(`course/${id}/unit/${selectedUnit.id}/teacher/${Decrypt(Decrypt(user).email)}/homeworks`).child(fileName).getDownloadURL()
+                .then(async url => {
+
+                    if (limitTime === true)
+                    {
+                        objectHomework.limitDate = limitDate;
+                    }
+
+                    objectHomework.name = Encrypt(name);
+                    objectHomework.description = Encrypt(description);
+                    objectHomework.url = Encrypt(url);
+                    objectHomework.limitTime = limitTime;            
+
+                    await axios.post(`${process.env.REACT_APP_API_URI}/post-teacher-homework`, {
+                        objectData: Encrypt(objectHomework)
+                    }, {
+                        params: {
+                            idSubjectParam: Encrypt(id),
+                            idUnitParam: Encrypt(selectedUnit.id)
+                        },
+                        headers: {
+                            "Content-Type": "application/json"
+                        }
+                    })
+                    .then(async result => {
+                        console.log(result);
+                        await handleGetUnitFiles();
+                        
+                        setErrorUnitFiles(false);
+                        setSelectedUnit(null);
+                        setLimitDate("");
+                        setLimitTime(false);
+                        showMessage("Tarea creada exitosamente", "success")
+
+                        setHomeworkDialog(false);
+                    })
+                    .catch(error => {
+                        if (error.response)
+                        {
+                            console.log(error.message);
+                            showMessage(error.response.message, "error");
+                        }
+
+                        setErrorUnitFiles(true);
+                    });
+
+                    handleClearFileParams();
+                })
+                .catch(error => {
+                    if (error.response)
+                    {
+                        console.log("GET DOWNLOAD URL", error.response);
+                    }
+
+                    handleClearFileParams();
+                    
+                    return;
+                });
+            });
+        },
+        [id, selectedUnit, user, file, name, description, limitTime, limitDate, handleVerifyFileExtension, handleClearFileParams, handleGetUnitFiles],
+    );
+    /* ------ HOMEWORK CALLBACKS ------ */
 
 
 
@@ -1058,48 +1219,48 @@ const DetailedSubject = () => {
 
 
     return (
-        <div>
+        <Paper elevation={0}>
         {
             authorized === null || loadingAuthorized === true ? (
-                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
+                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                         <CircularProgress style={{ color: "#2074d4" }} />
-                        <Typography style={{ marginTop: 15 }}>Cargando</Typography>
-                    </div>
-                </div>
+                        <Typography style={{ marginTop: 15 }}>Cargando Acceso</Typography>
+                    </Paper>
+                </Paper>
             ) : (
                 authorized === false ? (
-                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                    <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
+                        <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                             <Typography>No tienes acceso a esta asignatura, contactese con el administrador</Typography>
-                        </div>
-                    </div>
+                        </Paper>
+                    </Paper>
                 ) : (
                     loadingSubject === true || loadingAccess === true ? (
-                        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
+                            <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                                 <CircularProgress style={{ color: "#2074d4" }} />
                                 <Typography style={{ marginTop: 15 }}>Cargando Datos</Typography>
-                            </div>
-                        </div>
+                            </Paper>
+                        </Paper>
                     ) : (
                         errorSubject === true || errorAuthorized === true || errorAccess === true ? (
-                            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
-                                <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                            <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
+                                <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                                     <Typography>Ha ocurrido un error al momento de cargar la asignatura</Typography>
                                     <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={() => handleGetDetailedSubject}>
                                         <Typography>Recargar Contenido</Typography>
                                     </Button>
-                                </div>
-                            </div>
+                                </Paper>
+                            </Paper>
                         ) : (
                             subject === null || access === null ? (
-                                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
-                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
+                                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                                         <CircularProgress style={{ color: "#2074d4" }} />
                                         <Typography style={{ marginTop: 15 }}>Cargando</Typography>
-                                    </div>
-                                </div>
+                                    </Paper>
+                                </Paper>
                             ) : (
                                 <React.Fragment>
                                     <Paper style={{ padding: 20, marginBottom: 15 }} variant="outlined">
@@ -1124,75 +1285,130 @@ const DetailedSubject = () => {
                                                     <List>
                                                     {
                                                         Decrypt(subject.units).map(doc => (
-                                                            <div key={doc.id}>
+                                                            <Paper elevation={0} key={doc.id}>
                                                                 <ListItem>
                                                                     <ListItemText primary={`Unidad ${doc.data.numberUnit} : ${doc.data.unit}`} />
                                                                 </ListItem>
 
-                                                                <React.Fragment>
+                                                                <Paper elevation={0}>
                                                                 {
                                                                     editor === true && (
-                                                                        <Tooltip title={<Typography variant="subtitle1">{`Añadir archivos en la unidad ${doc.data.numberUnit}`}</Typography>}>
-                                                                            <IconButton onClick={() => handleOpenFilesUnitDialog(doc.id, doc.data.unit, doc.data.numberUnit)}>
-                                                                                <Queue />
-                                                                            </IconButton>
-                                                                        </Tooltip>
+                                                                        <React.Fragment>
+                                                                            <Tooltip title={<Typography>{`Añadir archivos en la unidad ${doc.data.numberUnit}`}</Typography>}>
+                                                                                <IconButton onClick={() => handleOpenFilesUnitDialog(doc.id, doc.data.unit, doc.data.numberUnit)}>
+                                                                                    <Queue />
+                                                                                </IconButton>
+                                                                            </Tooltip>
+
+                                                                            <Tooltip title={<Typography>{`Crear tarea o actividad en la unidad ${doc.data.numberUnit}`}</Typography>}>
+                                                                                <IconButton style={{ marginLeft: 10 }} onClick={() => handleOpenHomeWorkDialog(doc)}>
+                                                                                    <PostAdd />
+                                                                                </IconButton>
+                                                                            </Tooltip>
+                                                                        </React.Fragment>
                                                                     )
                                                                 }
-                                                                </React.Fragment>
+                                                                </Paper>
 
-                                                                <React.Fragment>
+                                                                <Paper elevation={0}>
                                                                 {
                                                                     loadingUnitFiles === true ? (
-                                                                        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: 5 }}>
-                                                                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                                        <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: 5 }}>
+                                                                            <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                                                                                 <CircularProgress style={{ color: "#2074d4" }} />
                                                                                 <Typography style={{ marginTop: 15 }}>Cargando</Typography>
-                                                                            </div>
-                                                                        </div>
+                                                                            </Paper>
+                                                                        </Paper>
                                                                     ) : (
                                                                         errorUnitFiles === true ? (
-                                                                            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+                                                                            <Paper elevation={0} style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
                                                                                 <Typography style={{ textAlign: "center" }}>Ha ocurrido un error al obtener los archivos de la unidad</Typography>
                                                                                 <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetUnitFiles()}>Recargar archivos de la unidad</Button>
-                                                                            </div>
+                                                                            </Paper>
                                                                         ) : (
                                                                             unitFiles === null ? (
-                                                                                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: 5 }}>
-                                                                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                                                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: 5 }}>
+                                                                                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                                                                                         <CircularProgress style={{ color: "#2074d4" }} />
                                                                                         <Typography style={{ marginTop: 15 }}>Cargando Archivos</Typography>
-                                                                                    </div>
-                                                                                </div>
+                                                                                    </Paper>
+                                                                                </Paper>
                                                                             ) : (
                                                                                 <ListItem>
                                                                                     <List>
                                                                                     {
                                                                                         unitFiles.filter(x => x.idUnit === doc.id)[0].data.length > 0 && (
                                                                                             unitFiles.filter(x => x.idUnit === doc.id)[0].data.map(docFile => (
-                                                                                                <ListItem button key={docFile.id} component="a" target="_blank" href={Decrypt(docFile.data.url)} style={{ height: "fit-content", marginBottom: 5, color: "#000" }}>
-                                                                                                    <ListItemText primary={<Typography>{Decrypt(docFile.data.name)}</Typography>} style={{ marginRight: 70 }} />
-                                                                                                    {
-                                                                                                        Decrypt(access) === "teacher" && (
-                                                                                                            editor === true && (
-                                                                                                                <ListItemSecondaryAction>
-                                                                                                                    <React.Fragment>
-                                                                                                                        <Tooltip title={<Typography>Eliminar este Archivo</Typography>}>
-                                                                                                                            <IconButton edge="end" onClick={() => handleRemoveFile(docFile.id, doc.id)}>
-                                                                                                                                <Delete />
-                                                                                                                            </IconButton>
-                                                                                                                        </Tooltip>
-                                                                                                                        <Tooltip title={<Typography>Editar este Archivo</Typography>}>
-                                                                                                                            <IconButton edge="end" onClick={() => handleOpenEditFileUnitDialog(doc.id, doc.data.unit, doc.data.numberUnit, docFile, doc)} style={{ marginLeft: 15 }}>
-                                                                                                                                <Edit />
-                                                                                                                            </IconButton>
-                                                                                                                        </Tooltip>
-                                                                                                                    </React.Fragment>
-                                                                                                                </ListItemSecondaryAction>
-                                                                                                            )
-                                                                                                        )
-                                                                                                    }
-                                                                                                </ListItem>
+                                                                                                <Paper elevation={0} key={docFile.id}>          
+                                                                                                {
+                                                                                                    docFile.data.type === "FILE" ? (
+                                                                                                        <ListItem button component="a" target="_blank" href={Decrypt(docFile.data.url)} style={{ height: "fit-content", marginBottom: 5, color: "#000" }}>
+                                                                                                            <ListItemIcon>
+                                                                                                                <Tooltip title={<Typography>Archivo/Documento de Estudio</Typography>}>
+                                                                                                                    <InsertDriveFile />
+                                                                                                                </Tooltip>    
+                                                                                                            </ListItemIcon>
+
+                                                                                                            <ListItemText primary={<Typography>{Decrypt(docFile.data.name)}</Typography>} style={{ marginRight: 70 }} />
+                                                                                                            {
+                                                                                                                Decrypt(access) === "teacher" && (
+                                                                                                                    editor === true && (
+                                                                                                                        <ListItemSecondaryAction>
+                                                                                                                            <React.Fragment>
+                                                                                                                                <Tooltip title={<Typography>Eliminar este Archivo</Typography>}>
+                                                                                                                                    <IconButton edge="end" onClick={() => handleRemoveFile(docFile.id, doc.id)}>
+                                                                                                                                        <Delete />
+                                                                                                                                    </IconButton>
+                                                                                                                                </Tooltip>
+                                                                                                                                <Tooltip title={<Typography>Editar este Archivo</Typography>}>
+                                                                                                                                    <IconButton edge="end" onClick={() => handleOpenEditFileUnitDialog(doc.id, doc.data.unit, doc.data.numberUnit, docFile, doc)} style={{ marginLeft: 15 }}>
+                                                                                                                                        <Edit />
+                                                                                                                                    </IconButton>
+                                                                                                                                </Tooltip>
+                                                                                                                            </React.Fragment>
+                                                                                                                        </ListItemSecondaryAction>
+                                                                                                                    )
+                                                                                                                )
+                                                                                                            }
+                                                                                                        </ListItem>
+                                                                                                    ) : docFile.data.type === "HOMEWORK" ? ( 
+                                                                                                        <ListItem button style={{ height: "fit-content", marginBottom: 5, color: "#000" }}>
+                                                                                                            <Link to={`/subject/homework/${docFile.id}?subject=${id}&unit=${doc.id}`} style={{ textDecoration: "none" }}>
+                                                                                                                <ListItemIcon>
+                                                                                                                    <Tooltip title={<Typography>Tarea/Actividad</Typography>}>
+                                                                                                                        <Book />
+                                                                                                                    </Tooltip>
+                                                                                                                </ListItemIcon>
+
+                                                                                                                <ListItemText primary={<Typography>{Decrypt(docFile.data.name)}</Typography>} style={{ marginRight: 70 }} />
+                                                                                                            </Link>
+                                                                                                                {
+                                                                                                                    Decrypt(access) === "teacher" && (
+                                                                                                                        editor === true && (
+                                                                                                                            <ListItemSecondaryAction>
+                                                                                                                                <React.Fragment>
+                                                                                                                                    <Tooltip title={<Typography>Eliminar esta Tarea</Typography>}>
+                                                                                                                                        <IconButton edge="end" onClick={() => handleRemoveFile(docFile.id, doc.id)}>
+                                                                                                                                            <Delete />
+                                                                                                                                        </IconButton>
+                                                                                                                                    </Tooltip>
+                                                                                                                                    <Tooltip title={<Typography>Editar esta Tarea</Typography>}>
+                                                                                                                                        <IconButton edge="end" /* onClick={() => handleOpenEditFileUnitDialog(doc.id, doc.data.unit, doc.data.numberUnit, docFile, doc)} */ style={{ marginLeft: 15 }}>
+                                                                                                                                            <Edit />
+                                                                                                                                        </IconButton>
+                                                                                                                                    </Tooltip>
+                                                                                                                                </React.Fragment>
+                                                                                                                            </ListItemSecondaryAction>
+                                                                                                                        )
+                                                                                                                    )
+                                                                                                                }
+                                                                                                        </ListItem>
+                                                                                                    ) : (
+                                                                                                        <React.Fragment>  
+                                                                                                        </React.Fragment>
+                                                                                                    )   
+                                                                                                }                                                        
+                                                                                                </Paper>
                                                                                             ))
                                                                                         )
                                                                                     }
@@ -1202,10 +1418,10 @@ const DetailedSubject = () => {
                                                                         )
                                                                     )                                       
                                                                 }
-                                                                </React.Fragment>
+                                                                </Paper>
 
                                                                 <Divider style={{ marginTop: 5, marginBottom: 15 }} /> 
-                                                            </div>
+                                                            </Paper>
                                                         ))
                                                     }
                                                     </List>
@@ -1219,27 +1435,27 @@ const DetailedSubject = () => {
                                                     <React.Fragment>
                                                     {
                                                         Decrypt(access) === "teacher" && (
-                                                            <React.Fragment>
+                                                            <Paper elevation={0}>
                                                                 <Button fullWidth style={{ color: "#2074d4", marginBottom: 15 }} onClick={() => handleOpenStudentsDialog()}>
-                                                                    <Typography>Asignar Estudiantes</Typography>
+                                                                    <Typography variant="button">Asignar Estudiantes</Typography>
                                                                 </Button>
 
                                                                 <Button fullWidth style={{ color: "#34495E", marginBottom: 15 }} onClick={() => setEditor(!editor)}>
                                                                 {
                                                                     editor === false ? (
-                                                                        <Typography>Abrir editor para subir archivos</Typography>
+                                                                        <Typography variant="button">Abrir editor para subir archivos</Typography>
                                                                     ) : (
-                                                                        <Typography>Cerrar Editor para subir archivos</Typography>
+                                                                        <Typography variant="button">Cerrar Editor para subir archivos</Typography>
                                                                     )
                                                                 }
                                                                 </Button>
 
                                                                 <Link to={`/subject/students/${id}`} style={{ textDecoration: "none", marginBottom: 15 }}>
                                                                     <Button fullWidth style={{ color: "#2074d4" }}>
-                                                                        <Typography>Ver Estudiantes</Typography>
+                                                                        <Typography variant="button">Ver Estudiantes</Typography>
                                                                     </Button>
                                                                 </Link>
-                                                            </React.Fragment>
+                                                            </Paper>
                                                         )
                                                     }
                                                     </React.Fragment>
@@ -1253,20 +1469,6 @@ const DetailedSubject = () => {
                                                                         <Typography variant="button">Ver mis calificaciones</Typography>
                                                                     </Button>
                                                                 </Link>
-
-                                                                {/* <Link to={`/subject/my-annotations/${id}`} style={{ textDecoration: "none", marginBottom: 15 }}>
-                                                                    <Button fullWidth style={{ color: "#2074d4", marginBottom: 15 }}>
-                                                                        <Typography variant="button">Ver mis anotaciones</Typography>
-                                                                    </Button>
-                                                                </Link> */}
-
-
-                                                                
-                                                                {/* <Link to={`/subject/students/${id}`} style={{ textDecoration: "none", marginBottom: 15 }}>
-                                                                    <Button fullWidth style={{ color: "#2074d4" }}>
-                                                                        <Typography>Ver Estudiantes</Typography>
-                                                                    </Button>
-                                                                </Link> */}
                                                             </React.Fragment>
                                                         )
                                                     }
@@ -1422,14 +1624,14 @@ const DetailedSubject = () => {
                                                 <Dialog open={editUnitFileDialog} maxWidth={"md"} onClose={handleCloseEditFileUnitDialog} fullScreen={fullScreen} scroll="paper">
                                                 {
                                                     unitId === null || unitName === null || unitNumber === null ? (
-                                                        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: 15 }}>
+                                                        <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: 15 }}>
                                                             <CircularProgress style={{ color: "#2074d4" }} />
-                                                        </div>
+                                                        </Paper>
                                                     ) : (
                                                         <React.Fragment>
                                                             <DialogTitle>Editar Archivo de la unidad Nº{unitNumber} : {unitName}</DialogTitle>
                                                             <DialogContent>
-                                                                <div style={{ display: "flex", flexDirection: "column" }}>
+                                                                <Paper elevation={0} style={{ display: "flex", flexDirection: "column" }}>
                                                                     <React.Fragment>
                                                                     {
                                                                         loadingUpload === true ? (
@@ -1495,7 +1697,7 @@ const DetailedSubject = () => {
                                                                         )
                                                                     }
                                                                     </React.Fragment> 
-                                                                </div>
+                                                                </Paper>
                                                             </DialogContent>
                                                             <DialogActions>
                                                             {
@@ -1520,6 +1722,86 @@ const DetailedSubject = () => {
                                                     )
                                                 }
                                                 </Dialog>
+
+                                                <Dialog open={homeworkDialog} maxWidth={"md"} fullWidth onClose={handleCloseHomewordDialog} fullScreen={fullScreen} scroll="paper">
+                                                    <DialogTitle>{`Crear tarea o una actividad en la unidad ${selectedUnit === null ? `seleccionada` : `Nº${selectedUnit.data.numberUnit} : ${selectedUnit.data.unit}`}`}</DialogTitle>
+                                                    <DialogContent>
+                                                        <React.Fragment>
+                                                            <Paper>
+                                                            {
+                                                                selectedUnit === null ? (
+                                                                    <Paper elevation={0} style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                                                        <Typography style={{ marginTop: 15 }}>Cargando Datos del Estudiante Seleccionado</Typography>
+                                                                    </Paper>
+                                                                ) : (
+                                                                    loadingUpload === true ? (
+                                                                        <Paper elevation={0} style={{ display: "flex", alignItems: "center", flexDirection: "column" }}>
+                                                                            <CircularProgress style={{ color: "#2074d4" }} />
+                                                                            <Typography style={{ textAlign: "center", marginTop: 15 }}>El archivo se esta subiendo, espere un momento</Typography>
+                                                                        </Paper>
+                                                                    ) : (
+                                                                        <Paper elevation={0}>
+                                                                            <ThemeProvider theme={InputTheme}>
+                                                                                <Typography style={{ color: "#2074d4" }}>Datos de la Tarea</Typography>
+                                                                                <Divider style={{ height: 2, marginBottom: 15, backgroundColor: "#2074d4" }} />
+                                                                                            
+                                                                                <TextField type="text" label="Nombre" variant="outlined" security="true" value={name} fullWidth onChange={(e) => setName(e.target.value)} style={{ marginBottom: 15 }} />
+                                                                                <TextField type="text" label="Descripción" variant="outlined" security="true" value={description} fullWidth multiline onChange={(e) => setDescription(e.target.value)} style={{ marginBottom: 15 }} />
+                                                                                <TextField type="file" label="" variant="outlined" security="true" fullWidth onChange={handleSetFile} style={{ marginBottom: 15 }} />
+
+                                                                                <FormControlLabel
+                                                                                    control={<Tooltip title={limitTime === true ? "Si desea no establecer un limite de tiempo, quite esta opción" : "Si desea establecer un limite de tiempo, seleccione esta opción"}>
+                                                                                                <Checkbox style={{ color: "#2074d4" }} security="true" checked={limitTime} onChange={(e) => setLimitTime(e.target.checked)} />
+                                                                                            </Tooltip>}
+                                                                                    label="Establecer un limite de tiempo de subida" />
+                                                                            
+                                                                                <Paper elevation={0}>
+                                                                                {
+                                                                                    limitTime === true && (
+                                                                                        <TextField type="datetime-local" label="Fecha Límite" variant="outlined" security="true" value={limitDate} fullWidth onChange={(e) => setLimitDate(e.target.value)} style={{ marginBottom: 15, marginTop: 15 }} />
+                                                                                    )
+                                                                                }
+                                                                                </Paper>
+                                                                            </ThemeProvider>
+                                                                        </Paper>
+                                                                    )
+                                                                )
+                                                            }
+                                                            </Paper>
+
+                                                            <Typography style={{ marginTop: 15, color: "#2074d4" }}>Progreso de la Carga</Typography>
+                                                            <Divider style={{ height: 2, backgroundColor: "#2074d4" }} />
+
+                                                            <ThemeProvider theme={InputTheme}>
+                                                                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", marginTop: 15 }}>
+                                                                    <Typography>{`${progress}%`}</Typography>
+                                                                    <LinearProgress variant="determinate" style={{ marginLeft: "auto", marginTop: 8, width: "calc(100% - 50px)" }} value={progress} />
+                                                                </Paper>
+                                                            </ThemeProvider>
+                                                        </React.Fragment>
+                                                    </DialogContent>
+                                                    <DialogActions>
+                                                        <React.Fragment>
+                                                        {
+                                                            cancel === true ? (
+                                                                <Button style={{ color: "#34495E" }} onClick={() => handleCancelUpload()}>
+                                                                    <Typography variant="button">Cancelar Operación</Typography>
+                                                                </Button>
+                                                            ) : (
+                                                                <Paper elevation={0}>
+                                                                    <Button style={{ color: "#2074d4" }} onClick={async () => await handleUploadHomework()}>
+                                                                        <Typography variant="button">Crear Elemento</Typography>
+                                                                    </Button>
+
+                                                                    <Button color="inherit" onClick={handleCloseHomewordDialog}>
+                                                                        <Typography variant="button">Cerrar Esta Ventana</Typography>
+                                                                    </Button>
+                                                                </Paper>                    
+                                                            )
+                                                        }
+                                                        </React.Fragment>                    
+                                                    </DialogActions>
+                                                </Dialog>
                                             </React.Fragment>
                                         )
                                     }
@@ -1531,7 +1813,7 @@ const DetailedSubject = () => {
                 )
             )
         }
-        </div>
+        </Paper>
     );
 };
 

@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { Skeleton } from '@material-ui/lab';
-import { Menu, ChevronLeft, ChevronRight,  ExitToApp, People, Home, Notes, Build, GridOn } from '@material-ui/icons';
-import { Drawer, AppBar, Toolbar, List, CssBaseline, Typography, Divider, IconButton, ListItem, ListItemIcon, ListItemText, makeStyles, useTheme } from '@material-ui/core';
+import { Menu, ChevronLeft, ChevronRight,  ExitToApp, People, Home, Notes, Build, GridOn, FormatListNumbered } from '@material-ui/icons';
+import { Drawer, AppBar, Toolbar, List, CssBaseline, Typography, Divider, IconButton, ListItem, ListItemIcon, ListItemText, makeStyles, useTheme, Paper, CircularProgress } from '@material-ui/core';
 
 import { Decrypt } from '../helpers/cipher/cipher';
 import history from './../helpers/history/handleHistory';
@@ -175,7 +174,7 @@ const Navigation = () => {
 
 
     return (
-        <div className={classes.root}>
+        <Paper elevation={0} className={classes.root}>
             <CssBaseline />
             <AppBar position="fixed" color="inherit" className={clsx(classes.appBar, { [classes.appBarShift]: open, })}>
                 <Toolbar>
@@ -199,79 +198,27 @@ const Navigation = () => {
                 </div>
                 <Divider />
                 <List>
-                    <div>
+                    <Paper elevation={0}>
                     { 
                         loadingAccess === true ? (
-                            <>
-                                <ListItem>
-                                    <ListItemIcon>
-                                        <Skeleton variant="rect" width={30} />
-                                    </ListItemIcon>
-                                    <ListItemText primary={<Skeleton variant="text" width={100} />} />
-                                </ListItem>
-
-                                <ListItem>
-                                    <ListItemIcon>
-                                        <Skeleton variant="rect" width={30} />
-                                    </ListItemIcon>
-                                    <ListItemText primary={<Skeleton variant="text" width={100} />} />
-                                </ListItem>
-
-                                <ListItem>
-                                    <ListItemIcon>
-                                        <Skeleton variant="rect" width={30} />
-                                    </ListItemIcon>
-                                    <ListItemText primary={<Skeleton variant="text" width={100} />} />
-                                </ListItem>
-                            
-                                <ListItem>
-                                    <ListItemIcon>
-                                        <Skeleton variant="rect" width={30} />
-                                    </ListItemIcon>
-                                    <ListItemText primary={<Skeleton variant="text" width={100} />} />
-                                </ListItem>
-                            </> 
+                            <Paper elevation={0} style={{ height: "80vh", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                <CircularProgress style={{ color: "#2074d4" }} />
+                            </Paper>
                         ) : (
                             errorAccess === true ? (
-                                <>
+                                <Paper>
                                    <ListItem button onClick={() => handleSignOut()}>
                                         <ListItemIcon>
                                             <ExitToApp />
                                         </ListItemIcon>
                                         <ListItemText primary="Salir" />
                                     </ListItem>
-                                </>
+                                </Paper>
                             ) : (
                                 access === null ? (
-                                    <>
-                                        <ListItem>
-                                            <ListItemIcon>
-                                                <Skeleton variant="rect" width={30} />
-                                            </ListItemIcon>
-                                            <ListItemText primary={<Skeleton variant="text" width={100} />} />
-                                        </ListItem>
-
-                                        <ListItem>
-                                            <ListItemIcon>
-                                                <Skeleton variant="rect" width={30} />
-                                            </ListItemIcon>
-                                            <ListItemText primary={<Skeleton variant="text" width={100} />} />
-                                        </ListItem>
-
-                                        <ListItem>
-                                            <ListItemIcon>
-                                                <Skeleton variant="rect" width={30} />
-                                            </ListItemIcon>
-                                            <ListItemText primary={<Skeleton variant="text" width={100} />} />
-                                        </ListItem>
-                                    
-                                        <ListItem>
-                                            <ListItemIcon>
-                                                <Skeleton variant="rect" width={30} />
-                                            </ListItemIcon>
-                                            <ListItemText primary={<Skeleton variant="text" width={100} />} />
-                                        </ListItem>
-                                    </> 
+                                    <Paper elevation={0} style={{ height: "80vh", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                        <CircularProgress style={{ color: "#2074d4" }} />
+                                    </Paper>
                                 ) : (
                                     <React.Fragment>
                                         { Decrypt(access) === "admin" && (
@@ -352,6 +299,15 @@ const Navigation = () => {
 
                                         { Decrypt(access) === "proxie" && (
                                             <React.Fragment>
+                                                <Link to="/" style={{ textDecoration: "none", color: "#000" }}>
+                                                    <ListItem button>
+                                                        <ListItemIcon>
+                                                            <Home />
+                                                        </ListItemIcon>
+                                                        <ListItemText primary="Home" />
+                                                    </ListItem>
+                                                </Link>
+
                                                 <ListItem button onClick={() => handleSignOut()}>
                                                     <ListItemIcon>
                                                         <ExitToApp />
@@ -381,12 +337,21 @@ const Navigation = () => {
                                                     </ListItem>
                                                 </Link>
 
-                                                <Link to="/my-all-grades" style={{ textDecoration: "none", color: "#000" }}>
+                                                <Link to="/my-grades" style={{ textDecoration: "none", color: "#000" }}>
                                                     <ListItem button>
                                                         <ListItemIcon>
                                                             <GridOn />
                                                         </ListItemIcon>
                                                         <ListItemText primary="Mis Notas" />
+                                                    </ListItem>
+                                                </Link>
+
+                                                <Link to="/my-annotations" style={{ textDecoration: "none", color: "#000" }}>
+                                                    <ListItem button>
+                                                        <ListItemIcon>
+                                                            <FormatListNumbered />
+                                                        </ListItemIcon>
+                                                        <ListItemText primary="Mis Anotaciones" />
                                                     </ListItem>
                                                 </Link>
 
@@ -403,10 +368,10 @@ const Navigation = () => {
                             )
                         ) 
                     }
-                    </div>
+                    </Paper>
                 </List>
             </Drawer>
-        </div>
+        </Paper>
     );
 };
 

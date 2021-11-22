@@ -358,6 +358,8 @@ controllers.createAndRegisterUser = async (req, res) => {
             user.created_by = uid;
             user.deleted = false;
 
+            //TODO: PONER DESPUES DE CREAR USUARIO SI ES PROFESOR, CREAR UNA COLECCIÓN DE USUARIOS DENTRO DEL USUARIO
+
             await db.collection("users").doc(result.uid).set(user)
             .then(() => {
                 code = "PROCESS_OK";
