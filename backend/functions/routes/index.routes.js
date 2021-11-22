@@ -30,6 +30,7 @@ const studentsGet = require("./../controllers/students/getStudentDataController"
 const homeworkGet = require("./../controllers/homework/get.controller");
 const homeworkPost = require("./../controllers/homework/post.controller");
 const homeworkDelete = require("./../controllers/homework/delete.controller");
+const homeworkPut = require("./../controllers/homework/put.controller");
 
 
 
@@ -160,7 +161,8 @@ app.post("/post-student-homework", [authMiddlewares.checkToken, authMiddlewares.
 app.delete("/delete-student-homework", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacher], homeworkDelete.deleteHomework);
 app.post("/post-teacher-feedback", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacher], homeworkPost.postFeedback);
 app.get("/get-student-feedback", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacherStudent], homeworkGet.getStudentFeedback);
-
+app.delete("/delete-student-feedback", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacher], homeworkDelete.deleteFeedback);
+app.put("/update-student-feedback", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacher], homeworkPut.updateFeedback);
 
 
 app.get("/get-student-answer-information", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacherStudent], homeworkGet.getStudentAnswerInformation);

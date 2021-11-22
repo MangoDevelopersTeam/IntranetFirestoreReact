@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, withRouter, useLocation, Link } from 'react-router-dom';
 
-import { Avatar, Breadcrumbs, Button, Card, CardContent, CircularProgress, createTheme, ThemeProvider, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, List, ListItem, ListItemAvatar, ListItemIcon, ListItemSecondaryAction, ListItemText, Paper, TextField, Tooltip, Typography, useMediaQuery, useTheme, Menu, MenuItem } from '@material-ui/core';
-import { Delete, Folder, GetApp, Info, LibraryBooks, MoreVert, NavigateNext, Person } from '@material-ui/icons';
+import { Avatar, Breadcrumbs, Button, Card, CardContent, CircularProgress, createTheme, ThemeProvider, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, List, ListItem, ListItemAvatar, ListItemSecondaryAction, ListItemText, Paper, TextField, Tooltip, Typography, useMediaQuery, useTheme, Menu, MenuItem } from '@material-ui/core';
+import { Delete, GetApp, LibraryBooks, MoreVert, NavigateNext, Person } from '@material-ui/icons';
 
 import { Decrypt, Encrypt } from '../../helpers/cipher/cipher';
 
@@ -47,12 +47,11 @@ const DetailedTeacherHomework = () => {
     const [loadingStudents, setLoadingStudents] = useState(true);
 
     const [feedbackData, setFeedbackData] = useState(null);
-    const [errorFeedback, setErrorFeedback] = useState(false);
     const [loadingFeedback, setLoadingFeedback] = useState(false);
+
 
     const [feedback, setFeedback] = useState("");
     const [selectedHomework, setSelectedHomework] = useState(null);
-
 
 
     const [loadingPostFeedback, setLoadingPostFeedback] = useState(false);
@@ -61,9 +60,18 @@ const DetailedTeacherHomework = () => {
     const [loadingDeleteHomework, setLoadingDeleteHomework] = useState(false);
     const [errorDeleteHomework, setErrorDeleteHomework] = useState(false);
 
+    const [loadingDeleteFeedback, setLoadingDeleteFeedback] = useState(false);
+    const [errorDeleteFeedback, setErrorDeleteFeedback] = useState(false);
+
+    const [loadingEditFeedback, setLoadingEditFeedback] = useState(false);
+    const [errorEditFeedback, setErrorEditFeedback] = useState(false);
+
+
+
     const [feedbackDialog, setFeedbackDialog] = useState(false);
     const [deleteHomeworkDialog, setDeleteHomeworkDialog] = useState(false);
     const [deleteFeedbackDialog, setDeleteFeedbackDialog] = useState(false);
+    const [editFeedbackDialog, setEditFeedbackDialog] = useState(false);
 
     const [anchorEl, setAnchorEl] = useState(null);
 
@@ -78,9 +86,7 @@ const DetailedTeacherHomework = () => {
         setAnchorEl(event.currentTarget);
     };
     
-    const handleClose = () => {
-        setAnchorEl(null);
-    };
+
 
     const query = useQuery();
     const idSubject = query.get("subject");
@@ -453,6 +459,7 @@ const DetailedTeacherHomework = () => {
                     setErrorPostFeedback(false);
                     handleCloseFeedbackDialog();
                     setErrorCode(null);
+                    await handleGetStudentsHomework();
 
                     return showMessage(result.data.message, result.data.type);
                 }
@@ -478,17 +485,17 @@ const DetailedTeacherHomework = () => {
                 }
             });
         },
-        [feedback, idSubject, idHomework, idUnit, selectedHomework, setLoadingPostFeedback, setErrorPostFeedback, setErrorCode, handleCloseFeedbackDialog],
+        [feedback, idSubject, idHomework, idUnit, selectedHomework, setLoadingPostFeedback, setErrorPostFeedback, setErrorCode, handleCloseFeedbackDialog, handleGetStudentsHomework],
     );
 
     const handleGetFeedback = useCallback(
-        async () => {
-            if (idHomework === null || idSubject === null || idUnit === null || selectedHomework === null)
+        async (doc) => {
+            if (idHomework === null || idSubject === null || idUnit === null || doc === null)
             {
                 return;
             }
 
-            if (selectedHomework === undefined)
+            if (doc === undefined)
             {
                 return;
             }
@@ -500,39 +507,33 @@ const DetailedTeacherHomework = () => {
                     idSubjectParam: Encrypt(idSubject),
                     idFileParam: Encrypt(idHomework),
                     idUnitParam: Encrypt(idUnit),
-                    idStudentParam: Encrypt(selectedHomework.student.id)
+                    idStudentParam: Encrypt(doc.student.id)
                 }
             })
             .then(result => {
-                console.log(result);
-                console.log(Decrypt(result.data.data));
-
                 if (result.status === 200 && result.data.code === "PROCESS_OK")
                 {
-                    setErrorFeedback(false);
                     setErrorCode(null);
                     setLoadingFeedback(false);
+                    setFeedback(Decrypt(Decrypt(result.data.data)[0].data.feedback));
 
                     return setFeedbackData(Decrypt(result.data.data));
                 }
 
                 if (result.status === 200 && result.data.code === "FEEDBACK_UNDEFINED")
                 {
-                    setErrorFeedback(false);
                     setErrorCode(null);
                     setLoadingFeedback(false);
 
                     return setFeedbackData(undefined);
                 }
                 
-                setErrorFeedback(false);
                 setErrorCode(null);
                 setLoadingFeedback(false);
 
                 return setFeedbackData(undefined);
             })
             .catch(error => {
-                setErrorFeedback(true);
                 setFeedbackData(undefined);
 
                 if (error.response)
@@ -549,33 +550,33 @@ const DetailedTeacherHomework = () => {
             .finally(() => {
                 return () => {
                     setFeedbackData(null);
-                    setErrorFeedback(null);
                     setErrorCode(null);
                     setLoadingFeedback(null);
                 }
             });
         },
-        [idHomework, idSubject, idUnit, detailedHomework, selectedHomework, setFeedbackData, setErrorFeedback, setErrorCode, setLoadingFeedback],
+        [idHomework, idSubject, idUnit, setFeedbackData, setErrorCode, setLoadingFeedback, setFeedback],
     );
 
 
-    /* const handleOpenDeleteFeedbackDialog = useCallback(
+
+    const handleOpenDeleteFeedbackDialog = useCallback(
         async (doc) => {
             if (doc === null)
             {
                 return;
             }
 
-            setDeleteFeedbackDialog(true);
             setSelectedHomework(doc);
-            handleClose();
+            setAnchorEl(null);
+            setDeleteFeedbackDialog(true);
 
-            await handleGetFeedback();
+            await handleGetFeedback(doc);
         },
-        [setDeleteFeedbackDialog, setSelectedHomework, handleClose, handleGetFeedback],
-    ); */
+        [setDeleteFeedbackDialog, setSelectedHomework, setAnchorEl, handleGetFeedback],
+    );
 
-    /* const handleCloseDeleteFeedbackDialog = useCallback(
+    const handleCloseDeleteFeedbackDialog = useCallback(
         (event, reason) => {
             if (reason === 'backdropClick' || reason === "escapeKeyDown") 
             {
@@ -586,14 +587,157 @@ const DetailedTeacherHomework = () => {
             setSelectedHomework(null);     
         },
         [setDeleteFeedbackDialog, setSelectedHomework],
-    ); */
+    );
 
-    // HACER QUE USE EL SELECTED HOMEWORK
-    // HACER EL HANDLE OPEN Y CLOSE DIALOG FEEDBACK ACA, PARA EVITAR ERRORES (ELIMINAR Y EDITAR FEEDBACK)
+    const handleDeleteFeeback = useCallback(
+        async () => {
+            if (idSubject === null || idHomework === null || idUnit === null || selectedHomework === null || feedbackData === null)
+            {
+                return;
+            }
 
-    // Y CORREGIR EL FORMULARIO DE EDITAR ASIGNATURA
-    // MAÑANA HACER ESTO TEMPRANOOOOO!!!!!!!, NO OLVIDAR
+            setLoadingDeleteFeedback(true);
 
+            await axios.delete(`${process.env.REACT_APP_API_URI}/delete-student-feedback`, {
+                params: {
+                    idSubjectParam: Encrypt(idSubject),
+                    idFileParam: Encrypt(idHomework),
+                    idUnitParam: Encrypt(idUnit),
+                    idStudentParam: Encrypt(selectedHomework.student.id),
+                    idFeedbackParam: Encrypt(feedbackData[0].id)
+                }
+            })
+            .then(async result => {
+                if (result.status === 200 && result.data.code === "PROCESS_OK")
+                {
+                    setLoadingDeleteFeedback(false);
+                    setErrorDeleteFeedback(false);
+                    setErrorCode(null);
+                    handleCloseDeleteFeedbackDialog();
+                    await handleGetStudentsHomework();
+                    
+                    return showMessage(result.data.message, result.data.type);
+                }
+
+                setLoadingDeleteFeedback(false);
+                setErrorDeleteFeedback(true);
+                setErrorCode(result.data.code);
+            })
+            .catch(error => {
+                if (error.response)
+                {
+                    setLoadingDeleteFeedback(false);
+                    setErrorDeleteFeedback(true);
+                    console.log(error.response);
+                    setErrorCode("DELETE_HOMEWORK_ERROR");
+                }
+            })
+            .finally(() => {
+                return () => {
+                    setLoadingDeleteFeedback(null);
+                    setErrorDeleteFeedback(null);
+                    setErrorCode(null);
+                }
+            });
+        },
+        [idSubject, idHomework, idUnit, selectedHomework, feedbackData, setLoadingDeleteFeedback, setErrorDeleteFeedback, setErrorCode, handleCloseDeleteFeedbackDialog, handleGetStudentsHomework],
+    );
+
+
+
+    const handleOpenEditFeedbackDialog = useCallback(
+        async (doc) => {
+            if (doc === null)
+            {
+                return;
+            }
+
+            setSelectedHomework(doc);
+            setAnchorEl(null);
+            setEditFeedbackDialog(true);
+
+            await handleGetFeedback(doc);
+        },
+        [setEditFeedbackDialog, setSelectedHomework, setAnchorEl, handleGetFeedback],
+    );
+
+    const handleCloseEditFeedbackDialog = useCallback(
+        (event, reason) => {
+            if (reason === 'backdropClick' || reason === "escapeKeyDown") 
+            {
+                return;
+            }
+
+            setEditFeedbackDialog(false);
+            setSelectedHomework(null);     
+            setFeedback("");
+        },
+        [setEditFeedbackDialog, setSelectedHomework, setFeedback],
+    );
+
+    const handleEditFeedback = useCallback(
+        async () => {
+            if (idSubject === null || idHomework === null || idUnit === null || selectedHomework === null || feedbackData === null)
+            {
+                return;
+            }
+
+            if (feedback === "")
+            {
+                showMessage("Complete todos los campos de texto requeridos", "info");
+            }
+
+            setLoadingEditFeedback(true);
+
+            let objectData = {
+                feedback: Encrypt(feedback)
+            }
+
+            await axios.put(`${process.env.REACT_APP_API_URI}/update-student-feedback`, {
+                objectData: Encrypt(objectData)
+            } , {
+                params: {
+                    idSubjectParam: Encrypt(idSubject),
+                    idFileParam: Encrypt(idHomework),
+                    idUnitParam: Encrypt(idUnit),
+                    idStudentParam: Encrypt(selectedHomework.student.id),
+                    idFeedbackParam: Encrypt(feedbackData[0].id)
+                }
+            })
+            .then(result => {
+                if (result.status === 201 && result.data.code === "PROCESS_OK")
+                {
+                    setLoadingEditFeedback(false);
+                    setErrorEditFeedback(false);
+                    setErrorCode(null);
+                    handleCloseEditFeedbackDialog();
+                    
+                    return showMessage(result.data.message, result.data.type);
+                }
+
+                setLoadingEditFeedback(false);
+                setErrorEditFeedback(true);
+                setErrorCode(result.data.code);
+            })
+            .catch(error => {
+                if (error.response)
+                {
+                    setLoadingEditFeedback(false);
+                    setErrorEditFeedback(true);
+                    console.log(error.response);
+                    setErrorCode("DELETE_HOMEWORK_ERROR");
+                }
+            })
+            .finally(() => {
+                return () => {
+                    setLoadingEditFeedback(null);
+                    setErrorEditFeedback(null);
+                    setErrorCode(null);
+                }
+            });
+        },
+        [idSubject, idHomework, idUnit, selectedHomework, feedbackData, feedback, setLoadingEditFeedback, setErrorEditFeedback, setErrorCode, handleCloseEditFeedbackDialog],
+    );
 
 
 
@@ -941,9 +1085,9 @@ const DetailedTeacherHomework = () => {
                                                                                                 </Tooltip>
                                                                                             ) : (
                                                                                                 <React.Fragment>
-                                                                                                    <Menu anchorEl={anchorEl} keepMounted open={Boolean(anchorEl)} onClose={handleClose}>
-                                                                                                        <MenuItem /* onClick={async () => await handleOpenDeleteFeedbackDialog()} */>Eliminar feedback</MenuItem>
-                                                                                                        <MenuItem onClick={handleClose}>Editar feedback</MenuItem>
+                                                                                                    <Menu anchorEl={anchorEl} keepMounted open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
+                                                                                                        <MenuItem onClick={async () => await handleOpenDeleteFeedbackDialog(doc)}>Eliminar feedback</MenuItem>
+                                                                                                        <MenuItem onClick={async () => await handleOpenEditFeedbackDialog(doc)}>Editar feedback</MenuItem>
                                                                                                     </Menu>
 
                                                                                                     <Tooltip title={<Typography>Mas acciones en Feedback</Typography>}>
@@ -1105,7 +1249,198 @@ const DetailedTeacherHomework = () => {
                                                     </DialogActions>
                                                 </Dialog>
 
-                                                    
+                                                <Dialog open={deleteFeedbackDialog} maxWidth={"md"} fullWidth={true} onClose={handleCloseDeleteFeedbackDialog} fullScreen={fullScreen} scroll="paper">
+                                                    <DialogTitle>{selectedHomework === null ? "Borrar el feedback en la tarea seleccionada" : `Borrar el feedback de la tarea enviada por el alummno ${Decrypt(selectedHomework.student.data.name)} ${Decrypt(selectedHomework.student.data.surname)}`}</DialogTitle>
+                                                    <DialogContent>
+                                                        <React.Fragment>
+                                                        {
+                                                            selectedHomework === null ? (
+                                                                <Paper elevation={0} itemType="div" style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                                                    <Typography style={{ marginTop: 15 }}>Cargando Datos de la tarea Seleccionada</Typography>
+                                                                </Paper>
+                                                            ) : (
+                                                                <React.Fragment>
+                                                                {
+                                                                    loadingFeedback === true ? (
+                                                                        <Paper elevation={0} itemType="div" style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                                                            <Typography style={{ marginTop: 15 }}>Cargando Datos del feedback</Typography>
+                                                                        </Paper>
+                                                                    ) : loadingFeedback === true ? (
+                                                                        <Paper elevation={0} style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
+                                                                            <Typography style={{ marginTop: 15 }}>Ha ocurrido un error al obtener el feedback</Typography>
+                                                                            
+                                                                            <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                                            <Button onClick={async () => await handleGetFeedback()} style={{ color: "#2074d4" }}>Recargar Feedback</Button>
+                                                                        </Paper>
+                                                                    ) : feedbackData === null ? (
+                                                                        <Paper elevation={0} itemType="div" style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                                                            <Typography style={{ marginTop: 15 }}>Cargando Datos del feedback</Typography>
+                                                                        </Paper>
+                                                                    ) : (
+                                                                        <React.Fragment>
+                                                                        {
+                                                                            loadingDeleteFeedback === true ? (
+                                                                                <Paper elevation={0} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: 15 }}>
+                                                                                    <CircularProgress style={{ color: "#2074d4" }} />
+                                                                                    <Typography style={{ marginTop: 15 }}>Eliminando feedback</Typography>
+                                                                                </Paper>
+                                                                            ) : errorDeleteFeedback === true ? (
+                                                                                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto" }}>
+                                                                                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 15 }}>
+                                                                                        <Typography>
+                                                                                        {
+                                                                                            errorCode !== null ? (
+                                                                                                errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                                                                                    "Recargue la página para inicar sesión nuevamente, debido a que la sesión se ha vencido"
+                                                                                                ) : (
+                                                                                                    "Ha ocurrido un error al momento de eliminar el feedback"
+                                                                                                )
+                                                                                            ) : (
+                                                                                                "Ha ocurrido un error al momento de eliminar el feedback"
+                                                                                            )
+                                                                                        }
+                                                                                        </Typography>
+
+                                                                                        <React.Fragment>
+                                                                                        {
+                                                                                            errorCode !== null && (
+                                                                                                errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
+                                                                                                    <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleDeleteFeeback()}>
+                                                                                                        <Typography variant="button">Eliminar feedback nuevamente</Typography>
+                                                                                                    </Button>
+                                                                                                )
+                                                                                            )
+                                                                                        }
+                                                                                        </React.Fragment>
+                                                                                    </Paper>
+                                                                                </Paper>
+                                                                            ) : (
+                                                                                <React.Fragment>
+                                                                                    <Typography>Esta seguro de eliminar este feedback?, este paso es irreversible y el tendra que crear nuevamente un feedback a esta tarea</Typography>
+
+                                                                                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                                                        <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                                                        
+                                                                                        <Button onClick={async () => await handleDeleteFeeback()} style={{ color: "#2074d4" }}>
+                                                                                            <Typography variant="button">Eliminar feedback</Typography>
+                                                                                        </Button>
+                                                                                    </Paper>
+                                                                                </React.Fragment>
+                                                                            )
+                                                                        }
+                                                                        </React.Fragment>
+                                                                    )
+                                                                }
+                                                                </React.Fragment>
+                                                            )
+                                                        }
+                                                        </React.Fragment>
+                                                    </DialogContent>
+                                                    <DialogActions>
+                                                        <Button color="inherit" onClick={handleCloseDeleteFeedbackDialog}>
+                                                            <Typography variant="button">Cerrar Esta Ventana</Typography>
+                                                        </Button>
+                                                    </DialogActions>
+                                                </Dialog>
+
+                                                <Dialog open={editFeedbackDialog} maxWidth={"md"} fullWidth={true} onClose={handleCloseEditFeedbackDialog} fullScreen={fullScreen} scroll="paper">
+                                                    <DialogTitle>{selectedHomework === null ? "Editar el feedback en la tarea seleccionada" : `Editar el feedback de la tarea enviada por el alummno ${Decrypt(selectedHomework.student.data.name)} ${Decrypt(selectedHomework.student.data.surname)}`}</DialogTitle>
+                                                    <DialogContent>
+                                                        <React.Fragment>
+                                                        {
+                                                            selectedHomework === null ? (
+                                                                <Paper elevation={0} itemType="div" style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                                                    <Typography style={{ marginTop: 15 }}>Cargando Datos de la tarea Seleccionada</Typography>
+                                                                </Paper>
+                                                            ) : (
+                                                                <React.Fragment>
+                                                                {
+                                                                    loadingFeedback === true ? (
+                                                                        <Paper elevation={0} itemType="div" style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                                                            <Typography style={{ marginTop: 15 }}>Cargando Datos del feedback</Typography>
+                                                                        </Paper>
+                                                                    ) : loadingFeedback === true ? (
+                                                                        <Paper elevation={0} style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
+                                                                            <Typography style={{ marginTop: 15 }}>Ha ocurrido un error al obtener el feedback</Typography>
+                                                                            
+                                                                            <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                                            <Button onClick={async () => await handleGetFeedback()} style={{ color: "#2074d4" }}>Recargar Feedback</Button>
+                                                                        </Paper>
+                                                                    ) : feedbackData === null ? (
+                                                                        <Paper elevation={0} itemType="div" style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                                                            <Typography style={{ marginTop: 15 }}>Cargando Datos del feedback</Typography>
+                                                                        </Paper>
+                                                                    ) : (
+                                                                        <React.Fragment>
+                                                                        {
+                                                                            loadingEditFeedback === true ? (
+                                                                                <Paper elevation={0} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: 15 }}>
+                                                                                    <CircularProgress style={{ color: "#2074d4" }} />
+                                                                                    <Typography style={{ marginTop: 15 }}>Editando feedback</Typography>
+                                                                                </Paper>
+                                                                            ) : errorEditFeedback === true ? (
+                                                                                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto" }}>
+                                                                                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 15 }}>
+                                                                                        <Typography>
+                                                                                        {
+                                                                                            errorCode !== null ? (
+                                                                                                errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                                                                                    "Recargue la página para inicar sesión nuevamente, debido a que la sesión se ha vencido"
+                                                                                                ) : (
+                                                                                                    "Ha ocurrido un error al momento de editar el feedback"
+                                                                                                )
+                                                                                            ) : (
+                                                                                                "Ha ocurrido un error al momento de editar el feedback"
+                                                                                            )
+                                                                                        }
+                                                                                        </Typography>
+
+                                                                                        <React.Fragment>
+                                                                                        {
+                                                                                            errorCode !== null && (
+                                                                                                errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
+                                                                                                    <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleEditFeedback()}>
+                                                                                                        <Typography variant="button">Editar feedback nuevamente</Typography>
+                                                                                                    </Button>
+                                                                                                )
+                                                                                            )
+                                                                                        }
+                                                                                        </React.Fragment>
+                                                                                    </Paper>
+                                                                                </Paper>
+                                                                            ) : (
+                                                                                <React.Fragment>
+                                                                                    <Typography style={{ color: "#2074d4" }}>Feedback a editar</Typography>
+                                                                                    <Divider style={{ height: 2, marginBottom: 15, backgroundColor: "#2074d4" }} />
+
+                                                                                    <ThemeProvider theme={InputTheme}>
+                                                                                        <TextField type="text" label="Feedback" variant="outlined" security="true" multiline fullWidth value={feedback} onChange={(e) => setFeedback(e.target.value)} style={{ marginBottom: 15 }} />
+                                                                                    </ThemeProvider>
+
+                                                                                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                                                        <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                                                        
+                                                                                        <Button onClick={async () => await handleEditFeedback()} style={{ color: "#2074d4" }}>
+                                                                                            <Typography variant="button">Editar feedback</Typography>
+                                                                                        </Button>
+                                                                                    </Paper>
+                                                                                </React.Fragment>
+                                                                            )
+                                                                        }
+                                                                        </React.Fragment>
+                                                                    )
+                                                                }
+                                                                </React.Fragment>
+                                                            )
+                                                        }
+                                                        </React.Fragment>
+                                                    </DialogContent>
+                                                    <DialogActions>
+                                                        <Button color="inherit" onClick={handleCloseEditFeedbackDialog}>
+                                                            <Typography variant="button">Cerrar Esta Ventana</Typography>
+                                                        </Button>
+                                                    </DialogActions>
+                                                </Dialog>
                                             </React.Fragment>
                                         )
                                     }
