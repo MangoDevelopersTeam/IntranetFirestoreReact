@@ -3,7 +3,419 @@ const admin = require("firebase-admin");
 
 const controllers = {};
 
-controllers.setHomeworkFileURL = async (req, res) => {
+controllers.getStudentsProxie = async (req, res) => {
+    let db = admin.firestore();
+    
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+
+    let errorExec = false;
+    let studentsUID = [];
+    let students = [];
+
+    let { uid } = res.locals;
+
+    if (uid == null)
+    {
+        code = "USER_UID_NULL";
+        message = "Asegurese de enviar los parametros correctamente"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        course = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+    }
+
+    await db.collection("users").doc(uid).get()
+    .then(async result => {
+        studentsUID = result.data().students;
+        
+        if (studentsUID.length < 0)
+        {
+            code = "NO_STUDENTS_ASSIGNED";
+            message = "No tienes estudiantes asignados a ti aún";
+            type = "error";
+            status = 404;
+
+            return;
+        }
+
+        for (let x = 0; x < studentsUID.length; x++)
+        {
+            await db.collection("users").doc(studentsUID[x]).get()
+            .then(result => {
+                students.push({
+                    id: result.id,
+                    data: result.data()
+                });
+
+                errorExec = false;
+            })
+            .catch(error => {
+                code = error.code;
+                errorExec = true;
+
+                return;
+            });
+        }
+
+        if (errorExec == true)
+        {
+            type = "error";
+            status = 400;
+        }
+        else
+        {
+            code = "PROCESS_OK";
+            data = Encrypt(students);
+            type = "success";
+            status = 200;
+        }
+    })
+    .catch(error => {
+        code = error.code;
+        type = "error";
+        status = 500;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    });
+};
+
+controllers.getCheckStudentAssignation = async (req, res) => {
+    let db = admin.firestore();
+    
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+
+    let { studentIdParam } = req.query;
+    let { uid } = res.locals;
+
+    if (studentIdParam == null || uid == null)
+    {
+        code = "PARAMS_BAD_FORMATING";
+        message = "El id esta mal formateado";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (studentIdParam.startsWith("U2FsdGVkX") == false)
+    {
+        code = "PARAMS_BAD_FORMATING";
+        message = "El id esta mal formateado";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    let studentId = Decrypt(studentIdParam);
+
+    if (typeof(studentId) != "string" || typeof(uid) != "string")
+    {
+        code = "BAD_TYPES_PARAM";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (studentId == "" || uid == "")
+    {
+        code = "PARAMS_EMPTY";
+        message = "Los valores enviados no pueden ser vacios";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    await db.collection("users").doc(uid).get()
+    .then(result => {
+        if (result.data().students == null)
+        {
+            code = "NOT_HAVE_STUDENTS";
+            message = "Usted no tiene estudiantes asignados";
+            type = "error";
+            status = 404;
+        }
+
+        if (result.data().students.length <= 0)
+        {
+            code = "NOT_HAVE_STUDENTS";
+            message = "Usted no tiene estudiantes asignados";
+            type = "error";
+            status = 404;
+        }
+
+        if (result.data().students.includes(studentId) == true)
+        {
+            code = "PROCESS_OK";
+            data = true;
+            type = "success";
+            status = 200;
+        }
+        else
+        {
+            code = "STUDENT_NOT_FOUND";
+            data = false;
+            type = "error";
+            status = 404;
+        }
+    })
+    .catch(error => {
+        code = error.code;
+        type = "error";
+        status = 500;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    });
+};
+
+controllers.getStudentSubjects = async (req, res) => {
+    let db = admin.firestore();
+
+    let code = "";
+    let type = "";
+    let status = 0;
+    let data = null;
+    let message = "";
+
+    let arraySubjects = [];
+    let arraySubjectsStudent = [];
+
+    let { studentIdParam } = req.query;
+
+    if (studentIdParam == null)
+    {
+        code = "PARAMS_BAD_FORMATING";
+        message = "El id esta mal formateado";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (studentIdParam.startsWith("U2FsdGVkX") == false)
+    {
+        code = "PARAMS_BAD_FORMATING";
+        message = "El id esta mal formateado";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    let studentId = Decrypt(studentIdParam);
+
+    if (typeof(studentId) != "string")
+    {
+        code = "BAD_TYPES_PARAM";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (studentId == "")
+    {
+        code = "PARAMS_EMPTY";
+        message = "Los valores enviados no pueden ser vacios";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    await db.collection("courses").get()
+    .then(async resultSubject => {
+        resultSubject.docs.forEach(doc => {
+            arraySubjects.push({
+                id: doc.id,
+                data: doc.data()
+            });
+        });
+
+        await db.collection("users").doc(studentId).collection("courses").get()
+        .then(resultSubjectStudent => {
+            if (resultSubjectStudent.size > 0)
+            {
+                resultSubjectStudent.docs.forEach(doc => {
+                    let filter = arraySubjects.filter(x => x.id === doc.id);
+
+                    if (filter.length > 0)
+                    {
+                        arraySubjectsStudent.push({
+                            id: doc.id,
+                            data: {
+                                id: doc.id,
+                                idCourse: doc.id,
+                                uid: studentId,
+                                code: filter[0].data.code,
+                                name: filter[0].data.courseName,
+                                subject: filter[0].data.type,
+                                created_at: doc.data().created_at,
+                            }
+                        });
+                    }
+                });
+
+                code = "PROCESS_OK";
+                data = Encrypt(arraySubjectsStudent);
+                type = "success";
+                status = 200;
+            }
+            else
+            {
+                code = "NO_COURSES_EXIST";
+                type = "error";
+                status = 404;
+            }
+        })
+        .catch(error => {
+            code = error.code;
+            type = "error";
+            status = 500;
+        })
+        .finally(() => {
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+
+            db = null;
+            code = null;
+            data = null;
+            message = null;
+            type = null;
+            status = null;
+
+            return;
+        });
+    })
+    .catch(error => {
+        code = error.code;
+        type = "error";
+        status = 500;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        db = null;
+        code = null;
+        data = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    });
+};
+
+/* controllers.setHomeworkFileURL = async (req, res) => {
     let { uid } = res.locals;
     let { objectData } = req.body;
     let { idSubjectParam, idUnitParam } = req.query;
@@ -405,6 +817,6 @@ controllers.postFeedback = async (req, res) => {
 
         return;
     });
-};
+}; */
 
 module.exports = controllers;

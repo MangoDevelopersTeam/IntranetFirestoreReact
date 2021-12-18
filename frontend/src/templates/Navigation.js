@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { Menu, ChevronLeft, ChevronRight,  ExitToApp, People, Home, Notes, Build, GridOn, FormatListNumbered } from '@material-ui/icons';
+import { Menu, ChevronLeft, ChevronRight,  ExitToApp, People, Home, Notes, Build, GridOn, FormatListNumbered, Forum, Replay, Group } from '@material-ui/icons';
 import { Drawer, AppBar, Toolbar, List, CssBaseline, Typography, Divider, IconButton, ListItem, ListItemIcon, ListItemText, makeStyles, useTheme, Paper, CircularProgress } from '@material-ui/core';
 
 import { Decrypt } from '../helpers/cipher/cipher';
@@ -9,7 +9,6 @@ import history from './../helpers/history/handleHistory';
 import { clearAuthData } from '../helpers/auth/handleGetLevel';
 
 import clsx from 'clsx';
-
 import axios from 'axios';
 
 const drawerWidth = 240;
@@ -81,14 +80,11 @@ const Navigation = () => {
     const theme = useTheme();
     const classes = useStyles();
     
-
     // useStates
     const [open, setOpen] = useState(false);
     const [access, setAccess] = useState(null);
-
     const [errorAccess, setErrorAccess] = useState(false);
     const [loadingAccess, setLoadingAccess] = useState(true);
-
 
     // Funciones
     /**
@@ -105,7 +101,6 @@ const Navigation = () => {
         setOpen(false);
     };
 
-    
     // useCallback
     /**
      * useCallback paa obtener el nivel del usuario
@@ -114,29 +109,36 @@ const Navigation = () => {
         async () => {
             setLoadingAccess(true);
 
-            await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-access")
+            await axios.get(`${process.env.REACT_APP_API_URI}/get-access`)
             .then(result => {
                 if (result.status === 200 && result.data.code === "PROCESS_OK")
                 {
-                    setAccess(result.data.data);
+                    setAccess(Decrypt(result.data.data));
                     setErrorAccess(false);
                     setLoadingAccess(false);
                 }
                 else
                 {   
-                    setAccess(null);
+                    setAccess(undefined);
                     setErrorAccess(true);
                     setLoadingAccess(false);
                 }
             })
             .catch(error => {
-                setAccess(null);
+                setAccess(undefined);
                 setErrorAccess(true);
                 setLoadingAccess(false);
 
                 if (error.response)
                 {
                     console.log("THE ERROR GET ACCESS IS : ", error.response);
+                }
+            })
+            .finally(() => {
+                return () => {
+                    setAccess(null);
+                    setErrorAccess(null);
+                    setLoadingAccess(null);
                 }
             });
         },
@@ -156,7 +158,6 @@ const Navigation = () => {
         [setAccess],
     );
 
-    
     // useEffects
     useEffect(() => {
         let callQuery = async () => {
@@ -171,7 +172,6 @@ const Navigation = () => {
             setLoadingAccess(null);
         }
     }, [handleGetAccess, setAccess, setErrorAccess, setLoadingAccess]);
-
 
     return (
         <Paper elevation={0} className={classes.root}>
@@ -197,6 +197,7 @@ const Navigation = () => {
                     </IconButton>
                 </div>
                 <Divider />
+                
                 <List>
                     <Paper elevation={0}>
                     { 
@@ -204,169 +205,201 @@ const Navigation = () => {
                             <Paper elevation={0} style={{ height: "80vh", display: "flex", justifyContent: "center", alignItems: "center" }}>
                                 <CircularProgress style={{ color: "#2074d4" }} />
                             </Paper>
+                        ) : errorAccess === true ? (
+                            <Paper elevation={0}>
+                                <ListItem button onClick={async () => await handleGetAccess()}>
+                                    <ListItemIcon>
+                                        <Replay />
+                                    </ListItemIcon>
+                                    <ListItemText primary="Recargar contenido" />
+                                </ListItem>
+                            </Paper>
+                        ) : access === null ? (
+                            <Paper elevation={0} style={{ height: "80vh", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                <CircularProgress style={{ color: "#2074d4" }} />
+                            </Paper>
+                        ) : access === undefined ? (
+                            <Paper elevation={0}>
+                                <ListItem button onClick={async () => await handleGetAccess()}>
+                                    <ListItemIcon>
+                                        <Replay />
+                                    </ListItemIcon>
+                                    <ListItemText primary="Recargar contenido" />
+                                </ListItem>
+                            </Paper>
                         ) : (
-                            errorAccess === true ? (
-                                <Paper>
-                                   <ListItem button onClick={() => handleSignOut()}>
-                                        <ListItemIcon>
-                                            <ExitToApp />
-                                        </ListItemIcon>
-                                        <ListItemText primary="Salir" />
-                                    </ListItem>
-                                </Paper>
-                            ) : (
-                                access === null ? (
-                                    <Paper elevation={0} style={{ height: "80vh", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                                        <CircularProgress style={{ color: "#2074d4" }} />
-                                    </Paper>
-                                ) : (
+                            <React.Fragment>
+                                { Decrypt(access) === "admin" && (
                                     <React.Fragment>
-                                        { Decrypt(access) === "admin" && (
-                                            <React.Fragment>
-                                                <Link to="/" style={{ textDecoration: "none", color: "#000" }}>
-                                                    <ListItem button>
-                                                        <ListItemIcon>
-                                                            <Home />
-                                                        </ListItemIcon>
-                                                        <ListItemText primary="Home" />
-                                                    </ListItem>
-                                                </Link>
+                                        <Link to="/" style={{ textDecoration: "none", color: "#000" }}>
+                                            <ListItem button>
+                                                <ListItemIcon>
+                                                    <Home />
+                                                </ListItemIcon>
+                                                <ListItemText primary="Home" />
+                                            </ListItem>
+                                        </Link>
 
-                                                <Link to="/users" style={{ textDecoration: "none", color: "#000" }}>
-                                                    <ListItem button>
-                                                        <ListItemIcon>
-                                                            <People />
-                                                        </ListItemIcon>
-                                                        <ListItemText primary="Usuarios" />
-                                                    </ListItem>
-                                                </Link>
+                                        <Link to="/users" style={{ textDecoration: "none", color: "#000" }}>
+                                            <ListItem button>
+                                                <ListItemIcon>
+                                                    <People />
+                                                </ListItemIcon>
+                                                <ListItemText primary="Usuarios" />
+                                            </ListItem>
+                                        </Link>
 
-                                                <Link to="/subjects" style={{ textDecoration: "none", color: "#000" }}>
-                                                    <ListItem button>
-                                                        <ListItemIcon>
-                                                            <Notes />
-                                                        </ListItemIcon>
-                                                        <ListItemText primary="Manejar Asignaturas" />
-                                                    </ListItem>
-                                                </Link>
+                                        <Link to="/subjects" style={{ textDecoration: "none", color: "#000" }}>
+                                            <ListItem button>
+                                                <ListItemIcon>
+                                                    <Notes />
+                                                </ListItemIcon>
+                                                <ListItemText primary="Manejar Asignaturas" />
+                                            </ListItem>
+                                        </Link>
 
-                                                <Link to="/testing" style={{ textDecoration: "none", color: "#000" }}>
-                                                    <ListItem button>
-                                                        <ListItemIcon>
-                                                            <Build />
-                                                        </ListItemIcon>
-                                                        <ListItemText primary="Testeos" />
-                                                    </ListItem>
-                                                </Link>
+                                        <Link to="/forum" style={{ textDecoration: "none", color: "#000" }}>
+                                            <ListItem button>
+                                                <ListItemIcon>
+                                                    <Forum />
+                                                </ListItemIcon>
+                                                <ListItemText primary="Foro" />
+                                            </ListItem>
+                                        </Link>
 
-                                                <ListItem button onClick={() => handleSignOut()}>
-                                                    <ListItemIcon>
-                                                        <ExitToApp />
-                                                    </ListItemIcon>
-                                                    <ListItemText primary="Salir" />
-                                                </ListItem>
-                                            </React.Fragment>
-                                        ) }
-                                                      
-                                        { Decrypt(access) === "teacher" && (
-                                            <React.Fragment>
-                                                <Link to="/" style={{ textDecoration: "none", color: "#000" }}>
-                                                    <ListItem button>
-                                                        <ListItemIcon>
-                                                            <Home />
-                                                        </ListItemIcon>
-                                                        <ListItemText primary="Home" />
-                                                    </ListItem>
-                                                </Link>
+                                        <Link to="/testing" style={{ textDecoration: "none", color: "#000" }}>
+                                            <ListItem button>
+                                                <ListItemIcon>
+                                                    <Build />
+                                                </ListItemIcon>
+                                                <ListItemText primary="Testeos" />
+                                            </ListItem>
+                                        </Link>
 
-                                                <Link to="/my-subjects" style={{ textDecoration: "none", color: "#000" }}>
-                                                    <ListItem button>
-                                                        <ListItemIcon>
-                                                            <Notes />
-                                                        </ListItemIcon>
-                                                        <ListItemText primary="Mis Cursos" />
-                                                    </ListItem>
-                                                </Link>
-
-                                                <ListItem button onClick={() => handleSignOut()}>
-                                                    <ListItemIcon>
-                                                        <ExitToApp />
-                                                    </ListItemIcon>
-                                                    <ListItemText primary="Salir" />
-                                                </ListItem>
-                                            </React.Fragment>
-                                        ) }      
-
-                                        { Decrypt(access) === "proxie" && (
-                                            <React.Fragment>
-                                                <Link to="/" style={{ textDecoration: "none", color: "#000" }}>
-                                                    <ListItem button>
-                                                        <ListItemIcon>
-                                                            <Home />
-                                                        </ListItemIcon>
-                                                        <ListItemText primary="Home" />
-                                                    </ListItem>
-                                                </Link>
-
-                                                <ListItem button onClick={() => handleSignOut()}>
-                                                    <ListItemIcon>
-                                                        <ExitToApp />
-                                                    </ListItemIcon>
-                                                    <ListItemText primary="Salir" />
-                                                </ListItem>
-                                            </React.Fragment>
-                                        ) } 
-
-                                        { Decrypt(access) === "student" && (
-                                            <React.Fragment>
-                                                <Link to="/" style={{ textDecoration: "none", color: "#000" }}>
-                                                    <ListItem button>
-                                                        <ListItemIcon>
-                                                            <Home />
-                                                        </ListItemIcon>
-                                                        <ListItemText primary="Home" />
-                                                    </ListItem>
-                                                </Link>
-
-                                                <Link to="/my-subjects" style={{ textDecoration: "none", color: "#000" }}>
-                                                    <ListItem button>
-                                                        <ListItemIcon>
-                                                            <Notes />
-                                                        </ListItemIcon>
-                                                        <ListItemText primary="Mis Cursos" />
-                                                    </ListItem>
-                                                </Link>
-
-                                                <Link to="/my-grades" style={{ textDecoration: "none", color: "#000" }}>
-                                                    <ListItem button>
-                                                        <ListItemIcon>
-                                                            <GridOn />
-                                                        </ListItemIcon>
-                                                        <ListItemText primary="Mis Notas" />
-                                                    </ListItem>
-                                                </Link>
-
-                                                <Link to="/my-annotations" style={{ textDecoration: "none", color: "#000" }}>
-                                                    <ListItem button>
-                                                        <ListItemIcon>
-                                                            <FormatListNumbered />
-                                                        </ListItemIcon>
-                                                        <ListItemText primary="Mis Anotaciones" />
-                                                    </ListItem>
-                                                </Link>
-
-                                                <ListItem button onClick={() => handleSignOut()}>
-                                                    <ListItemIcon>
-                                                        <ExitToApp />
-                                                    </ListItemIcon>
-                                                    <ListItemText primary="Salir" />
-                                                </ListItem>
-                                            </React.Fragment>
-                                        ) } 
+                                        <ListItem button onClick={() => handleSignOut()}>
+                                            <ListItemIcon>
+                                                <ExitToApp />
+                                            </ListItemIcon>
+                                            <ListItemText primary="Salir" />
+                                        </ListItem>
                                     </React.Fragment>
-                                )
-                            )
-                        ) 
+                                ) }
+                                                      
+                                { Decrypt(access) === "teacher" && (
+                                    <React.Fragment>
+                                        <Link to="/" style={{ textDecoration: "none", color: "#000" }}>
+                                            <ListItem button>
+                                                <ListItemIcon>
+                                                    <Home />
+                                                </ListItemIcon>
+                                                <ListItemText primary="Home" />
+                                            </ListItem>
+                                        </Link>
+
+                                        <Link to="/my-subjects" style={{ textDecoration: "none", color: "#000" }}>
+                                            <ListItem button>
+                                                <ListItemIcon>
+                                                    <Notes />
+                                                </ListItemIcon>
+                                                <ListItemText primary="Mis Cursos" />
+                                            </ListItem>
+                                        </Link>
+
+                                        <ListItem button onClick={() => handleSignOut()}>
+                                            <ListItemIcon>
+                                                <ExitToApp />
+                                            </ListItemIcon>
+                                            <ListItemText primary="Salir" />
+                                        </ListItem>
+                                    </React.Fragment>
+                                ) }      
+
+                                { Decrypt(access) === "proxie" && (
+                                    <React.Fragment>
+                                        <Link to="/" style={{ textDecoration: "none", color: "#000" }}>
+                                            <ListItem button>
+                                                <ListItemIcon>
+                                                    <Home />
+                                                </ListItemIcon>
+                                                <ListItemText primary="Home" />
+                                            </ListItem>
+                                        </Link>
+
+                                        <Link to="/my-students" style={{ textDecoration: "none", color: "#000" }}>
+                                            <ListItem button>
+                                                <ListItemIcon>
+                                                    <Group />
+                                                </ListItemIcon>
+                                                <ListItemText primary="Mis Alumnos" />
+                                            </ListItem>
+                                        </Link>
+
+                                        <ListItem button onClick={() => handleSignOut()}>
+                                            <ListItemIcon>
+                                                <ExitToApp />
+                                            </ListItemIcon>
+                                            <ListItemText primary="Salir" />
+                                        </ListItem>
+                                    </React.Fragment>
+                                ) } 
+
+                                { Decrypt(access) === "student" && (
+                                    <React.Fragment>
+                                        <Link to="/" style={{ textDecoration: "none", color: "#000" }}>
+                                            <ListItem button>
+                                                <ListItemIcon>
+                                                    <Home />
+                                                </ListItemIcon>
+                                                <ListItemText primary="Home" />
+                                            </ListItem>
+                                        </Link>
+
+                                        <Link to="/my-subjects" style={{ textDecoration: "none", color: "#000" }}>
+                                            <ListItem button>
+                                                <ListItemIcon>
+                                                    <Notes />
+                                                </ListItemIcon>
+                                                <ListItemText primary="Mis Cursos" />
+                                            </ListItem>
+                                        </Link>
+
+                                        <Link to="/my-grades" style={{ textDecoration: "none", color: "#000" }}>
+                                            <ListItem button>
+                                                <ListItemIcon>
+                                                    <GridOn />
+                                                </ListItemIcon>
+                                                <ListItemText primary="Mis Notas" />
+                                            </ListItem>
+                                        </Link>
+
+                                        <Link to="/my-annotations" style={{ textDecoration: "none", color: "#000" }}>
+                                            <ListItem button>
+                                                <ListItemIcon>
+                                                    <FormatListNumbered />
+                                                </ListItemIcon>
+                                                <ListItemText primary="Mis Anotaciones" />
+                                            </ListItem>
+                                        </Link>
+
+                                        <Link to="/forum" style={{ textDecoration: "none", color: "#000" }}>
+                                            <ListItem button>
+                                                <ListItemIcon>
+                                                    <Forum />
+                                                </ListItemIcon>
+                                                <ListItemText primary="Foro" />
+                                            </ListItem>
+                                        </Link>
+
+                                        <ListItem button onClick={() => handleSignOut()}>
+                                            <ListItemIcon>
+                                                <ExitToApp />
+                                            </ListItemIcon>
+                                            <ListItemText primary="Salir" />
+                                        </ListItem>
+                                    </React.Fragment>
+                                ) } 
+                            </React.Fragment>
+                        )
                     }
                     </Paper>
                 </List>

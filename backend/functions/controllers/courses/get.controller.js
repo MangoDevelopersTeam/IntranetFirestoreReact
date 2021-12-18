@@ -1,11 +1,11 @@
+// Importaciones
 const { Decrypt, Encrypt } = require("./../../helpers/cipher");
 const admin = require("firebase-admin");
-const functions = require("firebase-functions");
 
-const db = admin.firestore();
-const auth = admin.auth();
 
+// Declaraciones
 const controllers = {};
+
 
 /**
  * Función para obtener los cursos
@@ -14,161 +14,114 @@ const controllers = {};
  * @returns Objeto json de las regiones
  */
 controllers.getCourses = async (req, res) => {
-    if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer ')) {
-        return res.send({ code: "TOKEN_MISSING", message: "Esta acción necesita de un token de autenticación", type: "error" });
-    }
+    let db = admin.firestore();
 
-    try {
-        const { page } = req.query;
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
 
-        /* if (page <= 1)
+    await db.collection("courses").get()
+    .then(result => {
+        code = "PROCESS_OK";
+        type = "success";
+        data = result.docs.length;
+        status = 200;
+
+        if (result.docs.length > 0) 
         {
-            await getCoursesNoPage(page);
-        }
-        else
-        { */
-        await db.collection("courses").orderBy("created_at").get()
-            .then(async snapshot => {
+            let array = [];
 
-                // Obtener paginas
-                const staticSize = snapshot.size; // 7
-
-                let size = staticSize; // 7
-                let array = [];
-
-                size = size / 5; //1,4
-                size = Math.floor(size);
-
-                if (staticSize % 5 !== 0) {
-                    size++;
-                }
-
-                // size: 2
-
-                let a = 0; // a = 0
-
-                if (page) // page: 2
-                {
-                    a = page * 5; // -> 10
-                }
-
-                let b = 0; // -> 5
-
-                if (staticSize > 5) {
-                    b = a - 5; // -> 5
-                }
-
-                //return res.send({ code: "PROCESS_OK", a: a, b: b, paginas: size, type: "success" });
-
-                /* if (page > 1)
-                {   
-                    await db.collection("courses").orderBy("created_at").startAfter(b).limit(a).get()
-                    .then((coursesRecord) => {
-                        if (coursesRecord?.docs?.length > 0)
-                        {
-                            coursesRecord?.docs?.forEach(course => {
-                                array.push({
-                                    id: course?.id,
-                                    data: course?.data(),
-                                });
-                            });
-
-                            return res.send({ code: "PROCESS_OK", data: array, paginas: size, type: "success" });
-                        }
-
-                        return res.send({ code: "NO_REGIONS", message: "No existen regiones aún", type: "error" });
-                    })
-                    .catch((error) => {
-                        return res.send({ code: "FIREBASE_GET_ERROR", message: error.message, type: "error" });
-                    });
-                }
-                else
-                { */
-                /* await db.collection("courses").orderBy("indice").startAt(b).limit(a).get() */
-                await db.collection("courses").get()
-                    .then((coursesRecord) => {
-                        if (coursesRecord?.docs?.length > 0) {
-                            coursesRecord?.docs?.forEach(course => {
-                                array.push({
-                                    id: course?.id,
-                                    data: Encrypt(course?.data()),
-                                });
-                            });
-
-                            return res.send({ code: "PROCESS_OK", data: Encrypt(array), paginas: size, type: "success" });
-                        }
-
-                        return res.send({ code: "NO_REGIONS", message: "No existen regiones aún", type: "error" });
-                    })
-                    .catch((error) => {
-                        return res.send({ code: "FIREBASE_GET_ERROR", message: error.message, type: "error" });
-                    });
-                /* } */
-
+            result.docs.forEach(doc => {
+                array.push({
+                    id: doc.id,
+                    data: doc.data(),
+                });
             });
 
+            code = "PROCESS_OK";
+            type = "success";
+            data = Encrypt(array);
+            status = 200;
+        }
+        else
+        {
+            code = "COURSES_NOT_FOUND";
+            message = "No existen cursos creados aún";
+            type = "error";
+            status = 404;
+        }
+    })
+    .catch(error => {
+        code = error.code;
+        message = "Ha ocurrido un error al obtener las asignaturas";
+        type = "error";
+        code = 400;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
 
-        /* } */
-        /* let queryLength = query.docs.length; */
+        code = null;
+        message = null;
+        data = null
+        type = null;
+        status = null;
 
+        return;
+    });
+/* 
+    await db.collection("courses").get()
+    .then(result => {
 
+        code = "PROCESS_OK";
+        type = "success";
+        data = result.size;
+        status = 200;
 
+        if (result.docs.length > 0) 
+        {
+            let array = [];
 
-        /* let longitud = 11;
-        let longitudd = longitud;
-
-        longitud = longitud/5;
-        longitud = Math.floor(longitud);
-        if(longitudd%5!=0){
-            longitud++
-    } */
-
-
-        //console.log(longitud);
-
-
-
-
-
-
-
-
-
-
-        /* db.collection("courses").orderBy("created_at").startAt(0).limit(5).get()
-        .then((coursesRecord) => {
-            if (coursesRecord?.docs?.length > 0)
-            {
-                coursesRecord?.docs?.forEach(course => {
-                    array.push({
-                        id: course?.id,
-                        data: course?.data(),
-                    });
+            result.docs.forEach(doc => {
+                array.push({
+                    id: doc.id,
+                    data: Encrypt(document.data()),
                 });
+            });
 
-                let longitud = array.length
-                longitud = longitud/5;
-                Math.floor(longitud);
-
-                return res.send({ code: "PROCESS_OK", data: array, type: "success" });
-            }
-
-            return res.send({ code: "NO_REGIONS", message: "No existen regiones aún", type: "error" });
-        })
-        .catch((error) => {
-            return res.send({ code: "FIREBASE_GET_ERROR", message: error.message, type: "error" });
-        }); */
-    }
-    catch (error) {
-        if (error.code == 'auth/id-token-revoked') {
-            return res.send({ code: "TOKEN_REVOKED", message: "Re-autenticate o deslogueate de la aplicación para acceder nuevamente", type: "error" });
+            code = "PROCESS_OK";
+            type = "success";
+            data = Encrypt(array);
+            status = 200;
         }
-        else {
-            return res.send({ code: "TOKEN_INVALID", message: "El token provisto es invalido", type: "error" });
+        else
+        {
+            code = "COURSES_NOT_FOUND";
+            message = "No existen cursos creados aún";
+            type = "error";
+            status = 404;
         }
-    }
+    })
+    .catch(error => {
+        code = error.code;
+        message = error.message;
+        type = "error";
+        code = 400;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        db = null;
+        code = null;
+        message = null;
+        data = null
+        type = null;
+        status = null;
+
+        return;
+    }); */
 };
-
 
 
 /**

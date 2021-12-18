@@ -689,10 +689,16 @@ controllers.postGradesStudentCourse = async (req, res) => {
         return;
     }
 
+    let gradeRef = db.collection("courses").doc(courseId).collection("students").doc(userId).collection("grades").doc(unitId);
+
     objectGrade.created_at = admin.firestore.FieldValue.serverTimestamp();
     objectGrade.created_by = uid;
+    objectGrade.idSubject = courseId;
+    objectGrade.idStudent = userId;
+    objectGrade.idUnit = unitId;
+    objectGrade.idGrade = gradeRef.id;
 
-    await db.collection("courses").doc(courseId).collection("students").doc(userId).collection("grades").doc(unitId).set(objectGrade)
+    await gradeRef.set(objectGrade)
     .catch(error => {
         code = error.code;
         type = "error";
@@ -869,10 +875,15 @@ controllers.postAnnotationStudentCourse = async (req, res) => {
         return;
     }
 
+    let annotationRef = db.collection("users").doc(userId).collection("annotations").doc();
+
     annotationObject.created_at = admin.firestore.FieldValue.serverTimestamp();
     annotationObject.created_by = uid;
+    annotationObject.idUser = userId;
+    annotationObject.idSubject = subjectId;
+    annotationObject.id = annotationRef.id;
 
-    await db.collection("users").doc(userId).collection("annotations").add(annotationObject)
+    await annotationRef.set(annotationObject)
     .catch(error => {
         code = error.code;
         type = "error";

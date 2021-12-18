@@ -513,7 +513,7 @@ const DetailedStudentHomework = () => {
                     let remainingTime = null;
                     let objectHomework = null;
 
-                    if (detailedHomework[0].limitTime === true)
+                    if (detailedHomework[0].data.limitTime === true)
                     {
                         actualDate = new Date().toString();
                         remainingTime = handleGetRemainingTime("UPLOAD_FILE");
@@ -1033,6 +1033,9 @@ const DetailedStudentHomework = () => {
                                                                                     </TableCell>
                                                                                     <TableCell align="left" style={studentHomework !== undefined ? studentHomework[0].data.inTime === true ? {backgroundColor: "#CCF6CB" } : {backgroundColor: "#FAB9B9" } : {backgroundColor: "white" }}>
                                                                                         <React.Fragment>
+                                                                                            {
+                                                                                                console.log(studentHomework)
+                                                                                            }
                                                                                         {
                                                                                             studentHomework === undefined ? (
                                                                                                 <Typography color={inTime !== undefined && inTime === true ? `inherit` : `error`}>{timeCount}</Typography>

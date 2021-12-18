@@ -21,7 +21,7 @@ export class homework {
      */
     setRemainingTime(remainingTime)
     {
-        if(remainingTime != "" || typeof(remainingTime) != "number")
+        if(remainingTime !== "" || typeof(remainingTime) !== "number")
         {
             this.remainingTime = remainingTime;
         }
@@ -33,7 +33,7 @@ export class homework {
      */
     setInTime(inTime)
     {
-        if(inTime != "" || typeof(inTime) != "boolean")
+        if(inTime !== "" || typeof(inTime) !== "boolean")
         {
             this.inTime = inTime;
         }
@@ -45,7 +45,7 @@ export class homework {
      */
     setDate(date)
     {
-        if(date != "" || typeof(date) != "string")
+        if(date !== "" || typeof(date) !== "string")
         {
             this.date = date;
         }
@@ -57,7 +57,7 @@ export class homework {
      */
     setCalificated(calificated)
     {
-        if(calificated != "" || typeof(calificated) != "boolean")
+        if(calificated !== "" || typeof(calificated) !== "boolean")
         {
             this.calificated = calificated;
         }
@@ -69,7 +69,7 @@ export class homework {
      */
     setUrl(url)
     {
-        if(url !== "" || typeof(url) != "string")
+        if(url !== "" || typeof(url) !== "string")
         {
             this.url = url;
         }

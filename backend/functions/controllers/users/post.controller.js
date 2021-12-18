@@ -1,60 +1,13 @@
-// Importación del metodo Decrypt y el admin sdk
+// Importaciones
 const { Decrypt, Encrypt } = require("./../../helpers/cipher");
 const admin = require("firebase-admin");
 
 
-// Objeto controllers que contendra los metodos
+// Declaraciones
 const controllers = {};
 
 
-/**
- * Función para obtener la información del usuario
- * @param {import("express").Request} req Objeto Request
- * @param {import("express").Response} res Objeto Response
- */
-controllers.whoami = async (req, res) => {
-    let { uid } = res.locals;
-
-    let auth = admin.auth();
-
-    let code = "";
-    let data = null;
-    let message = "";
-    let type = "";
-    let status = 0;
-
-    await auth.getUser(uid)
-    .then(result => {
-        let object = {
-            email: Encrypt(result.displayName),
-            displayName: Encrypt(result.email),
-        }
-
-        code = "PROCESS_OK";
-        data = Encrypt(object);
-        type = "success";
-        status = 200;
-    })
-    .catch(error => {
-        code = error.code;
-        type = "error";
-        status = 404;
-    })
-    .finally(() => {
-        res.status(status).send({ code: code, message: message, data: data, type: type });
-        
-        auth = null;
-        code = null;
-        data = null;
-        message = null;
-        type = null;
-        status = null;
-
-        return;
-    });
-};
-
-
+// Funciones
 /**
  * Función para verificar que el run no este duplicado en la base de datos
  * @param {string} run run del usuario
@@ -98,6 +51,100 @@ const checkExistRun = async (run) => {
 };
 
 
+/**
+ * Función para verificar que el run este bien formateado
+ * @param {string} run run del usuario
+ * @returns booleano de si esta bien o no formateado el un
+ */
+const checkFormatRun = (run) => {
+    // Despejar puntos y guión
+    let valor = clean(run);
+
+    // Divide el valor ingresado en dígito verificador y resto del RUN.
+    let cuerpo = valor.slice(0, -1);
+    let dv = valor.slice(-1).toUpperCase();
+
+    // Separa con un Guión el cuerpo del dígito verificador.
+    run = formatRun(run);
+
+    // Si no cumple con el mínimo ej. (n.nnn.nnn)
+    if (cuerpo.length < 7) 
+    {
+        return false;
+    }
+
+    // Calcular Dígito Verificador "Método del Módulo 11"
+    let suma = 0;
+    let multiplo = 2;
+
+    // Para cada dígito del Cuerpo
+    for (let i = 1; i <= cuerpo.length; i++)
+    {
+        // Obtener su Producto con el Múltiplo Correspondiente
+        let index = multiplo * valor.charAt(cuerpo.length - i);
+
+        // Sumar al Contador General
+        suma = suma + index;
+
+        // Consolidar Múltiplo dentro del rango [2,7]
+        if (multiplo < 7) 
+        {
+            multiplo = multiplo + 1;
+        } 
+        else 
+        {
+            multiplo = 2;
+        }
+    }
+
+    // Calcular Dígito Verificador en base al Módulo 11
+    let dvEsperado = 11 - (suma % 11);
+
+    // Casos Especiales (0 y K)
+    dv = (dv == "K") ? 10 : dv;
+    dv = (dv == 0) ? 11 : dv;
+
+    if (dvEsperado != dv)
+    {
+        return false;
+    } 
+    else 
+    {
+        return true;
+    }
+};
+
+
+/**
+ * Función que formatea el run
+ * @param {string} run run del usuario
+ * @returns run formateado
+ */
+const formatRun = (run) => {
+    run = clean(run);
+
+    let result = run.slice(-4, -1) + '-' + run.substr(run.length - 1);
+
+    for (let i = 4; i < run.length; i += 3) 
+    {
+        result = run.slice(-3 - i, -i) + '.' + result;
+    }
+  
+    return result;
+};
+
+
+/**
+ * Función para limpiar el run
+ * @param {string} run run del usuario
+ * @returns el run con formato limpio
+ */
+const clean = (run) => {
+    return typeof run == "string" ? run.replace(/^0+|[^0-9kK]+/g, '').toUpperCase() : '';
+};
+
+
+// Metodos
 /**
  * Metodo que crea usuarios dentro del sistema (profesores, alumnos, apoderados)
  * @param {import("express").Request} req objeto request
@@ -189,6 +236,27 @@ controllers.createAndRegisterUser = async (req, res) => {
     if (level == "teacher" || level == "student" || level == "proxie")
     {
         let checkRunExist = await checkExistRun(run);
+        let checkRunFormat = checkFormatRun(run);
+
+        if (checkRunFormat == false)
+        {
+            code = "RUN_BAD_FORMATING";
+            message = "El run enviado tiene un mal formato"; 
+            type = "error";
+            status = 400;
+
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+
+            db = null;
+            auth = null;
+            code = null;
+            data = null;
+            message = null;
+            type = null;
+            status = null;
+
+            return;
+        }
 
         if (checkRunExist.exist == true)
         {
@@ -198,6 +266,26 @@ controllers.createAndRegisterUser = async (req, res) => {
             status = 400;
 
             res.status(status).send({ code: code, message: message, data: data, type: type });
+
+            db = null;
+            auth = null;
+            code = null;
+            data = null;
+            message = null;
+            type = null;
+            status = null;
+
+            return;
+        }
+
+        if (password != passwordRepeat)
+        {
+            code = "PASSWORDS_DOESNT_MATCH";
+            message = "Las contraseñas no coinciden"; 
+            type = "error";
+            status = 400;
+
+            res.status(400).send({ code: code, message: message, data: data, type: type });
 
             db = null;
             auth = null;
@@ -305,26 +393,6 @@ controllers.createAndRegisterUser = async (req, res) => {
             });
         }
 
-        if (password != passwordRepeat)
-        {
-            code = "PASSWORDS_DOESNT_MATCH";
-            message = "Las contraseñas no coinciden"; 
-            type = "error";
-            status = 400;
-
-            res.status(400).send({ code: code, message: message, data: data, type: type });
-
-            db = null;
-            auth = null;
-            code = null;
-            data = null;
-            message = null;
-            type = null;
-            status = null;
-
-            return;
-        }
-
         await auth.createUser({
             displayName: displayName,
             email: email,
@@ -353,12 +421,11 @@ controllers.createAndRegisterUser = async (req, res) => {
             delete user.password;
             delete user.passwordRepeat;
 
-            user.level = level;
             user.created_at = admin.firestore.FieldValue.serverTimestamp();
             user.created_by = uid;
+            user.level = level;    
             user.deleted = false;
-
-            //TODO: PONER DESPUES DE CREAR USUARIO SI ES PROFESOR, CREAR UNA COLECCIÓN DE USUARIOS DENTRO DEL USUARIO
+            user.uid = result.uid;
 
             await db.collection("users").doc(result.uid).set(user)
             .then(() => {
@@ -519,6 +586,27 @@ controllers.createAndRegisterAdmin = async (req, res) => {
     if (level == "admin")
     {
         let checkRunExist = await checkExistRun(run);
+        let checkRunFormat = checkFormatRun(run);
+
+        if (checkRunFormat == false)
+        {
+            code = "RUN_BAD_FORMATING";
+            message = "El run enviado tiene un mal formato"; 
+            type = "error";
+            status = 400;
+
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+
+            db = null;
+            auth = null;
+            code = null;
+            data = null;
+            message = null;
+            type = null;
+            status = null;
+
+            return;
+        }
 
         if (checkRunExist.exist == true)
         {
@@ -593,6 +681,7 @@ controllers.createAndRegisterAdmin = async (req, res) => {
                 user.level = level;
                 user.created_at = admin.firestore.FieldValue.serverTimestamp();
                 user.created_by = uid;
+                user.uid = result.uid;
     
                 await db.collection("users").doc(result.uid).set(user)
                 .then(() => {
@@ -646,6 +735,7 @@ controllers.createAndRegisterAdmin = async (req, res) => {
             user.level = level;
             user.created_at = admin.firestore.FieldValue.serverTimestamp();
             user.created_by = uid;
+            user.uid = uid;
 
             await db.collection("users").doc(uid).set(user)
             .then(async () => {
@@ -715,233 +805,6 @@ controllers.createAndRegisterAdmin = async (req, res) => {
         status = null;
 
         return;
-    }
-};
-
-
-/**
- * Metodo para obtener a todos los alumnos del sistema
- * @param {import("express").Request} req Objeto Request
- * @param {import("express").Response} res Objeto Response
- */
-controllers.getSystemStudents = async (req, res) => {
-    const { filter, filterData } = req.query;
-
-    let db = admin.firestore();
-
-    let code = "";
-    let data = null;
-    let message = "";
-    let type = "";
-    let status = 0;
-
-    if (filter == null)
-    {
-        code = "DATA_SENT_NULL";
-        message = "Asegurate de enviar los datos de forma correcta y completa";
-        type = "error";
-        status = 400;
-
-        res.status(status).send({ code: code, message: message, data: data, type: type });
-
-        db = null;
-        auth = null;
-        code = null;
-        data = null;
-        message = null;
-        type = null;
-        status = null;
-
-        return;
-    }
-
-    if (typeof(filter) != "string")
-    {
-        code = "BAD_TYPE_PARAMS";
-        message = "Los tipos de datos enviados deben ser validos";
-        type = "error";
-        status = 400;
-
-        res.status(status).send({ code: code, message: message, data: data, type: type });
-            
-        db = null;
-        auth = null;
-        code = null;
-        data = null;
-        message = null;
-        type = null;
-        status = null;
-
-        return;
-    }
-
-    if (filter == "true")
-    {
-        if (filterData == null)
-        {
-            code = "DATA_SENT_NULL";
-            message = "Asegurate de enviar los datos de forma correcta y completa";
-            type = "error";
-            status = 400;
-
-            res.status(status).send({ code: code, message: message, data: data, type: type });
-
-            db = null;
-            auth = null;
-            code = null;
-            data = null;
-            message = null;
-            type = null;
-            status = null;
-        }
-
-        if (filterData.startsWith("U2FsdGVk") == false)
-        {
-            code = "DATA_SENT_INVALID";
-            message = "Asegurate de enviar los datos de forma correcta y completa";
-            type = "error";
-            status = 400;
-
-            res.status(status).send({ code: code, message: message, data: data, type: type });
-
-            db = null;
-            auth = null;
-            code = null;
-            data = null;
-            message = null;
-            type = null;
-            status = null;
-        }
-
-        let dataFilter = Decrypt(filterData);
-
-        if (dataFilter.number == null || dataFilter.grade == null || dataFilter.letter == null)
-        {
-            code = "DATA_SENT_NULL";
-            message = "Asegurate de enviar los datos de forma correcta y completa";
-            type = "error";
-            status = 400;
-
-            res.status(status).send({ code: code, message: message, data: data, type: type });
-
-            db = null;
-            auth = null;
-            code = null;
-            data = null;
-            message = null;
-            type = null;
-            status = null;
-        }
-
-        if (dataFilter.number == "" || dataFilter.grade == "" || dataFilter.letter == "")
-        {
-            code = "DATA_SENT_INVALID";
-            message = "Asegurate de enviar los datos de forma correcta y completa";
-            type = "error";
-            status = 400;
-
-            res.status(status).send({ code: code, message: message, data: data, type: type });
-
-            db = null;
-            auth = null;
-            code = null;
-            data = null;
-            message = null;
-            type = null;
-            status = null;
-        }
-
-        let letterParam = dataFilter.letter.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
-        let gradeParam = dataFilter.grade.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
-        let numberParam = dataFilter.number;
-
-        await db.collection("users").where("level", "==", "student").where("assignedToProxie", "==", false).where("number", "==", numberParam).where("letter", "==", letterParam).where("grade", "==", gradeParam).get()
-        .then(result => {
-            let array = [];
-
-            if (result.size > 0)
-            {
-                result.forEach(doc => {
-                    array.push({
-                        id: doc.id,
-                        data: doc.data()
-                    })
-                });
-
-                code = "PROCESS_OK";
-                type = "success";
-                data = Encrypt(array);
-                status = 200;
-            }
-            else
-            {
-                code = "STUDENTS_NOT_FOUND";
-                message = "No existen usuarios en la plataforma con los datos de filtro proporcionados";
-                type = "error";
-                status = 404;
-            }
-        })
-        .catch(error => {
-            code = error.code;
-            type = "error";
-            status = 400;
-        })
-        .finally(() => {
-            res.status(status).send({ code: code, message: message, data: data, type: type });
-
-            db = null;
-            auth = null;
-            code = null;
-            data = null;
-            message = null;
-            type = null;
-            status = null;
-        });
-    }
-    else
-    {
-        await db.collection("users").where("level", "==", "student").where("assignedToProxie", "==", false).get()
-        .then(result => {
-            let array = [];
-
-            if (result.size > 0)
-            {
-                result.forEach(doc => {
-                    array.push({
-                        id: doc.id,
-                        data: doc.data()
-                    })
-                });
-
-                code = "PROCESS_OK";
-                type = "success";
-                data = Encrypt(array);
-                status = 200;
-            }
-            else
-            {
-                code = "STUDENTS_NOT_FOUND";
-                message = "No existen usuarios en la plataforma";
-                type = "error";
-                status = 404;
-            }
-        })
-        .catch(error => {
-            code = error.code;
-            type = "error";
-            status = 400;
-        })
-        .finally(() => {
-            res.status(status).send({ code: code, message: message, data: data, type: type });
-
-            db = null;
-            auth = null;
-            code = null;
-            data = null;
-            message = null;
-            type = null;
-            status = null;
-        });
     }
 };
 

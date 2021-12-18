@@ -1,9 +1,288 @@
 // Importaciones
-const admin = require("firebase-admin");
 const { Decrypt, Encrypt } = require("./../../helpers/cipher");
+const admin = require("firebase-admin");
 
-// Objeto controllers que contendra los metodos
+
+// Declaraciones
 const controllers = {};
+
+
+// Metodos
+/**
+ * Metodo para obtener la información del Usuario
+ * @param {import("express").Request} req Objeto Request
+ * @param {import("express").Response} res Objeto Response
+ */
+controllers.whoami = async (req, res) => {
+    let auth = admin.auth();
+
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+
+    let { uid } = res.locals;
+
+    await auth.getUser(uid)
+    .then(result => {
+        let object = {
+            email: Encrypt(result.displayName),
+            displayName: Encrypt(result.email),
+        }
+
+        code = "PROCESS_OK";
+        data = Encrypt(object);
+        type = "success";
+        status = 200;
+    })
+    .catch(error => {
+        code = error.code;
+        message = error.message;
+        type = "error";
+        status = 404;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, data: data, message: message, type: type });
+        
+        auth = null;
+        code = null;
+        data = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    });
+};
+
+
+/**
+ * Metodo para obtener a todos los alumnos del sistema
+ * @param {import("express").Request} req Objeto Request
+ * @param {import("express").Response} res Objeto Response
+ */
+controllers.getSystemStudents = async (req, res) => {
+    const { filter, filterData } = req.query;
+
+    let db = admin.firestore();
+
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+
+    if (filter == null)
+    {
+        code = "DATA_SENT_NULL";
+        message = "Asegurate de enviar los datos de forma correcta y completa";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        db = null;
+        auth = null;
+        code = null;
+        data = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (typeof(filter) != "string")
+    {
+        code = "BAD_TYPE_PARAMS";
+        message = "Los tipos de datos enviados deben ser validos";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        db = null;
+        auth = null;
+        code = null;
+        data = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (filter == "true")
+    {
+        if (filterData == null)
+        {
+            code = "DATA_SENT_NULL";
+            message = "Asegurate de enviar los datos de forma correcta y completa";
+            type = "error";
+            status = 400;
+
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+
+            db = null;
+            auth = null;
+            code = null;
+            data = null;
+            message = null;
+            type = null;
+            status = null;
+        }
+
+        if (filterData.startsWith("U2FsdGVk") == false)
+        {
+            code = "DATA_SENT_INVALID";
+            message = "Asegurate de enviar los datos de forma correcta y completa";
+            type = "error";
+            status = 400;
+
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+
+            db = null;
+            auth = null;
+            code = null;
+            data = null;
+            message = null;
+            type = null;
+            status = null;
+        }
+
+        let dataFilter = Decrypt(filterData);
+
+        if (dataFilter.number == null || dataFilter.grade == null || dataFilter.letter == null)
+        {
+            code = "DATA_SENT_NULL";
+            message = "Asegurate de enviar los datos de forma correcta y completa";
+            type = "error";
+            status = 400;
+
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+
+            db = null;
+            auth = null;
+            code = null;
+            data = null;
+            message = null;
+            type = null;
+            status = null;
+        }
+
+        if (dataFilter.number == "" || dataFilter.grade == "" || dataFilter.letter == "")
+        {
+            code = "DATA_SENT_INVALID";
+            message = "Asegurate de enviar los datos de forma correcta y completa";
+            type = "error";
+            status = 400;
+
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+
+            db = null;
+            auth = null;
+            code = null;
+            data = null;
+            message = null;
+            type = null;
+            status = null;
+        }
+
+        let letterParam = dataFilter.letter.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
+        let gradeParam = dataFilter.grade.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
+        let numberParam = dataFilter.number;
+
+        await db.collection("users").where("level", "==", "student").where("assignedToProxie", "==", false).where("number", "==", numberParam).where("letter", "==", letterParam).where("grade", "==", gradeParam).get()
+        .then(result => {
+            let array = [];
+
+            if (result.size > 0)
+            {
+                result.forEach(doc => {
+                    array.push({
+                        id: doc.id,
+                        data: doc.data()
+                    })
+                });
+
+                code = "PROCESS_OK";
+                type = "success";
+                data = Encrypt(array);
+                status = 200;
+            }
+            else
+            {
+                code = "STUDENTS_NOT_FOUND";
+                message = "No existen usuarios en la plataforma con los datos de filtro proporcionados";
+                type = "error";
+                status = 404;
+            }
+        })
+        .catch(error => {
+            code = error.code;
+            type = "error";
+            status = 400;
+        })
+        .finally(() => {
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+
+            db = null;
+            auth = null;
+            code = null;
+            data = null;
+            message = null;
+            type = null;
+            status = null;
+        });
+    }
+    else
+    {
+        await db.collection("users").where("level", "==", "student").where("assignedToProxie", "==", false).get()
+        .then(result => {
+            let array = [];
+
+            if (result.size > 0)
+            {
+                result.forEach(doc => {
+                    array.push({
+                        id: doc.id,
+                        data: doc.data()
+                    })
+                });
+
+                code = "PROCESS_OK";
+                type = "success";
+                data = Encrypt(array);
+                status = 200;
+            }
+            else
+            {
+                code = "STUDENTS_NOT_FOUND";
+                message = "No existen usuarios en la plataforma";
+                type = "error";
+                status = 404;
+            }
+        })
+        .catch(error => {
+            code = error.code;
+            type = "error";
+            status = 400;
+        })
+        .finally(() => {
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+
+            db = null;
+            auth = null;
+            code = null;
+            data = null;
+            message = null;
+            type = null;
+            status = null;
+        });
+    }
+};
+
 
 /**
  * Metodo para obtener los usuarios de la base de datos
@@ -22,7 +301,7 @@ controllers.getUsers = async (req, res) => {
     let type = "";
     let status = 0;
 
-    if (levelParam === null)
+    if (levelParam == null)
     {
         code = "TYPE_PARAM_NULL";
         message = "El tipo de usuario no puede ser nulo"
@@ -42,7 +321,7 @@ controllers.getUsers = async (req, res) => {
 
     let level = Decrypt(levelParam);
 
-    if (typeof(level) !== "string")
+    if (typeof(level) != "string")
     {
         code = "DATA_TYPE_LEVEL_INVALID";
         message = "El tipo de dato enviado no es correcto";
@@ -60,7 +339,7 @@ controllers.getUsers = async (req, res) => {
         return;
     }
 
-    if (level === "student" || level === "teacher" || level === "proxie")
+    if (level == "student" || level == "teacher" || level == "proxie")
     {
         await db.collection("users").where("level", "==", level).get()
         .then(result => {
@@ -221,7 +500,49 @@ controllers.getUsersByRegionCommune = async (req, res) => {
     
         return;
     });
-} 
+};
+
+
+/**
+ * Metodo para obtener el nievel del usuario
+ * @param {import("express").Request} req objeto request
+ * @param {import("express").Response} res objeto response
+ */
+controllers.getAccess = async (req, res) => {
+    let auth = admin.auth();
+
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+
+    let { uid } = res.locals;
+
+    await auth.getUser(uid)
+    .then(result => {
+        code = "PROCESS_OK";
+        data = Encrypt(result.customClaims.level);
+        type = "success";
+        status = 200;
+    })
+    .catch(error => {
+        code = error.code;
+        type = "error";
+        status = 500;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        code = null;
+        data = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    });
+};
 
 
 module.exports = controllers;

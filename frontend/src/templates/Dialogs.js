@@ -40,7 +40,6 @@ const Dialogs = () => {
     const fullScreen = useMediaQuery(themeApp.breakpoints.down('sm'));
 
 
-
     // useStates
     const [run, setRun] = useState("");
     const [name, setName] = useState("");
@@ -78,7 +77,6 @@ const Dialogs = () => {
     const [numberFilter, setNumberFilter] = useState(1);
     const [letterFilter, setLetterFilter] = useState("");
     const [mutableGradesFilter, setMutableGradesFilter] = useState(myNumberGrades);
-
 
 
     // useCallbacks

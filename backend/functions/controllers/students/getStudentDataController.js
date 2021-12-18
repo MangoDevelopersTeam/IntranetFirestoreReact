@@ -9,22 +9,21 @@ controllers.getStudentAnnotations = async (req, res) => {
     let db = admin.firestore();
 
     let code = "";
-    let data = null;
-    let message = "";
     let type = "";
     let status = 0;
+    let data = null;
+    let message = "";
 
     let userId = "";
-    
-    let arrayAnnotations = [];
     let arraySubjects = [];
+    let arrayAnnotations = [];
 
     let { uid } = res.locals;
-    let { idUserParam } = req.query;
+    let { userIdParam } = req.query;
 
-    if (idUserParam != null)
+    if (userIdParam != null)
     {
-        if (idUserParam.startsWith("U2FsdGVkX") == false)
+        if (userIdParam.startsWith("U2FsdGVkX") == false)
         {
             code = "PARAMS_BAD_FORMATING";
             message = "El id esta mal formateado";
@@ -43,7 +42,7 @@ controllers.getStudentAnnotations = async (req, res) => {
             return;
         }
 
-        userId = Decrypt(idUserParam);
+        userId = Decrypt(userIdParam);
 
         if (typeof(userId) != "string")
         {
@@ -90,7 +89,7 @@ controllers.getStudentAnnotations = async (req, res) => {
 
     await db.collection("courses").get()
     .then(async resultSubject => {
-        resultSubject.forEach(doc => {
+        resultSubject.docs.forEach(doc => {
             arraySubjects.push({
                 id: doc.id,
                 data: doc.data()
@@ -124,39 +123,20 @@ controllers.getStudentAnnotations = async (req, res) => {
                 data = Encrypt(arrayAnnotations);
                 type = "success";
                 status = 200;
-
-                res.status(status).send({ code: code, message: message, data: data, type: type });
-
-                db = null;
-                code = null;
-                data = null;
-                message = null;
-                type = null;
-                status = null;
-
-                return;
             }
             else
             {
                 code = "NO_ANNOTATIONS_EXIST";
                 type = "error";
                 status = 404;
-
-                res.status(status).send({ code: code, message: message, data: data, type: type });
-
-                db = null;
-                code = null;
-                data = null;
-                message = null;
-                type = null;
-                status = null;
             }
         })
         .catch(error => {
             code = error.code;
             type = "error";
             status = 500;
-
+        })
+        .finally(() => {
             res.status(status).send({ code: code, message: message, data: data, type: type });
 
             db = null;
@@ -167,7 +147,7 @@ controllers.getStudentAnnotations = async (req, res) => {
             status = null;
 
             return;
-        })
+        });
     })
     .catch(error => {
         code = error.code;
@@ -198,6 +178,25 @@ controllers.getUserInfo = async (req, res) => {
     let status = 0;
 
     let { idUserParam } = req.query;
+
+    if (idUserParam == null)
+    {
+        code = "ID_PARAM_NULL";
+        message = "El id no puede ser nulo, intentelo nuevamente";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
 
     if (idUserParam.startsWith("U2FsdGVkX") == false)
     {
@@ -315,8 +314,76 @@ controllers.getStudentGrades = async (req, res) => {
     let type = "";
     let status = 0;
 
+    let userId = "";
+
     let { uid } = res.locals;
-    let { idSubjectParam } = req.query;
+    let { idSubjectParam, userIdParam } = req.query;
+
+    if (userIdParam != null)
+    {
+        if (userIdParam.startsWith("U2FsdGVkX") == false)
+        {
+            code = "PARAMS_BAD_FORMATING";
+            message = "El id esta mal formateado";
+            type = "error";
+            status = 400;
+
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+            db = null;
+            data = null;
+            code = null;  
+            message = null;
+            type = null;
+            status = null;
+
+            return;
+        }
+
+        userId = Decrypt(userIdParam);
+
+        if (typeof(userId) != "string")
+        {
+            code = "BAD_TYPES_PARAM";
+            message = "Asegurese de enviar los tipos de datos correctos"; 
+            type = "error";
+            status = 400;
+
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+
+            uid = null;
+            db = null;
+            code = null;
+            message = null;
+            type = null;
+            status = null;
+
+            return;
+        }
+
+        if (userId == "")
+        {
+            code = "PARAMS_EMPTY";
+            message = "Los valores enviados no pueden ser vacios";
+            type = "error";
+            status = 400;
+
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+            message = null;
+            status = null;
+            code = null;  
+            data = null;
+            type = null;
+            db = null;
+
+            return;
+        }
+    }
+    else
+    {
+        userId = uid;
+    }
 
     if (idSubjectParam == null)
     {
@@ -377,7 +444,7 @@ controllers.getStudentGrades = async (req, res) => {
         return;
     }
 
-    await db.collection("courses").doc(idSubject).collection("students").doc(uid).collection("grades").get()
+    await db.collection("courses").doc(idSubject).collection("students").doc(userId).collection("grades").get()
     .then(result => {
         let array = [];
 

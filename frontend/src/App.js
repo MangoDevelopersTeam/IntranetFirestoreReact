@@ -3,14 +3,14 @@ import { useSelector } from 'react-redux';
 
 import { Backdrop, CircularProgress, makeStyles, ThemeProvider, unstable_createMuiStrictModeTheme as MuiThemeUS } from '@material-ui/core';
 
+import { initAxiosInterceptors, getToken, deleteToken } from './helpers/token/handleToken';
+import { clearUserRedux, setUserRedux } from './helpers/auth/handleAuth';
+import { showMessage } from './helpers/message/handleMessage';
+
 import Main from './components/Main';
 import Login from './components/Login';
 import Dialogs from './templates/Dialogs';
 import Message from './templates/Message';
-
-import { showMessage } from './helpers/message/handleMessage';
-import { clearUserRedux, setUserRedux } from './helpers/auth/handleAuth';
-import { initAxiosInterceptors, getToken, deleteToken } from './helpers/token/handleToken';
 
 import { SELECT_USER } from './redux/userSlice';
 
@@ -31,10 +31,8 @@ const App = () => {
     const classes = useStyles();
     const user = useSelector(SELECT_USER);
 
-
     // useStates
     const [loading, setLoading] = useState(true);
-
 
     // useCallbacks
     /**
@@ -45,11 +43,12 @@ const App = () => {
             if (!getToken())
             {
                 clearUserRedux();
+                setLoading(false);
 
-                return setLoading(false);
+                return;
             }
 
-            await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/whoami")
+            await axios.get(`${process.env.REACT_APP_API_URI}/whoami`)
             .then(result => {
                 if (result.status === 200 && result.data.code === "PROCESS_OK")
                 {
@@ -58,41 +57,39 @@ const App = () => {
                         setUserRedux(result.data.data);
                     }
 
-                    setLoading(false);
+                    return setLoading(false);
                 }
-                else
+
+                if (result.data.code === "TOKEN_MISSING")
                 {
-                    if (result.data.code === "TOKEN_MISSING")
+                    clearUserRedux();
+
+                    showMessage("La sesión se ha terminado debido a falta de credenciales", "info");
+                    return setLoading(false);
+                }
+                else if (result.data.code === "FIREBASE_GET_USER_ERROR")
+                {
+                    clearUserRedux();
+                    
+                    if (getToken())
                     {
-                        clearUserRedux();
-                        showMessage("La sesión se ha terminado debido a falta de credenciales", "info");
-                        
-                        setLoading(false);           
+                        deleteToken();
                     }
-                    else if (result.data.code === "FIREBASE_GET_USER_ERROR")
+
+                    showMessage("Ha ocurrido un error al momento de obtener el usuario", "info");
+                    return setLoading(false);
+                }
+                else if (result.data.code === "FIREBASE_VERIFY_TOKEN_ERROR" || result.data.code === "TOKEN_REVOKED" || result.data.code === "TOKEN_INVALID")
+                {              
+                    clearUserRedux();   
+                    
+                    if (getToken())
                     {
-                        clearUserRedux();   
-                        showMessage("Ha ocurrido un error al momento de obtener el usuario", "info");
-                        
-                        if (getToken())
-                        {
-                            deleteToken();
-                        }
-
-                        setLoading(false);
+                        deleteToken();
                     }
-                    else if (result.data.code === "FIREBASE_VERIFY_TOKEN_ERROR" || result.data.code === "TOKEN_REVOKED" || result.data.code === "TOKEN_INVALID")
-                    {              
-                        clearUserRedux();   
-                        showMessage("La sesión ha acabado debido a que la sesión se ha vencido", "info");
 
-                        if (getToken())
-                        {
-                            deleteToken();
-                        }
-
-                        setLoading(false);
-                    }
+                    showMessage("La sesión ha acabado debido a que la sesión se ha vencido", "info");
+                    return setLoading(false);
                 }
             })
             .catch(error => {
@@ -111,12 +108,11 @@ const App = () => {
                     deleteToken();
                 }
                 
-                setLoading(false);
+                return setLoading(false);
             });
         },  
         [user, setLoading],
     );
-
 
     // useEffects
     useEffect(() => {
@@ -124,8 +120,12 @@ const App = () => {
             await verifyAuthCallback();
         }
 
-        return callQuery();
-    }, [verifyAuthCallback]);
+        callQuery();
+
+        return () => {
+            setLoading(null);
+        }
+    }, [verifyAuthCallback, setLoading]);
 
 
     return (    

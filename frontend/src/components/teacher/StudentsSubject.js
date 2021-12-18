@@ -902,7 +902,11 @@ const StudentsSubject = () => {
     /* ------ DIALOG CALLBACKS ------ */
 
 
+
     /* ------ FILTER CALLBACKS ------ */
+    /**
+     * useCallback para filtrar las anotaciones desde la base de datos
+     */
     const handleFilterAnnotations = useCallback(
         async (type) => {
             if (typeof(type) === "string" && selectedStudent !== null && id !== null)
@@ -976,6 +980,9 @@ const StudentsSubject = () => {
         [id, selectedStudent, setMenuSelect, setAnnotations, setErrorAnnotations, setErrorCode, setLoadingAnnotations, setUseFilter],
     );
 
+    /**
+     * useCallback para quitar el filtro que se le hace a la base de datos
+     */
     const handleRemoveFilterAnnotations = useCallback(
         async () => {
             if (selectedStudent !== null)
@@ -988,6 +995,30 @@ const StudentsSubject = () => {
     );
     /* ------ FILTER CALLBACKS ------ */
 
+
+    // Functions
+    /**
+     * Función que cambia el valor al campo de texto manipulando el DOM 
+     * @param {string} value valor de la nota
+     */
+    const handleChange = (value) => {
+        document.getElementById("grade1").setAttribute("value", value)
+    };
+
+    /**
+     * Función para manejar el filtro del menu
+     * @param {any} event tipo de evento
+     */
+    const handleClickMenuFilter = (event) => {
+        setMenuSelect(event.currentTarget);
+    };
+    
+    /**
+     * Función que cierra el filtro del menu
+     */
+    const handleCloseMenuFilter = () => {
+        setMenuSelect(null);
+    };
 
 
     // useEffects
@@ -1041,516 +1072,487 @@ const StudentsSubject = () => {
     }, [authorized, subject, handleGetTeacherCourse]);
 
 
-    const handleChange = (value) => {
-        document.getElementById("grade1").setAttribute("value", value)
-    };
-
-    const handleClickMenuFilter = (event) => {
-        setMenuSelect(event.currentTarget);
-    };
-    
-    const handleCloseMenuFilter = () => {
-        setMenuSelect(null);
-    };
-
-
     return (
-        <div>
+        <Paper elevation={0} itemType="div">
         {
             loadingAuthorized === true ? (
-                <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: "calc(10% + 110px)" }}>
+                <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: "calc(10% + 110px)" }}>
                     <CircularProgress style={{ color: "#2074d4" }} />
                     <Typography style={{ marginTop: 15 }}>Verificando acceso al Contenido</Typography>
-                </div>
-            ) : (
-                errorAuthorized === true ? (
-                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto" }}>
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "calc(10% + 110px)" }}>
-                            <Typography>
-                            {
-                                errorCode !== null ? (
-                                    errorCode === "NO_ADDED" ? (
-                                        "El identificador ingresado es incorrecto, o no estas asignado a este curso, intentelo nuevamente"
-                                    ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
-                                        "Recargue la página para inicar sesión nuevamente, debido a que la sesión se ha vencido"
-                                    ) : (
-                                        "Ha ocurrido un error al momento de verificar el Acceso al Contenido"
-                                    )
+                </Paper>
+            ) : errorAuthorized === true ? (
+                <Paper elevation={0} itemType="div" style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto" }}>
+                    <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "calc(10% + 110px)" }}>
+                        <Typography>
+                        {
+                            errorCode !== null ? (
+                                errorCode === "NO_ADDED" ? (
+                                    "El identificador ingresado es incorrecto, o no estas asignado a este curso, intentelo nuevamente"
+                                ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                    "Recargue la página para inicar sesión nuevamente, debido a que la sesión se ha vencido"
                                 ) : (
                                     "Ha ocurrido un error al momento de verificar el Acceso al Contenido"
                                 )
-                            }
-                            </Typography>
-
-                            <React.Fragment>
-                            {
-                                errorCode !== null && (
-                                    errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
-                                        <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetAuthorizedAccess()}>
-                                            <Typography variant="button">Recargar Verificar Acceso</Typography>
-                                        </Button>
-                                    )
-                                )
-                            }
-                            </React.Fragment>
-                        </div>
-                    </div>
-                ) : (
-                    authorized === null ? (
-                        <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: "calc(10% + 110px)" }}>
-                            <CircularProgress style={{ color: "#2074d4" }} />
-                            <Typography style={{ marginTop: 15 }}>Cargando Acceso al Curso</Typography>
-                        </div>
-                    ) : (
-                        loadingSubject === true ? (
-                            <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: "calc(10% + 110px)" }}>
-                                <CircularProgress style={{ color: "#2074d4" }} />
-                                <Typography style={{ marginTop: 15 }}>Obteniendo los Datos del Curso</Typography>
-                            </div>
-                        ) : (
-                            errorSubject === true ? (
-                                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
-                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                        <Typography>Ha Ocurrido un error al Momento de Cargar la Asignatura</Typography>
-                                        <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetDetailedSubject()}>
-                                            <Typography>Recargar Contenido de la Asignatura</Typography>
-                                        </Button>
-                                    </div>
-                                </div>
                             ) : (
-                                subject === null ? (
-                                    <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: "calc(10% + 110px)" }}>
-                                        <CircularProgress style={{ color: "#2074d4" }} />
-                                        <Typography style={{ marginTop: 15 }}>Cargando Contenido de la Asignatura</Typography>
-                                    </div>
-                                ) : (
+                                "Ha ocurrido un error al momento de verificar el Acceso al Contenido"
+                            )
+                        }
+                        </Typography>
+
+                        <React.Fragment>
+                        {
+                            errorCode !== null && (
+                                errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
+                                    <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetAuthorizedAccess()}>
+                                        <Typography variant="button">Recargar Verificar Acceso</Typography>
+                                    </Button>
+                                )
+                            )
+                        }
+                        </React.Fragment>
+                    </Paper>
+                </Paper>
+            ) : authorized === null ? (
+                <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: "calc(10% + 110px)" }}>
+                    <CircularProgress style={{ color: "#2074d4" }} />
+                    <Typography style={{ marginTop: 15 }}>Cargando Acceso al Curso</Typography>
+                </Paper>
+            ) : (
+                <Paper elevation={0} itemType="div">
+                {
+                    loadingSubject === true ? (
+                        <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: "calc(10% + 110px)" }}>
+                            <CircularProgress style={{ color: "#2074d4" }} />
+                            <Typography style={{ marginTop: 15 }}>Obteniendo los Datos del Curso</Typography>
+                        </Paper>
+                    ) : errorSubject === true ? (
+                        <Paper elevation={0} itemType="div" style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
+                            <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                <Typography>Ha Ocurrido un error al Momento de Cargar la Asignatura</Typography>
+                                <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetDetailedSubject()}>
+                                    <Typography>Recargar Contenido de la Asignatura</Typography>
+                                </Button>
+                            </Paper>
+                        </Paper>
+                    ) : subject === null ? (
+                        <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: "calc(10% + 110px)" }}>
+                            <CircularProgress style={{ color: "#2074d4" }} />
+                            <Typography style={{ marginTop: 15 }}>Cargando Contenido de la Asignatura</Typography>
+                        </Paper>
+                    ) : (
+                        <React.Fragment>
+                            <Paper style={{ padding: 20, marginBottom: 15 }} variant="outlined">
+                                <Breadcrumbs separator={<NavigateNext fontSize="small" />}>
+                                    <Link to="/" style={{ textDecoration: "none", color: "#333" }}>
+                                        Home
+                                    </Link>
+                                    <Link to="/my-subjects" style={{ textDecoration: "none", color: "#333" }}>
+                                        Mis Asignaturas
+                                    </Link>
+                                    <Link to={`/subject/${id}`} style={{ textDecoration: "none", color: "#333" }}>
+                                        {Decrypt(subject.subject)[0].data.code}
+                                    </Link>
+                                    <Typography style={{ color: "#2074d4" }}>Estudiantes</Typography>
+                                </Breadcrumbs>
+                            </Paper>
+
+                            <Card variant="outlined">
+                                <CardContent>
+                                    <Typography variant="h6">Todos los estudiantes de la asignatura {Decrypt(Decrypt(subject.subject)[0].data.courseName)}</Typography>
+                                    <Divider style={{ marginTop: 15, marginBottom: 15 }} />
+
                                     <React.Fragment>
-                                        <Paper style={{ padding: 20, marginBottom: 15 }} variant="outlined">
-                                            <Breadcrumbs separator={<NavigateNext fontSize="small" />}>
-                                                <Link to="/" style={{ textDecoration: "none", color: "#333" }}>
-                                                    Home
-                                                </Link>
-                                                <Link to="/my-subjects" style={{ textDecoration: "none", color: "#333" }}>
-                                                    Mis Asignaturas
-                                                </Link>
-                                                <Link to={`/subject/${id}`} style={{ textDecoration: "none", color: "#333" }}>
-                                                    {Decrypt(subject.subject)[0].data.code}
-                                                </Link>
-                                                <Typography style={{ color: "#2074d4" }}>Estudiantes</Typography>
-                                            </Breadcrumbs>
-                                        </Paper>
-
-                                        <Card variant="outlined">
-                                            <CardContent>
-                                                <Typography variant="h6">Todos los estudiantes de la asignatura {Decrypt(Decrypt(subject.subject)[0].data.courseName)}</Typography>
-
-                                                <Divider style={{ marginTop: 15, marginBottom: 15 }} />
-
-                                                <React.Fragment>
+                                    {
+                                        loadingStudents === true ? (
+                                            <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
+                                                <CircularProgress style={{ color: "#2074d4" }} />
+                                                <Typography style={{ marginTop: 15 }}>Cargando Estudiantes ligados a Esta Asignatura</Typography>
+                                            </Paper>
+                                        ) : errorStudents === true ? (
+                                            <Paper elevation={0} itemType="div" style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
+                                                <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                    <Typography>Ha Ocurrido un error al Momento de Cargar los Estudiantes</Typography>
+                                                    <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetStudentsCourse()}>
+                                                        <Typography>Recargar Estudiantes de la asignatura</Typography>
+                                                    </Button>
+                                                </Paper>
+                                            </Paper>
+                                        ) : students === null ? (
+                                            <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
+                                                <CircularProgress style={{ color: "#2074d4" }} />
+                                                <Typography style={{ marginTop: 15 }}>Cargando los Estudiantes de la Asignatura</Typography>
+                                            </Paper>
+                                        ) : (
+                                            <React.Fragment>
+                                                <List>
                                                 {
-                                                    loadingStudents === true ? (
-                                                        <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
-                                                            <CircularProgress style={{ color: "#2074d4" }} />
-                                                            <Typography style={{ marginTop: 15 }}>Cargando Estudiantes ligados a Esta Asignatura</Typography>
-                                                        </div>
-                                                    ) : (
-                                                        errorStudents === true ? (
-                                                            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
-                                                                <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                                                    <Typography>Ha Ocurrido un error al Momento de Cargar los Estudiantes</Typography>
-                                                                    <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetStudentsCourse()}>
-                                                                        <Typography>Recargar Estudiantes de la asignatura</Typography>
-                                                                    </Button>
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            students === null ? (
-                                                                <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
-                                                                    <CircularProgress style={{ color: "#2074d4" }} />
-                                                                    <Typography style={{ marginTop: 15 }}>Cargando los Estudiantes de la Asignatura</Typography>
-                                                                </div>
-                                                            ) : (
-                                                                <React.Fragment>
-                                                                    <List>
-                                                                    {
-                                                                        students.map(doc => (
-                                                                            <Paper key={doc.id} elevation={0}>
-                                                                                <ListItem>
-                                                                                    <ListItemText style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", maxWidth: "50%" }} primary={`${Decrypt(Decrypt(doc.data).name)} ${Decrypt(Decrypt(doc.data).surname)}`} secondary={`Asignado a este Curso ${timeago(new Date(Decrypt(doc.data).created_at._seconds * 1000))}`} security="true" />
+                                                    students.map(doc => (
+                                                        <Paper key={doc.id} elevation={0} itemType="div">
+                                                            <ListItem>
+                                                                <ListItemText style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", maxWidth: "50%" }} primary={`${Decrypt(Decrypt(doc.data).name)} ${Decrypt(Decrypt(doc.data).surname)}`} secondary={`Asignado a este Curso ${timeago(new Date(Decrypt(doc.data).created_at._seconds * 1000))}`} security="true" />
 
-                                                                                    <ListItemSecondaryAction>
-                                                                                    {
-                                                                                        helper === null ? (
-                                                                                            <Paper elevation={0} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
-                                                                                                <Typography>Cargando</Typography>
-                                                                                            </Paper>
-                                                                                        ) : (
-                                                                                            helper === false && (
-                                                                                                <Paper elevation={0} style={{ width: "100%", display: "flex", flexDirection: "row", alignItems: "center" }}>
-                                                                                                    <Tooltip title={<Typography>Asignar Notas a este Estudiante</Typography>}>
-                                                                                                        <IconButton edge="end" onClick={async () => await handleOpenSetGrades(doc)} style={{ marginRight: 5 }}>
-                                                                                                            <GridOn />
-                                                                                                        </IconButton>
-                                                                                                    </Tooltip>
-                                                                                                    <Tooltip title={<Typography>Asignar Anotaciones a este estudiante</Typography>}>
-                                                                                                        <IconButton edge="end" onClick={() => {handleOpenSetAnnotation(doc)}} style={{ marginRight: 5 }}>
-                                                                                                            <PlaylistAdd />
-                                                                                                        </IconButton>
-                                                                                                    </Tooltip>
-                                                                                                    <Tooltip title={<Typography>Mas Información acerca de esto</Typography>}>
-                                                                                                        <IconButton edge="end">
-                                                                                                            <Info />
-                                                                                                        </IconButton>
-                                                                                                    </Tooltip>
-                                                                                                </Paper>
-                                                                                            )
-                                                                                        )
-                                                                                    }
-                                                                                    </ListItemSecondaryAction>
-                                                                                </ListItem>
-                                                                                
-                                                                                <Divider />
-                                                                            </Paper>
-                                                                        ))
-                                                                    }
-                                                                    </List>
-
-                                                                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                                                        <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                                                        <Button onClick={async () => await handleGetStudentsCourse()} style={{ color: "#2074d4" }}>
-                                                                            <Typography variant="button">Recargar Estudiantes ligados a Esta Asignatura</Typography>
-                                                                        </Button>
-                                                                    </Paper>
-                                                                </React.Fragment>
-                                                            )
-                                                        )
-                                                    )
-                                                }
-                                                </React.Fragment>
-                                            </CardContent>
-                                        </Card>
-
-
-                                        <Dialog open={gradesDialog} maxWidth={"md"} fullWidth={true} onClose={handleCloseSetGrades} fullScreen={fullScreen} scroll="paper">
-                                            <DialogTitle>{selectedStudent === null ? "Asignar calificaciones al estudiante Seleccionado en esta Asignatura" : `Asignar calificaciones al Estudiante ${Decrypt(Decrypt(selectedStudent.data).name)} ${Decrypt(Decrypt(selectedStudent.data).surname)} en esta Asignatura`}</DialogTitle>
-                                            <DialogContent>
-                                                <React.Fragment>
-                                                {
-                                                    selectedStudent === null ? (
-                                                        <div style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                                                            <Typography style={{ marginTop: 15 }}>Cargando Datos del Estudiante Seleccionado</Typography>
-                                                        </div>
-                                                    ) : (
-                                                        <React.Fragment>
-                                                        {
-                                                            loadingGrades === true ? (
-                                                                <div style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                                                                    <Typography style={{ marginTop: 15 }}>Cargando Calificaciones del Estudiante</Typography>
-                                                                </div>
-                                                            ) : (
-                                                                errorGrades === true ? (
-                                                                    <div style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
-                                                                        <Typography style={{ marginTop: 15 }}>Ha ocurrido un error al obtener las Calificaciones del Estudiante</Typography>
-
-                                                                        <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                                                        <Button onClick={async () => await handleGetGradesStudentCourse(selectedStudent.id)} style={{ color: "#2074d4" }}>
-                                                                            <Typography variant="button">Recargar Calificaciones</Typography>
-                                                                        </Button>
-                                                                    </div>
-                                                                ) : (
-                                                                    grades === null ? (
-                                                                        <div style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                                                                            <Typography style={{ marginTop: 15 }}>Cargando Calificaciones del Estudiante</Typography>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <React.Fragment>
-                                                                            <TableContainer component={Paper} elevation={0} variant="outlined">
-                                                                                <Table>
-                                                                                    <TableHead>
-                                                                                        <TableRow>
-                                                                                            <TableCell>Nº Calificación</TableCell>
-                                                                                            <TableCell align="right">Nº de la Unidad</TableCell>
-                                                                                            <TableCell align="right">Nombre de la Unidad</TableCell>
-                                                                                            <TableCell align="center">Nota</TableCell>
-                                                                                        </TableRow>
-                                                                                    </TableHead>
-                                                                                    <TableBody>
-                                                                                    {
-                                                                                        Decrypt(subject.units).map((doc, index) => (
-                                                                                            <TableRow key={doc.id}>
-                                                                                                <TableCell component="th" scope="row">
-                                                                                                    {index + 1}
-                                                                                                </TableCell>
-                                                                                                <TableCell align="right">{doc.data.numberUnit}</TableCell>
-                                                                                                <TableCell align="right">{doc.data.unit}</TableCell>
-                                                                                                <TableCell align="right">
-                                                                                                    <InputBase id={`grade${doc.data.numberUnit}`} placeholder="Nota" inputProps={{ 'aria-label': 'naked' }} style={{ width: 50 }} defaultValue={grades.find(x => x.id === doc.id) !== undefined ? grades.find(x => x.id === doc.id).data.valueGrade : ""} onChange={(e) => handleChange(e.target.value)} security="true" />
-                                                                                                </TableCell>
-                                                                                                <TableCell align="right">
-                                                                                                    <Tooltip title={<Typography>Añadir Calificación en {doc.data.unit}</Typography>}>
-                                                                                                        <IconButton onClick={async () => await handleAddGrades(doc.id, doc.data.numberUnit, doc.data.unit)}>
-                                                                                                            <PostAdd />
-                                                                                                        </IconButton>
-                                                                                                    </Tooltip>
-                                                                                                </TableCell>
-                                                                                            </TableRow>
-                                                                                        ))
-                                                                                    }
-                                                                                    </TableBody>
-                                                                                </Table>
-                                                                            </TableContainer>
-
-                                                                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                                                                <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                                                                <Button onClick={async () => await handleGetGradesStudentCourse(selectedStudent.id)} style={{ color: "#2074d4" }}>
-                                                                                    <Typography variant="button">Recargar Calificaciones</Typography>
-                                                                                </Button>
-                                                                            </div>
-                                                                        </React.Fragment>
-                                                                    )
-                                                                )
-                                                            )
-                                                        }
-                                                        </React.Fragment>
-                                                    )
-                                                }
-                                                </React.Fragment>
-                                            </DialogContent>
-                                        
-                                            <DialogActions>
-                                                <Button color="inherit" onClick={handleCloseSetGrades}>
-                                                    <Typography variant="button">Cerrar Esta Ventana</Typography>
-                                                </Button>
-                                            </DialogActions>
-                                        </Dialog>
-
-                                        <Dialog open={annotationDialog} maxWidth={"xl"} fullWidth={true} onClose={handleCloseSetAnnotation} fullScreen={fullScreen} scroll="paper">
-                                            <DialogTitle>{selectedStudent === null ? "Asignar Anotaciones al estudiante Seleccionado en esta Asignatura" : `Asignar Anotaciones al estudiante ${Decrypt(Decrypt(selectedStudent.data).name)} ${Decrypt(Decrypt(selectedStudent.data).surname)} en esta Asignatura`}</DialogTitle>
-                                            <DialogContent>
-                                                <React.Fragment>
-                                                {
-                                                    selectedStudent === null ? (
-                                                        <Paper style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                                                            <Typography style={{ marginTop: 15 }}>Cargando Datos del Estudiante Seleccionado</Typography>
-                                                        </Paper>
-                                                    ) : (
-                                                        <React.Fragment>
-                                                            <Grid container direction="row" alignItems="flex-start">
-                                                                <Grid item container md={7} alignItems="center" justifyContent="center">
+                                                                <ListItemSecondaryAction>
                                                                 {
-                                                                    loadingAnnotations === true ? (
-                                                                        <Paper elevation={0} style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                                                                            <Typography style={{ marginTop: 15 }}>Cargando las Anotaciones del Estudiante</Typography>
+                                                                    helper === null ? (
+                                                                        <Paper elevation={0} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
+                                                                            <Typography>Cargando</Typography>
                                                                         </Paper>
-                                                                    ) : (
-                                                                        errorAnnotations === true ? (
-                                                                            <Paper elevation={0} style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
-                                                                                <Typography style={{ marginTop: 15 }}>Ha ocurrido un error al obtener las Anotaciones del Estudiante</Typography>
-
-                                                                                <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                                                                <Button onClick={async () => await handleGetAnnotations(selectedStudent.id)} style={{ color: "#2074d4" }}>
-                                                                                    <Typography variant="button">Recargar Annotaciones</Typography>
-                                                                                </Button>
-                                                                            </Paper>
-                                                                        ) : (
-                                                                            annotations === null ? (
-                                                                                <Paper elevation={0} style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                                                                                    <Typography style={{ marginTop: 15 }}>Cargando las Anotaciones del Estudiante</Typography>
-                                                                                </Paper>
-                                                                            ) : (
-                                                                                <React.Fragment>
-                                                                                    <Card variant="outlined" style={{ width: "100%", maxHeight: "59vh", overflow: "auto", marginLeft: 5, marginRight: 5, marginTop: 15 }}>
-                                                                                        <CardContent>
-                                                                                            <Typography variant="h6">Todas las anotaciones del estudiante {Decrypt(Decrypt(selectedStudent.data).name)} {Decrypt(Decrypt(selectedStudent.data).surname)}</Typography>
-                                                                                        
-                                                                                            <Button aria-haspopup="true" color="inherit" style={{ marginTop: 10 }} onClick={handleClickMenuFilter}>
-                                                                                                <Typography variant="button">Filtrar Anotaciones</Typography>
-                                                                                            </Button>
-
-                                                                                            <Menu anchorEl={menuSelect} keepMounted open={Boolean(menuSelect)} onClose={handleCloseMenuFilter} style={{ marginTop: 50 }}>
-                                                                                                <MenuItem onClick={() => handleFilterAnnotations("positive")}>Filtrar por Anotaciones Positivas</MenuItem>
-                                                                                                <MenuItem onClick={() => handleFilterAnnotations("negative")}>Filtrar por Anotaciones Negativas</MenuItem>
-                                                                                                <MenuItem onClick={() => handleFilterAnnotations("observation")}>Filtrar por Anotaciones de Observación</MenuItem>
-                                                                                            </Menu>
-
-                                                                                            <List>
-                                                                                            {
-                                                                                                annotations.map(doc => (
-                                                                                                    <Paper elevation={0} key={doc.id}>
-                                                                                                        <ListItem key={doc.id}>
-                                                                                                            <ListItemText primary={
-                                                                                                                <React.Fragment>
-                                                                                                                    <Paper elevation={0} style={{ display: "flex", maxWidth: "calc(100% - 100px)", flexDirection: "row", alignItems: "center" }}>
-                                                                                                                        {
-                                                                                                                            doc.data.type === "positive" ? (
-                                                                                                                                <Tooltip title={<Typography>Anotación Positiva</Typography>}>
-                                                                                                                                    <AddCircleOutline color="primary" />
-                                                                                                                                </Tooltip>
-                                                                                                                            ) : doc.data.type === "negative" ? (
-                                                                                                                                <Tooltip title={<Typography>Anotación Negativa</Typography>}>
-                                                                                                                                    <RemoveCircleOutline color="error" />
-                                                                                                                                </Tooltip>
-                                                                                                                            ) : doc.data.type === "observation" && (
-                                                                                                                                <Tooltip title={<Typography>Anotación de Observación</Typography>}>
-                                                                                                                                    <Visibility color="inherit" />
-                                                                                                                                </Tooltip>
-                                                                                                                            )
-                                                                                                                        }
-
-                                                                                                                        <Paper elevation={0} style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                                                                                                                            <Typography style={{ marginLeft: 15 }}>{Decrypt(doc.data.description)}</Typography>
-                                                                                                                            <Typography style={{ marginLeft: 15 }}>se creó en el dia {new Date(doc.data.created_at._seconds * 1000).toLocaleDateString()}</Typography>
-                                                                                                                        </Paper> 
-                                                                                                                    </Paper>
-                                                                                                                </React.Fragment>} secondary={`Anotación creada ${timeago(new Date(doc.data.created_at._seconds * 1000))} ${doc.data.updated_at !== undefined ? `(Editado)` : ``}` } />
-                                                                                                            
-                                                                                                            <ListItemSecondaryAction>
-                                                                                                                <React.Fragment>
-                                                                                                                    <Tooltip title={<Typography>Eliminar esta Anotación</Typography>}>
-                                                                                                                        <IconButton edge="end" onClick={() => handleOpenDeleteAnnotation(doc)} style={{ marginRight: 5 }}>
-                                                                                                                            <Delete />
-                                                                                                                        </IconButton>
-                                                                                                                    </Tooltip>
-                                                                                                                    <Tooltip title={<Typography>Editar esta Anotación</Typography>}>
-                                                                                                                        <IconButton edge="end" onClick={() => handleOpenEditAnnotation(doc)} style={{ marginRight: 5 }}>
-                                                                                                                            <Edit />
-                                                                                                                        </IconButton>
-                                                                                                                    </Tooltip>
-                                                                                                                </React.Fragment>
-                                                                                                            </ListItemSecondaryAction>
-                                                                                                        </ListItem>
-
-                                                                                                        <Divider />
-                                                                                                    </Paper>
-                                                                                                ))
-                                                                                            }
-                                                                                            </List>
-
-                                                                                            <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                                                                                <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                                                                                
-                                                                                                <Button style={{ color: "#2074d4", marginBottom: 5 }} onClick={async () => await handleGetAnnotations(selectedStudent.id)}>
-                                                                                                    <Typography variant="button">Recargar Anotaciones</Typography>
-                                                                                                </Button>
-                                                                                                <React.Fragment>
-                                                                                                {
-                                                                                                    useFilter === true && (
-                                                                                                        <Button style={{ color: "#34495E" }} onClick={handleRemoveFilterAnnotations}>
-                                                                                                            <Typography variant="button">Quitar Filtro</Typography>
-                                                                                                        </Button>
-                                                                                                    )
-                                                                                                }
-                                                                                                </React.Fragment>
-                                                                                            </Paper>                                                                                     
-                                                                                        </CardContent>
-                                                                                    </Card>
-                                                                                </React.Fragment>
-                                                                            )
-                                                                        )
-                                                                    )
+                                                                    ) : helper === false && (
+                                                                        <Paper elevation={0} style={{ width: "100%", display: "flex", flexDirection: "row", alignItems: "center" }}>
+                                                                            <Tooltip title={<Typography>Asignar Notas a este Estudiante</Typography>}>
+                                                                                <IconButton edge="end" onClick={async () => await handleOpenSetGrades(doc)} style={{ marginRight: 5 }}>
+                                                                                    <GridOn />
+                                                                                </IconButton>
+                                                                            </Tooltip>
+                                                                            <Tooltip title={<Typography>Asignar Anotaciones a este estudiante</Typography>}>
+                                                                                <IconButton edge="end" onClick={async () => await handleOpenSetAnnotation(doc)} style={{ marginRight: 5 }}>
+                                                                                    <PlaylistAdd />
+                                                                                </IconButton>
+                                                                            </Tooltip>
+                                                                            <Tooltip title={<Typography>Mas Información acerca de esto</Typography>}>
+                                                                                <IconButton edge="end">
+                                                                                    <Info />
+                                                                                </IconButton>
+                                                                            </Tooltip>
+                                                                        </Paper>
+                                                                    )                        
                                                                 }
-                                                                </Grid>
+                                                                </ListItemSecondaryAction>
+                                                            </ListItem>
+                                                                                
+                                                            <Divider />
+                                                        </Paper>
+                                                    ))
+                                                }
+                                                </List>
 
-                                                                <Grid item container md={5} alignItems="center" justifyContent="center">
-                                                                    <Card variant="outlined" style={{ width: "100%", marginLeft: 5, marginRight: 5, marginTop: 15 }}>
-                                                                        <CardContent>
-                                                                            <Paper elevation={0} style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-                                                                            {
-                                                                                selectedAnnotation === null ? (
-                                                                                    editAnnotation === true ? (
-                                                                                        <Typography variant="h6">Editar anotación {Decrypt(selectedAnnotation.data.description)}</Typography>
-                                                                                    ) : deleteAnnotation === true ? (
-                                                                                        <Typography variant="h6">Eliminar anotación {Decrypt(selectedAnnotation.data.description)}</Typography>
-                                                                                    ) : (
-                                                                                        <Typography variant="h6">Crear una nueva anotación</Typography>
-                                                                                    )
-                                                                                ) : (
-                                                                                    <Typography variant="h6">Cargando Datos</Typography>
-                                                                                )
-                                                                            }
-                                                                            </Paper>
+                                                <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                    <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                    <Button onClick={async () => await handleGetStudentsCourse()} style={{ color: "#2074d4" }}>
+                                                        <Typography variant="button">Recargar Estudiantes ligados a Esta Asignatura</Typography>
+                                                    </Button>
+                                                </Paper>
+                                            </React.Fragment>
+                                        )            
+                                    }
+                                    </React.Fragment>
+                                </CardContent>
+                            </Card>
 
+                            <Dialog open={gradesDialog} maxWidth={"md"} fullWidth={true} onClose={handleCloseSetGrades} fullScreen={fullScreen} scroll="paper">
+                                <DialogTitle>{selectedStudent === null ? "Asignar calificaciones al estudiante Seleccionado en esta Asignatura" : `Asignar calificaciones al Estudiante ${Decrypt(Decrypt(selectedStudent.data).name)} ${Decrypt(Decrypt(selectedStudent.data).surname)} en esta Asignatura`}</DialogTitle>
+                                
+                                <DialogContent>
+                                    <React.Fragment>
+                                    {
+                                        selectedStudent === null ? (
+                                            <Paper elevation={0} itemType="div" style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                                <Typography style={{ marginTop: 15 }}>Cargando Datos del Estudiante Seleccionado</Typography>
+                                            </Paper>
+                                        ) : (
+                                            <React.Fragment>
+                                            {
+                                                loadingGrades === true ? (
+                                                    <Paper elevation={0} itemType="div" style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                                        <Typography style={{ marginTop: 15 }}>Cargando Calificaciones del Estudiante</Typography>
+                                                    </Paper>
+                                                ) : errorGrades === true ? (
+                                                    <Paper elevation={0} itemType="div" style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
+                                                        <Typography style={{ marginTop: 15 }}>Ha ocurrido un error al obtener las Calificaciones del Estudiante</Typography>
+
+                                                        <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                        <Button onClick={async () => await handleGetGradesStudentCourse(selectedStudent.id)} style={{ color: "#2074d4" }}>
+                                                            <Typography variant="button">Recargar Calificaciones</Typography>
+                                                        </Button>
+                                                    </Paper>
+                                                ) : grades === null ? (
+                                                    <Paper elevation={0} itemType="div" style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                                        <Typography style={{ marginTop: 15 }}>Cargando Calificaciones del Estudiante</Typography>
+                                                    </Paper>
+                                                ) : (
+                                                    <React.Fragment>
+                                                        <TableContainer component={Paper} elevation={0} variant="outlined">
+                                                            <Table>
+                                                                <TableHead>
+                                                                    <TableRow>
+                                                                        <TableCell>Nº Calificación</TableCell>
+                                                                        <TableCell align="right">Nº de la Unidad</TableCell>
+                                                                        <TableCell align="right">Nombre de la Unidad</TableCell>
+                                                                        <TableCell align="center">Nota</TableCell>
+                                                                    </TableRow>
+                                                                </TableHead>
+                                                                <TableBody>
+                                                                {
+                                                                    Decrypt(subject.units).map((doc, index) => (
+                                                                        <TableRow key={doc.id}>
+                                                                            <TableCell component="th" scope="row">
+                                                                                {index + 1}
+                                                                            </TableCell>
+                                                                            <TableCell align="right">{doc.data.numberUnit}</TableCell>
+                                                                            <TableCell align="right">{doc.data.unit}</TableCell>
+                                                                            <TableCell align="right">
+                                                                                <InputBase id={`grade${doc.data.numberUnit}`} placeholder="Nota" inputProps={{ 'aria-label': 'naked' }} style={{ width: 50 }} defaultValue={grades.find(x => x.id === doc.id) !== undefined ? grades.find(x => x.id === doc.id).data.valueGrade : ""} onChange={(e) => handleChange(e.target.value)} security="true" />
+                                                                            </TableCell>
+                                                                            <TableCell align="right">
+                                                                                <Tooltip title={<Typography>Añadir Calificación en {doc.data.unit}</Typography>}>
+                                                                                    <IconButton onClick={async () => await handleAddGrades(doc.id, doc.data.numberUnit, doc.data.unit)}>
+                                                                                        <PostAdd />
+                                                                                    </IconButton>
+                                                                                </Tooltip>
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                    ))
+                                                                }
+                                                                </TableBody>
+                                                            </Table>
+                                                        </TableContainer>
+
+                                                        <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                            <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                            <Button onClick={async () => await handleGetGradesStudentCourse(selectedStudent.id)} style={{ color: "#2074d4" }}>
+                                                                <Typography variant="button">Recargar Calificaciones</Typography>
+                                                            </Button>
+                                                        </Paper>
+                                                    </React.Fragment>
+                                                )
+                                            }
+                                            </React.Fragment>
+                                        )
+                                    }
+                                    </React.Fragment>
+                                </DialogContent>    
+
+                                <DialogActions>
+                                    <Button color="inherit" onClick={handleCloseSetGrades}>
+                                        <Typography variant="button">Cerrar Esta Ventana</Typography>
+                                    </Button>
+                                </DialogActions>
+                            </Dialog>
+
+                            <Dialog open={annotationDialog} maxWidth={"xl"} fullWidth={true} onClose={handleCloseSetAnnotation} fullScreen={fullScreen} scroll="paper">
+                                <DialogTitle>{selectedStudent === null ? "Asignar Anotaciones al estudiante Seleccionado en esta Asignatura" : `Asignar Anotaciones al estudiante ${Decrypt(Decrypt(selectedStudent.data).name)} ${Decrypt(Decrypt(selectedStudent.data).surname)} en esta Asignatura`}</DialogTitle>
+                                
+                                <DialogContent>
+                                    <React.Fragment>
+                                    {
+                                        selectedStudent === null ? (
+                                            <Paper elevation={0} itemType="div" style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                                <Typography style={{ marginTop: 15 }}>Cargando Datos del Estudiante Seleccionado</Typography>
+                                            </Paper>
+                                        ) : (
+                                            <React.Fragment>
+                                                <Grid container direction="row" alignItems="flex-start">
+                                                    <Grid item container md={7} alignItems="center" justifyContent="center">
+                                                    {
+                                                        loadingAnnotations === true ? (
+                                                            <Paper elevation={0} itemType="div" style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                                                <Typography style={{ marginTop: 15 }}>Cargando las Anotaciones del Estudiante</Typography>
+                                                            </Paper>
+                                                        ) : errorAnnotations === true ? (
+                                                            <Paper elevation={0} itemType="div" style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
+                                                                <Typography style={{ marginTop: 15 }}>Ha ocurrido un error al obtener las Anotaciones del Estudiante</Typography>
+
+                                                                <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                                <Button onClick={async () => await handleGetAnnotations(selectedStudent.id)} style={{ color: "#2074d4" }}>
+                                                                    <Typography variant="button">Recargar Annotaciones</Typography>
+                                                                </Button>
+                                                            </Paper>
+                                                        ) : annotations === null ? (
+                                                            <Paper elevation={0} itemType="div" style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                                                <Typography style={{ marginTop: 15 }}>Cargando las Anotaciones del Estudiante</Typography>
+                                                            </Paper>
+                                                        ) : (
+                                                            <React.Fragment>
+                                                                <Card variant="outlined" style={{ width: "100%", maxHeight: "59vh", overflow: "auto", marginLeft: 5, marginRight: 5, marginTop: 15 }}>
+                                                                    <CardContent>
+                                                                        <Typography variant="h6">Todas las anotaciones del estudiante {Decrypt(Decrypt(selectedStudent.data).name)} {Decrypt(Decrypt(selectedStudent.data).surname)}</Typography>
+
+                                                                        <Button aria-haspopup="true" color="inherit" style={{ marginTop: 10 }} onClick={handleClickMenuFilter}>
+                                                                            <Typography variant="button">Filtrar Anotaciones</Typography>
+                                                                        </Button>
+
+                                                                        <Menu anchorEl={menuSelect} keepMounted open={Boolean(menuSelect)} onClose={handleCloseMenuFilter} style={{ marginTop: 50 }}>
+                                                                            <MenuItem onClick={() => handleFilterAnnotations("positive")}>Filtrar por Anotaciones Positivas</MenuItem>
+                                                                            <MenuItem onClick={() => handleFilterAnnotations("negative")}>Filtrar por Anotaciones Negativas</MenuItem>
+                                                                            <MenuItem onClick={() => handleFilterAnnotations("observation")}>Filtrar por Anotaciones de Observación</MenuItem>
+                                                                        </Menu>
+
+                                                                        <List>
+                                                                        {
+                                                                            annotations.map(doc => (
+                                                                                <Paper elevation={0} key={doc.id}>
+                                                                                    <ListItem key={doc.id}>
+                                                                                        <ListItemText primary={
+                                                                                            <React.Fragment>
+                                                                                                <Paper elevation={0} style={{ display: "flex", maxWidth: "calc(100% - 100px)", flexDirection: "row", alignItems: "center" }}>
+                                                                                                    {
+                                                                                                        doc.data.type === "positive" ? (
+                                                                                                            <Tooltip title={<Typography>Anotación Positiva</Typography>}>
+                                                                                                                <AddCircleOutline color="primary" />
+                                                                                                            </Tooltip>
+                                                                                                        ) : doc.data.type === "negative" ? (
+                                                                                                            <Tooltip title={<Typography>Anotación Negativa</Typography>}>
+                                                                                                                <RemoveCircleOutline color="error" />
+                                                                                                            </Tooltip>
+                                                                                                        ) : doc.data.type === "observation" && (
+                                                                                                            <Tooltip title={<Typography>Anotación de Observación</Typography>}>
+                                                                                                                <Visibility color="inherit" />
+                                                                                                            </Tooltip>
+                                                                                                        )
+                                                                                                    }
+
+                                                                                                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                                                                                                        <Typography style={{ marginLeft: 15 }}>{Decrypt(doc.data.description)}</Typography>
+                                                                                                        <Typography style={{ marginLeft: 15 }}>se creó en el dia {new Date(doc.data.created_at._seconds * 1000).toLocaleDateString()}</Typography>
+                                                                                                    </Paper> 
+                                                                                                </Paper>
+                                                                                            </React.Fragment>} secondary={`Anotación creada ${timeago(new Date(doc.data.created_at._seconds * 1000))} ${doc.data.updated_at !== undefined ? `(Editado)` : ``}` } />
+                                                                                                            
+                                                                                        <ListItemSecondaryAction>
+                                                                                            <React.Fragment>
+                                                                                                <Tooltip title={<Typography>Eliminar esta Anotación</Typography>}>
+                                                                                                    <IconButton edge="end" onClick={() => handleOpenDeleteAnnotation(doc)} style={{ marginRight: 5 }}>
+                                                                                                        <Delete />
+                                                                                                    </IconButton>
+                                                                                                </Tooltip>
+
+                                                                                                <Tooltip title={<Typography>Editar esta Anotación</Typography>}>
+                                                                                                    <IconButton edge="end" onClick={() => handleOpenEditAnnotation(doc)} style={{ marginRight: 5 }}>
+                                                                                                        <Edit />
+                                                                                                    </IconButton>
+                                                                                                </Tooltip>
+                                                                                            </React.Fragment>
+                                                                                        </ListItemSecondaryAction>
+                                                                                    </ListItem>
+
+                                                                                    <Divider />
+                                                                                </Paper>
+                                                                            ))
+                                                                        }
+                                                                        </List>
+
+                                                                        <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                                            <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                                                                
+                                                                            <Button style={{ color: "#2074d4", marginBottom: 5 }} onClick={async () => await handleGetAnnotations(selectedStudent.id)}>
+                                                                                <Typography variant="button">Recargar Anotaciones</Typography>
+                                                                            </Button>
+                                                            
                                                                             <React.Fragment>
                                                                             {
-                                                                                deleteAnnotation === true ? (
-                                                                                    <React.Fragment>
-                                                                                        <Typography style={{ marginBottom: 15, marginTop: 15, textAlign: "center" }}>Esta seguro de Eliminar esta Anotación?</Typography>
-                                                                                    </React.Fragment>
-                                                                                ) : (
-                                                                                    <React.Fragment>
-                                                                                        <Typography style={{ color: "#2074d4", marginTop: 15 }}>Datos de la anotación</Typography>
-                                                                                        <Divider style={{ height: 2, marginBottom: 15, backgroundColor: "#2074d4" }} />
-                        
-                                                                                        <ThemeProvider theme={InputTheme}>
-                                                                                            <FormControl style={{ marginBottom: 15 }} variant="outlined" fullWidth>
-                                                                                                <InputLabel>Tipo de Anotación</InputLabel>
-                                                                                                <Select value={type} label="Tipo de Anotación" onChange={(e) => setType(e.target.value)}>
-                                                                                                    <MenuItem value="positive">Positiva</MenuItem>
-                                                                                                    <MenuItem value="negative">Negativa</MenuItem>
-                                                                                                    <MenuItem value="observation">Observación</MenuItem>  
-                                                                                                </Select>
-                                                                                            </FormControl>
-
-                                                                                            <TextField type="text" label="Descripción" variant="outlined" security="true" value={description} fullWidth multiline onChange={(e) => setDescription(e.target.value)} style={{ marginBottom: 15 }} />
-                                                                                        </ThemeProvider>
-                                                                                    </React.Fragment>
-                                                                                )
-                                                                            }
-                                                                            </React.Fragment>
-
-                                                                            <React.Fragment>
-                                                                            {
-                                                                                editAnnotation === true ? (
-                                                                                    <React.Fragment>
-                                                                                        <Button fullWidth style={{ color: "#2074d4", marginBottom: 10 }} onClick={handleEditAnnotation}>
-                                                                                            <Typography variant="button">Editar Anotación</Typography>
-                                                                                        </Button>
-                                                                                        <Button fullWidth style={{ color: "#34495E" }} onClick={handleCancelEditAnnotation}>
-                                                                                            <Typography variant="button">Cancelar Editar Anotación</Typography>
-                                                                                        </Button>
-                                                                                    </React.Fragment>
-                                                                                    
-                                                                                ) : deleteAnnotation === true ? (
-                                                                                    <React.Fragment>
-                                                                                        <Button fullWidth style={{ color: "#2074d4", marginBottom: 10 }} onClick={handleDeleteAnnotation}>
-                                                                                            <Typography variant="button">Eliminar Anotación</Typography>
-                                                                                        </Button>
-                                                                                        <Button fullWidth style={{ color: "#34495E" }} onClick={handleCancelDeleteAnnotation}>
-                                                                                            <Typography variant="button">Cancelar Eliminar Anotación</Typography>
-                                                                                        </Button>
-                                                                                    </React.Fragment>  
-                                                                                ) : (
-                                                                                    <Button fullWidth style={{ color: "#2074d4" }} onClick={handleAddAnnotation}>
-                                                                                        <Typography variant="button">Crear Anotación</Typography>
+                                                                                useFilter === true && (
+                                                                                    <Button style={{ color: "#34495E" }} onClick={handleRemoveFilterAnnotations}>
+                                                                                        <Typography variant="button">Quitar Filtro</Typography>
                                                                                     </Button>
                                                                                 )
                                                                             }
                                                                             </React.Fragment>
-                                                                        </CardContent>
-                                                                    </Card>
-                                                                </Grid>
-                                                            </Grid>
-                                                        </React.Fragment>
-                                                    )
-                                                }
-                                                </React.Fragment>
-                                            </DialogContent>
+                                                                        </Paper>                                                                                     
+                                                                    </CardContent>
+                                                                </Card>
+                                                            </React.Fragment>
+                                                        )
+                                                    }
+                                                    </Grid>
 
-                                            <DialogActions>
-                                                <Button color="inherit" onClick={handleCloseSetAnnotation}>
-                                                    <Typography variant="button">Cerrar Esta Ventana</Typography>
-                                                </Button>
-                                            </DialogActions>
-                                        </Dialog>
+                                                    <Grid item container md={5} alignItems="center" justifyContent="center">
+                                                        <Card variant="outlined" style={{ width: "100%", marginLeft: 5, marginRight: 5, marginTop: 15 }}>
+                                                            <CardContent>
+                                                                <Paper elevation={0} style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                                                                {
+                                                                    selectedAnnotation === null ? (
+                                                                        <Typography variant="h6">Cargando Datos</Typography>
+                                                                    ) : (
+                                                                        editAnnotation === true ? (
+                                                                            <Typography variant="h6">Editar anotación {Decrypt(selectedAnnotation.data.description)}</Typography>
+                                                                        ) : deleteAnnotation === true ? (
+                                                                            <Typography variant="h6">Eliminar anotación {Decrypt(selectedAnnotation.data.description)}</Typography>
+                                                                        ) : (
+                                                                            <Typography variant="h6">Crear una nueva anotación</Typography>
+                                                                        )
+                                                                    )
+                                                                }
+                                                                </Paper>
+
+                                                                <React.Fragment>
+                                                                {
+                                                                    deleteAnnotation === true ? (
+                                                                        <React.Fragment>
+                                                                            <Typography style={{ marginBottom: 15, marginTop: 15, textAlign: "center" }}>Esta seguro de Eliminar esta Anotación?</Typography>
+                                                                        </React.Fragment>
+                                                                    ) : (
+                                                                        <React.Fragment>
+                                                                            <Typography style={{ color: "#2074d4", marginTop: 15 }}>Datos de la anotación</Typography>
+                                                                            <Divider style={{ height: 2, marginBottom: 15, backgroundColor: "#2074d4" }} />
+                        
+                                                                            <ThemeProvider theme={InputTheme}>
+                                                                                <FormControl style={{ marginBottom: 15 }} variant="outlined" fullWidth>
+                                                                                    <InputLabel>Tipo de Anotación</InputLabel>
+                                                                                    <Select value={type} label="Tipo de Anotación" onChange={(e) => setType(e.target.value)}>
+                                                                                        <MenuItem value="positive">Positiva</MenuItem>
+                                                                                        <MenuItem value="negative">Negativa</MenuItem>
+                                                                                        <MenuItem value="observation">Observación</MenuItem>  
+                                                                                    </Select>
+                                                                                </FormControl>
+
+                                                                                <TextField type="text" label="Descripción" variant="outlined" security="true" value={description} fullWidth multiline onChange={(e) => setDescription(e.target.value)} style={{ marginBottom: 15 }} />
+                                                                            </ThemeProvider>
+                                                                        </React.Fragment>
+                                                                    )
+                                                                }
+                                                                </React.Fragment>
+
+                                                                <React.Fragment>
+                                                                {
+                                                                    editAnnotation === true ? (
+                                                                        <React.Fragment>
+                                                                            <Button fullWidth style={{ color: "#2074d4", marginBottom: 10 }} onClick={handleEditAnnotation}>
+                                                                                <Typography variant="button">Editar Anotación</Typography>
+                                                                            </Button>
+                                                                            <Button fullWidth style={{ color: "#34495E" }} onClick={handleCancelEditAnnotation}>
+                                                                                <Typography variant="button">Cancelar Editar Anotación</Typography>
+                                                                            </Button>
+                                                                        </React.Fragment>         
+                                                                    ) : deleteAnnotation === true ? (
+                                                                        <React.Fragment>
+                                                                            <Button fullWidth style={{ color: "#2074d4", marginBottom: 10 }} onClick={handleDeleteAnnotation}>
+                                                                                <Typography variant="button">Eliminar Anotación</Typography>
+                                                                            </Button>
+                                                                            <Button fullWidth style={{ color: "#34495E" }} onClick={handleCancelDeleteAnnotation}>
+                                                                                <Typography variant="button">Cancelar Eliminar Anotación</Typography>
+                                                                            </Button>
+                                                                        </React.Fragment>  
+                                                                    ) : (
+                                                                        <Button fullWidth style={{ color: "#2074d4" }} onClick={handleAddAnnotation}>
+                                                                            <Typography variant="button">Crear Anotación</Typography>
+                                                                        </Button>
+                                                                    )
+                                                                }
+                                                                
+                                                                </React.Fragment>
+                                                            </CardContent>
+                                                        </Card>
+                                                    </Grid>
+                                                </Grid>
+                                            </React.Fragment>
+                                        )
+                                    }
                                     </React.Fragment>
-                                )
-                            )
-                        )
+                                </DialogContent>
+
+                                <DialogActions>
+                                    <Button color="inherit" onClick={handleCloseSetAnnotation}>
+                                        <Typography variant="button">Cerrar Esta Ventana</Typography>
+                                    </Button>
+                                </DialogActions>
+                            </Dialog>
+                        </React.Fragment>
                     )
-                )
+                }
+                </Paper>
             )
         }
-        </div>
+        </Paper>
     );
 };
 

@@ -37,8 +37,10 @@ const ManageSubject = () => {
 
 
     // useStates
-    const [courses, setCourses] = useState(null);
-    const [mutableGrades, setMutableGrades] = useState(myNumberGrades);
+    const [subjects, setSubjects] = useState(null);
+    const [errorSubjects, setErrorSubjects] = useState(false);
+    const [loadingSubjects, setLoadingSubjects] = useState(true);
+    const [errorCode, setErrorCode] = useState(null);
 
     const [type, setType] = useState("");
     const [courseName, setCourseName] = useState("");
@@ -49,9 +51,8 @@ const ManageSubject = () => {
     const [letter, setLetter] = useState("");
     const [disabled, setDisabled] = useState(true);
 
-    const [loadingSubjects, setLoadingSubjects] = useState(true);
+    const [mutableGrades, setMutableGrades] = useState(myNumberGrades);
     const [createSubjectProcess, setCreateSubjectProcess] = useState(false);
-    const [errorSubjects, setErrorSubjects] = useState(false);
    
 
     // useCallbacks
@@ -146,7 +147,7 @@ const ManageSubject = () => {
             .then(result => {
                 if (result.status === 201 && result.data.code === "PROCESS_OK")
                 {
-                    setCourses(Decrypt(result.data.data));
+                    setSubjects(Decrypt(result.data.data));
 
                     handleClearFields();
                     hideNewCourseDialog();
@@ -190,11 +191,11 @@ const ManageSubject = () => {
                 setCreateSubjectProcess(false);
 
                 return () => {
-                    setCourses(null);
+                    setSubjects(null);
                 }
             });
         },
-        [type, grade, letter, number, courseName, description, setCourses, setCreateSubjectProcess, handleClearFields],
+        [type, grade, letter, number, courseName, description, setSubjects, setCreateSubjectProcess, handleClearFields],
     );
 
     /**
@@ -204,27 +205,21 @@ const ManageSubject = () => {
         async () => {
             setLoadingSubjects(true);
 
-            await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/testing-get-course", {
-                params: {
-                    page: 1
-                },
-            })
+            await axios.get(`${process.env.REACT_APP_API_URI}/testing-get-course`)
             .then(result => {
                 if (result.status === 200 && result.data.code === "PROCESS_OK")
                 {
-                    setCourses(Decrypt(result.data.data));
+                    setSubjects(Decrypt(result.data.data));
 
                     setLoadingSubjects(false);
                     setErrorSubjects(false);
                 }
                 else
                 {
-                    setCourses([]);
+                    setSubjects(undefined);
 
                     setLoadingSubjects(false);
                     setErrorSubjects(true);
-
-                    showMessage(result.data.message, result.data.type);
                 }
             })
             .catch(error => {
@@ -232,22 +227,21 @@ const ManageSubject = () => {
                 {
                     console.log("the error is", error.response);
                 }
-                setCourses([]);
 
-                setLoadingSubjects(false);
+                setSubjects(undefined);
                 setErrorSubjects(true);
-
-                showMessage(error.message, "error");
+                setLoadingSubjects(false);
             })
             .finally(() => {
                 return () => {
-                    setCourses(null);
+                    setSubjects(null);
+                    setErrorCode(null);
                     setLoadingSubjects(null);
                     setErrorSubjects(null);
                 }
             });
         },
-        [setLoadingSubjects, setErrorSubjects, setCourses],
+        [setLoadingSubjects, setErrorSubjects, setSubjects],
     );
 
 
@@ -260,9 +254,9 @@ const ManageSubject = () => {
         callQuery();
 
         return () => {
-            setCourses(null);
+            setSubjects(null);
         }
-    }, [setCourses, handleGetCourses]);
+    }, [setSubjects, handleGetCourses]);
 
 
     return (
@@ -303,37 +297,13 @@ const ManageSubject = () => {
                                     </Paper>
                                 </Paper>
                             ) : (
-                                courses === null ? (
+                                subjects === null ? (
                                     <Paper elevation={0} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
                                         <CircularProgress style={{ color: "#2074d4" }} />
                                         <Typography style={{ marginTop: 15 }}>Cargando las Asignaturas</Typography>
                                     </Paper>
                                 ) : (
-                                    courses.length > 0 ? (
-                                        <Paper elevation={0}>
-                                            <List style={{ marginTop: 6 }}>
-                                            {
-                                                courses.map(doc => (
-                                                    <Paper key={doc.id} elevation={0}>
-                                                        <Link to={`/subjects/${doc.id}`} style={{ color: "#333", textDecoration: "none" }}>
-                                                            <ListItem button>
-                                                                <ListItemText primary={Decrypt(Decrypt(doc.data).courseName)} secondary={Decrypt(doc.data).code} />
-                                                            </ListItem>
-                                                        </Link>
-                                                        <Divider />
-                                                    </Paper>
-                                                ))
-                                            }
-                                            </List>
-
-                                            <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                                <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                                <Button onClick={async () => await handleGetCourses()} style={{ color: "#2074d4" }}>
-                                                    <Typography variant="button">Recargar Asignaturas</Typography>
-                                                </Button>
-                                            </Paper>
-                                        </Paper>
-                                    ) : (
+                                    subjects === undefined ? (
                                         <Paper elevation={0}>
                                             <Typography style={{ textAlign: "center" }}>No existen Asignaturas aquí aún</Typography>
 
@@ -344,7 +314,45 @@ const ManageSubject = () => {
                                                 </Button>
                                             </Paper>
                                         </Paper>
-                                    )
+                                    ) : (
+                                        subjects.length > 0 ? (
+                                            <Paper elevation={0}>
+                                                <List style={{ marginTop: 6 }}>
+                                                {
+                                                    subjects.map(doc => (
+                                                        <Paper key={doc.id} elevation={0}>
+                                                            <Link to={`/subjects/${doc.id}`} style={{ color: "#333", textDecoration: "none" }}>
+                                                                <ListItem button>
+                                                                    <ListItemText primary={Decrypt(doc.data.courseName)} secondary={doc.data.code} />
+                                                                </ListItem>
+                                                            </Link>
+
+                                                            <Divider />
+                                                        </Paper>
+                                                    ))
+                                                }
+                                                </List>
+
+                                                <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                    <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                    <Button onClick={async () => await handleGetCourses()} style={{ color: "#2074d4" }}>
+                                                        <Typography variant="button">Recargar Asignaturas</Typography>
+                                                    </Button>
+                                                </Paper>
+                                            </Paper>
+                                        ) : (
+                                            <Paper elevation={0}>
+                                                <Typography style={{ textAlign: "center" }}>No existen Asignaturas aquí aún</Typography>
+
+                                                <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                    <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                    <Button onClick={async () => await handleGetCourses()} style={{ color: "#2074d4" }}>
+                                                        <Typography variant="button">Recargar Asignaturas</Typography>
+                                                    </Button>
+                                                </Paper>
+                                            </Paper>
+                                        )
+                                    )    
                                 )
                             )
                         )

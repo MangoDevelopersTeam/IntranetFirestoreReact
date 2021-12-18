@@ -35,6 +35,10 @@ const Login = () => {
     
 
     // useCallbacks
+    /* ------ SIGNIN CALLBACKS ------ */
+    /**
+     * useCallback para manejar el inicio de sesión
+     */
     const handleSignIn = useCallback(
         async (e) => {
             e.preventDefault();
@@ -72,8 +76,8 @@ const Login = () => {
                     };
                     setUserRedux(Encrypt(object));
 
-                    setLoading(false);
                     showMessage(`Bienvenido/a ${result.data.displayName}`, "success");
+                    return setLoading(false);
                 }
             })
             .catch(error => {
@@ -81,29 +85,38 @@ const Login = () => {
                 {
                     if (error.response.data.error.message === "INVALID_PASSWORD")
                     {
-                        return showMessage("La contraseña que ha ingresado ha sido incorrecta", "error");
+                        showMessage("La contraseña que ha ingresado ha sido incorrecta", "error");
                     }
                     else if (error.response.data.error.message === "EMAIL_NOT_FOUND")
                     {
-                        return showMessage("El email que ha ingresado no existe", "error");
+                        showMessage("El email que ha ingresado no existe", "error");
                     }
                     else if (error.response.data.error.message.startsWith("TOO_MANY_ATTEMPTS_TRY_LATER"))
                     {
-                        return showMessage("Se ha fallado en el intento de loguearse, el acceso se ha bloqueado temporalmente, espere a que se habilite nuevamente e intenelo nuevamente, o bien, puede reestablecer su contraseña", "error");
+                        showMessage("Se ha fallado en el intento de loguearse, el acceso se ha bloqueado temporalmente, espere a que se habilite nuevamente e intenelo nuevamente, o bien, puede reestablecer su contraseña", "error");
                     }
                     else
                     {                
-                        return showMessage("Ha ocurrido un error al procesar la solicitud, intentelo nuevamente", "error");
-                   }
+                        showMessage("Ha ocurrido un error al procesar la solicitud, intentelo nuevamente", "error");
+                    }
+
+                    return setLoading(false);
                 }
             })
             .finally(() => {
-                setLoading(false);
+                return () => {
+                    setLoading(null);
+                    setEmail(null);
+                    setPassword(null);
+                }
             });
         },
         [email, password, setLoading, setEmail, setPassword],
     );
 
+    /**
+     * useCallback para obtener el numero de administradores creados
+     */
     const handleGetCountAdmins = useCallback(
         async () => {
             await axios.get(`${process.env.REACT_APP_API_URI}/get-numbers-admin`)
@@ -135,7 +148,12 @@ const Login = () => {
         },
         [setEnable],
     );
+    /* ------ SIGNIN CALLBACKS ------ */
 
+    /* ------ RESET PASSWORD CALLBACKS ------ */
+    /**
+     * useCallback para cerrar el dialogo de resetear contraseña
+     */
     const handleCloseResetPassword = useCallback(
         (event, reason) => {
             if (reason === 'backdropClick' || reason === "escapeKeyDown") 
@@ -149,6 +167,9 @@ const Login = () => {
         [setResetPasswordDialog, setEmailResetPassword],
     );
 
+    /**
+     * useCallback para resetar la contraseña
+     */
     const handleResetPassword = useCallback(
         async () => {
             if (emailResetPassword === "")
@@ -172,8 +193,8 @@ const Login = () => {
             .then(result => {
                 if (result.status === 200)
                 {
-                    handleCloseResetPassword()
-                    showMessage("El correo de cambiar contraseña ha sido enviado a su correo", "success");
+                    handleCloseResetPassword();           
+                    return showMessage("El correo de cambiar contraseña ha sido enviado a su correo", "success");
                 }
             })
             .catch(error => {
@@ -181,21 +202,22 @@ const Login = () => {
                 {
                     if (error.response.data.error.message === "MISSING_EMAIL")
                     {
-                        showMessage("Complete el campo Email", "info");
+                        return showMessage("Complete el campo Email", "info");
                     }
                     else if (error.response.data.error.message === "EMAIL_NOT_FOUND")
                     {
-                        showMessage("El correo ingresado no existe en el sistema", "warning");
+                        return showMessage("El correo ingresado no existe en el sistema", "warning");
                     }
                     else
                     {
-                        showMessage("Ha ocurrido un error al enviar el correo de recuperar contraseña", "error");
+                        return showMessage("Ha ocurrido un error al enviar el correo de recuperar contraseña", "error");
                     }
                 }
             });
         },
-        [emailResetPassword, setResetPasswordDialog, handleCloseResetPassword],
+        [emailResetPassword, handleCloseResetPassword],
     );
+    /* ------ RESET PASSWORD CALLBACKS ------ */
 
 
     // useEffects
@@ -213,7 +235,7 @@ const Login = () => {
 
     
     return (
-        <Paper elevation={0}>
+        <Paper elevation={0} itemType="div">
             <Grid container direction="row" justifyContent="space-evenly" alignItems="flex-start">
                 <Grid item container md={7} alignItems="center" justifyContent="center">
                     <Card variant="outlined" style={{ maxWidth: 640, margin: 7 }}>
@@ -235,11 +257,15 @@ const Login = () => {
                                     <TextField type="password" label="Contraseña" variant="outlined" security="true" value={password} disabled={loading} fullWidth onChange={(e) => setPassword(e.target.value)} style={{ marginBottom: 15 }} />
                                 </ThemeProvider>                       
 
-                                <Paper elevation={0}>
+                                <Paper elevation={0} itemType="div">
                                 {
-                                    loading === false ? (
-                                        <Paper elevation={0}>
-                                            <Button fullWidth type="submit" style={{ color: "#2074d4", marginTop: 15 }} onClick={handleSignIn}>Iniciar Sesión</Button>
+                                    loading === true ? (
+                                        <Paper elevation={0} itemType="div" style={{ display: "flex", justifyContent: "end", alignItems: "center", marginTop: 45 }}>
+                                            <CircularProgress style={{ color: "#2074d4", margin: "auto" }} />
+                                        </Paper>
+                                    ) : (
+                                        <Paper elevation={0} itemType="div">
+                                            <Button fullWidth type="submit" onClick={handleSignIn} style={{ color: "#2074d4", marginTop: 15 }}>Iniciar Sesión</Button>
                                             
                                             <React.Fragment>
                                             {
@@ -249,14 +275,10 @@ const Login = () => {
                                             }
                                             </React.Fragment>
 
-                                            <Button fullWidth style={{ color: "#34495E", marginTop: 5 }} onClick={() => setResetPasswordDialog(true)}>Reestablecer mi Contraseña</Button>
-                                        </Paper>
-                                    ) : (
-                                        <Paper elevation={0} style={{ display: "flex", justifyContent: "end", alignItems: "center", marginTop: 45 }}>
-                                            <CircularProgress style={{ color: "#2074d4", margin: "auto" }} />
+                                            <Button fullWidth onClick={() => setResetPasswordDialog(true)} style={{ color: "#34495E", marginTop: 5 }}>Reestablecer mi Contraseña</Button>
                                         </Paper>
                                     )
-                                }   
+                                }
                                 </Paper>
                             </form>
                         </CardContent>
@@ -269,7 +291,7 @@ const Login = () => {
                 <DialogContent>
                     <DialogContentText>Complete el campo de correo a continuación y luego se le enviará un correo con el enlace para reestablecer su contraseña</DialogContentText>
 
-                    <Paper elevation={0}>
+                    <Paper elevation={0} itemType="div">
                         <ThemeProvider theme={InputTheme}>
                             <TextField style={{ marginBottom: 15 }} type="email" label="Email" variant="outlined" security="true" onChange={(e) => setEmailResetPassword(e.target.value)} value={emailResetPassword} fullWidth />
                         </ThemeProvider>

@@ -74,6 +74,8 @@ const DetailedSubject = () => {
     const [unitName, setUnitName] = useState(null);
     const [unitNumber, setUnitNumber] = useState(null);
     const [unitId, setUnitId] = useState(null);
+    const [unitLimitTime, setUnitLimitTime] = useState(null);
+    const [unitLimitDate, setUnitLimitDate] = useState(null);
 
     const [name, setName] = useState("");
     const [file, setFile] = useState(null);
@@ -292,7 +294,7 @@ const DetailedSubject = () => {
                 if (result.status === 200 && result.data.code === "PROCESS_OK")
                 {
                     setErrorAccess(false);
-                    setAccess(result.data.data);
+                    setAccess(Decrypt(result.data.data));
                     setErrorCode(null);
                 }
                 else
@@ -497,6 +499,16 @@ const DetailedSubject = () => {
                     setUnitName(name);
                     setUnitNumber(number);
                     
+                    /* if (unitFile.data.limitTime !== undefined && unitFile.data.limitTime !== null)
+                    {
+                        setUnitLimitTime(unitFile.data.limitTime);
+
+                        if (unitFile.data.limitTime === true)
+                        {
+                            setUnitLimitDate(unitFile.data.limitDate);
+                        }
+                    } */
+
                     setName(Decrypt(unitFile.data.name));
                     setDescription(Decrypt(unitFile.data.description));
                     setActualUrlFile(Decrypt(unitFile.data.url));
@@ -744,6 +756,17 @@ const DetailedSubject = () => {
                     description: null,
                     url: null
                 };
+
+                /* if (selectedUnitFile.data.limitTime !== undefined && selectedUnitFile.data.limitTime !== null)
+                {
+                    object.limitTime = limitTime;
+
+                    if (limitTime === true)
+                    {
+                        object.limitDate = limitDate;
+                    }
+                } */
+            
 
                 if (editFile === true)
                 {
@@ -1393,7 +1416,7 @@ const DetailedSubject = () => {
                                                                                                                                         </IconButton>
                                                                                                                                     </Tooltip>
                                                                                                                                     <Tooltip title={<Typography>Editar esta Tarea</Typography>}>
-                                                                                                                                        <IconButton edge="end" /* onClick={() => handleOpenEditFileUnitDialog(doc.id, doc.data.unit, doc.data.numberUnit, docFile, doc)} */ style={{ marginLeft: 15 }}>
+                                                                                                                                        <IconButton edge="end" onClick={() => handleOpenEditFileUnitDialog(doc.id, doc.data.unit, doc.data.numberUnit, docFile, doc)} style={{ marginLeft: 15 }}>
                                                                                                                                             <Edit />
                                                                                                                                         </IconButton>
                                                                                                                                     </Tooltip>

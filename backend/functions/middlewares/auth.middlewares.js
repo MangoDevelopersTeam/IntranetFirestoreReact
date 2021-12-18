@@ -1,27 +1,11 @@
 // Importaciones
 const admin = require("firebase-admin");
-
 const { Decrypt } = require("../helpers/cipher");
 
+// Declaraciones
 const middlewares = {};
 
-const getUserLevel = async () => {
-    let auth = admin.auth();
-    let level = "";
-    
-    let { uid } = res.locals;
-
-    await auth.getUser(uid)
-    .then(user => {
-        level = Decrypt(user.customClaims.level);
-    })
-    .catch((error) => {
-        return res.send({ code: "FIREBASE_GET_USER_ERROR", message: error.message, type: "error" }); 
-    });
-
-    return level;
-};
-
+// Metodos
 /**
  * Función para verificar si existe token
  * @param {import("express").Request} req objeto request
@@ -171,7 +155,6 @@ middlewares.checkIsProxie = async (req, res, next) => {
 };
 
 
-
 /**
  * Función para verificar si el usuario es un profesor o un estudiante
  * @param {import("express").Request} req objeto request
@@ -200,6 +183,36 @@ middlewares.checkIsTeacherStudent = async (req, res, next) => {
         return res.send({ code: "FIREBASE_GET_USER_ERROR", message: error.message, type: "error" }); 
     });
 };
+
+/**
+ * Función para verificar si el usuario es un administrador o un estudiante
+ * @param {import("express").Request} req objeto request
+ * @param {import("express").Response} res objeto response
+ * @param {import("express").NextFunction} next objeto next
+ * @returns mensaje de error o sigue con el programa
+ */
+ middlewares.checkIsAdminStudent = async (req, res, next) => {
+    let auth = admin.auth();
+    
+    let { uid } = res.locals;
+
+    await auth.getUser(uid)
+    .then(user => {
+        let level = Decrypt(user.customClaims.level);
+        res.locals.level = user.customClaims.level;
+
+        if (level == "admin" || level == "student")
+        {
+            return next();
+        }
+                
+        return res.send({ code: "ACCESS_DENIED", message: "No tienes los suficientes privilegios para esta operación", type: "error" });
+    })
+    .catch((error) => {
+        return res.send({ code: "FIREBASE_GET_USER_ERROR", message: error.message, type: "error" }); 
+    });
+};
+
 
 /**
  * Función para verificar si el usuario es un estudiante o apoderado

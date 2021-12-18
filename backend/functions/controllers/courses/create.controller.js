@@ -1,10 +1,11 @@
-// Importación del metodo Decrypt y el admin sdk
+// Importaciones
 const { Decrypt, Encrypt } = require("./../../helpers/cipher");
 const admin = require("firebase-admin");
-const funcions = require("firebase-functions");
 
-// Objeto controllers que contendra los metodos
+
+// Declaraciones
 const controllers = {};
+
 
 /**
  * Función para generar un codigo con parametros del curso
@@ -193,6 +194,8 @@ controllers.createCourse = async (req, res) => {
         status = null;
     }
 
+    let courseRef = db.collection("courses").doc();
+
     let codeCourse = generateCode(nameSubject, gradeCourse, numberCourse, letterCourse);
     
     course.code = codeCourse;
@@ -203,8 +206,9 @@ controllers.createCourse = async (req, res) => {
     course.number = numberCourse;
     course.letter = letterCourse; 
     course.type = typeSubject; 
+    course.id = courseRef.id;
 
-    await db.collection("courses").add(course)
+    await courseRef.set(course)
     .catch(() => {
         code = "FIREBASE_CREATE_COURSE_ERROR";
         message = "La asignatura no se ha podido crear";
@@ -249,13 +253,23 @@ controllers.createCourse = async (req, res) => {
         code = 400;
     })
     .finally(() => {
-        res.status(status).jsonp({ code: code, message: message, data: data, type: type });
-            
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        db = null;
+        code = null;
+        message = null;
+        data = null
+        type = null;
+        status = null;
+
         return;
     });
 };
 
 
+
+
+/** REVISAR ESTOS ------------ */
 /**
  * Función para establecer a uno o dos docentes dentro de una asignatura
  * @param {import("express").Request} req objeto request
@@ -290,11 +304,18 @@ controllers.setTeachersCourse = async (req, res) => {
     dataTeacher.created_at = admin.firestore.FieldValue.serverTimestamp();
     dataTeacher.created_by = uid;
 
+    let teacherRef = db.collection("courses").doc(idCourse).collection("teachers").doc(idTeacher);
+    let userRef = db.collection("users").doc(idTeacher).collection("courses").doc(idCourse);
+
     await db.collection("courses").doc(idCourse).collection("teachers").get()
     .then(async result => {
         if (result.size == 0)
         {
-            await db.collection("courses").doc(idCourse).collection("teachers").doc(idTeacher).set(dataTeacher)
+            dataTeacher.idTeacher = idTeacher;
+            dataTeacher.idSubject = idCourse;
+            dataTeacher.id = teacherRef.id;
+
+            await teacherRef.set(dataTeacher)
             .catch(error => {
                 code = error.code;
                 type = "error";
@@ -312,13 +333,18 @@ controllers.setTeachersCourse = async (req, res) => {
                 return;
             });
 
-            await db.collection("users").doc(idTeacher).collection("courses").doc(idCourse).set({
+            let objectS0 = {
                 code: codeCourse,
                 name: nameCourse,
                 subject: typeCourse,
                 created_at: admin.firestore.FieldValue.serverTimestamp(),
-                created_by: uid
-            })
+                created_by: uid,
+                uid: idTeacher,
+                idSubject: idCourse,
+                id: userRef.id
+            }
+
+            await userRef.set(objectS0)
             .catch(error => {
                 code = error.code;
                 type = "error";
@@ -339,8 +365,11 @@ controllers.setTeachersCourse = async (req, res) => {
         else
         {
             dataTeacher.helper = true;
+            dataTeacher.idTeacher = idTeacher;
+            dataTeacher.idSubject = idCourse;
+            dataTeacher.id = teacherRef.id;
 
-            await db.collection("courses").doc(idCourse).collection("teachers").doc(idTeacher).set(dataTeacher)
+            await teacherRef.set(dataTeacher)
             .catch(error => {
                 code = error.code;
                 type = "error";
@@ -358,13 +387,18 @@ controllers.setTeachersCourse = async (req, res) => {
                 return;
             });
 
-            await db.collection("users").doc(idTeacher).collection("courses").doc(idCourse).set({
+            let objectS1 = {
                 code: codeCourse,
                 name: nameCourse,
                 subject: typeCourse,
                 created_at: admin.firestore.FieldValue.serverTimestamp(),
-                created_by: uid
-            })
+                created_by: uid,
+                uid: idTeacher,
+                idSubject: idCourse,
+                id: userRef.id
+            }
+
+            await userRef.set(objectS1)
             .catch(error => {
                 code = error.code;
                 type = "error";
@@ -458,10 +492,15 @@ controllers.setStudentsCourse = async (req, res) => {
     delete dataStudent.courseName;
     delete dataStudent.courseType;
 
+    let studentRef = db.collection("courses").doc(idCourse).collection("students").doc(idStudent);
+
     dataStudent.created_at = admin.firestore.FieldValue.serverTimestamp();
     dataStudent.created_by = uid;
+    dataStudent.idSubject = idCourse;
+    dataStudent.idStudent = idStudent;
+    dataStudent.id = studentRef.id;
 
-    await db.collection("courses").doc(idCourse).collection("students").doc(idStudent).set(dataStudent)
+    await studentRef.set(dataStudent)
     .catch(error => {
         code = "FIREBASE_SET_STUDENT_COURSE_ERROR";
         message = error.message;
@@ -481,13 +520,20 @@ controllers.setStudentsCourse = async (req, res) => {
         return;
     });
 
-    await db.collection("users").doc(idStudent).collection("courses").doc(idCourse).set({
+    let courseRef = db.collection("users").doc(idStudent).collection("courses").doc(idCourse);
+
+    let object = {
         code: codeCourse,
         name: nameCourse,            
         subject: typeCourse,
         created_at: admin.firestore.FieldValue.serverTimestamp(),
-        created_by: uid
-    })
+        created_by: uid,
+        uid: idStudent,
+        idCourse: idCourse,
+        id: courseRef.id
+    }
+
+    await courseRef.set(object)
     .catch(error => {
         code = "FIREBASE_SET_USER_COURSE_ERROR";
         message = error.message;
@@ -610,13 +656,19 @@ controllers.createUnitsCourse = async (req, res) => {
 
     for (let i = 0; i < unitsArray.length; i++)
     {
-        await db.collection("courses").doc(subjectId).collection("units").add({
+        let unitRef = db.collection("courses").doc(subjectId).collection("units").doc();
+
+        let object = {
             numberUnit: unitsArray[i].numberUnit,
             unit: unitsArray[i].unit,
             created_by: uid,
             created_at: admin.firestore.FieldValue.serverTimestamp(),
-            deleted: false
-        });
+            deleted: false,
+            idSubject: subjectId,
+            idUnit: unitRef.id
+        }
+
+        await unitRef.set(object);
     }
 
     await db.collection("courses").doc(subjectId).collection("units").orderBy("numberUnit", "asc").get()
@@ -658,8 +710,17 @@ controllers.createUnitsCourse = async (req, res) => {
         return;
     });
 };
+/** REVISAR ESTOS ----------------------- */
 
 
+
+
+/**
+ * Función para crear un archivo en el sistema, en la unidad de un curso
+ * @param {import("express").Request} req objeto request
+ * @param {import("express").Response} res objeto response
+ * @returns retorna un mensaje erroneo o un mensaje informativo al usuario
+ */
 controllers.setFileURL = async (req, res) => {
     let { uid } = res.locals;
     let { objectData } = req.body;
@@ -715,14 +776,21 @@ controllers.setFileURL = async (req, res) => {
         return;
     }
 
-    await db.collection("courses").doc(idSubject).collection("units").doc(idUnit).collection("files").add({
+    let fileRef = db.collection("courses").doc(idSubject).collection("units").doc(idUnit).collection("files").doc();
+
+    let objectPostData = {
         url: object.url,
         name: object.name, 
         description: object.description,
         created_at: admin.firestore.FieldValue.serverTimestamp(),
         created_by: uid,
-        type: "FILE"
-    })
+        type: "FILE",
+        idSubject: idSubject,
+        idUnit: idUnit,
+        idFile: fileRef.id
+    }
+
+    await fileRef.set(objectPostData)
     .then(() => {
         code = "PROCESS_OK";
         message = "Archivo creado exitosamente";
@@ -748,155 +816,6 @@ controllers.setFileURL = async (req, res) => {
         return;
     });
 };
-
-
-controllers.uploadHomeworkFileURL = async (req, res) => {
-    let { uid } = res.locals;
-
-    let { objectData } = req.body;
-    let { idSubjectParam, idUnitParam } = req.query;
-
-    let db = admin.firestore();
-
-    let code = "";
-    let data = null;
-    let message = "";
-    let type = "";
-    let status = 0;
-
-    let object = Decrypt(objectData);
-    let idSubject = Decrypt(idSubjectParam);
-    let idUnit = Decrypt(idUnitParam);
-
-    if (typeof(idSubject) !== "string" || typeof(idUnit) !== "string")
-    {
-        code = "BAD_ID_TYPE_PARAM";
-        message = "Asegurese de enviar los tipos de datos correctos"; 
-        type = "error";
-        status = 400;
-
-        res.status(status).send({ code: code, message: message, data: data, type: type });
-
-        uid = null;
-        db = null;
-        code = null;
-        message = null;
-        type = null;
-        status = null;
-
-        return;
-    }
-
-    if (typeof(Decrypt(object.url)) !== "string" || typeof(Decrypt(object.name)) !== "string" || typeof(Decrypt(object.description)) !== "string")
-    {
-        code = "BAD_TYPE_BODY_VALUES";
-        message = "Asegurese de enviar los tipos de datos correctos"; 
-        type = "error";
-        status = 400;
-
-        res.status(status).send({ code: code, message: message, data: data, type: type });
-
-        uid = null;
-        db = null;
-        code = null;
-        message = null;
-        type = null;
-        status = null;
-
-        return;
-    }
-    //el object.delayState deberia ser un boolean para identificar si se atraso con la entrega
-    await db.collection("courses").doc(idSubject).collection("units").doc(idUnit).collection("files").doc(file).collection('answers').add({
-        url: object.url,
-        created_at: admin.firestore.FieldValue.serverTimestamp(),
-        created_by: uid,
-        delay:object.delayState
-    })
-    .catch(error => {
-        if (error.response)
-        {
-            code = error.response.message;
-            message = error.response.message; 
-        }
-        else
-        {
-            code = "ADD_FILE_ERROR";
-            message = "Ha ocurrido un error al añadir el archivo en el la unidad"; 
-        }
-
-        type = "error";
-        status = 400;
-
-        res.status(status).send({ code: code, message: message, data: data, type: type });
-
-        uid = null;
-        db = null;
-        code = null;
-        message = null;
-        type = null;
-        status = null;
-
-        return;
-    });
-
-
-    let unitObject = {
-        idUnit: null,
-        data: []
-    };
-    unitObject.idUnit = idUnit;
-
-    await db.collection("courses").doc(idSubject).collection("units").doc(idUnit).collection("files").get()
-    .then(result => {
-        let array = [];
-
-        if (result.size > 0)
-        {
-            result.forEach(doc => {
-                array.push({
-                    id: doc.id,
-                    data: doc.data()
-                });
-            });
-        }
-
-        unitObject.data = array;
-        
-        code = "PROCESS_OK"; 
-        type = "success";
-        status = 201;
-    })
-    .catch(error => {
-        if (error.response)
-        {
-            code = error.response.message;
-            message = error.response.message; 
-        }
-        else
-        {
-            code = "GET_FILES_UNIT_ERROR";
-            message = "Ha ocurrido un error al obtener los archivos de la unidad"; 
-        }
-
-        type = "error";
-        status = 400;
-    })
-    .finally(() => {
-        res.status(status).send({ code: code, message: message, data: unitObject, type: type });
-
-        uid = null;
-        db = null;
-        code = null;
-        message = null;
-        type = null;
-        status = null;
-
-        return;
-    });
-};
-
-
-
 
 
 module.exports = controllers;

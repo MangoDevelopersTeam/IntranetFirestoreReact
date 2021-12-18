@@ -18,6 +18,7 @@ const MyCourses = () => {
 
 
     // useCallbacks
+    /* ------ COURSES TEACHER CALLBACKS ------ */
     /**
      * useCallback para obtener los cursos del profesor actual
      */
@@ -37,7 +38,7 @@ const MyCourses = () => {
                     setErrorCourses(true);
                 }
 
-                setLoadingCourses(false);
+                return setLoadingCourses(false);
             })
             .catch(error => {
                 if (error.response)
@@ -47,6 +48,7 @@ const MyCourses = () => {
                     setErrorCourses(true);
 
                     console.log(error.response);
+                    return;
                 }
             })
             .finally(() => {
@@ -60,6 +62,7 @@ const MyCourses = () => {
         },
         [setCourses, setErrorCode, setErrorCourses, setLoadingCourses],
     );
+    /* ------ COURSES TEACHER CALLBACKS ------ */
     
 
     // useEffects
@@ -78,8 +81,8 @@ const MyCourses = () => {
 
     
     return (
-        <div>
-            <Paper style={{ padding: 20, marginBottom: 15 }} variant="outlined">
+        <Paper elevation={0} itemType="div">
+            <Paper variant="outlined" itemType="div" style={{ padding: 20, marginBottom: 15 }}>
                 <Breadcrumbs separator={<NavigateNext fontSize="small" />}>
                     <Link to="/" style={{ textDecoration: "none", color: "#333" }}>
                         Home
@@ -94,66 +97,64 @@ const MyCourses = () => {
 
                     <Divider style={{ marginTop: 15, marginBottom: 15 }} />
 
-                    <div>
+                    <Paper elevation={0} itemType="div">
                     {
                         loadingCourses === true ? (
-                            <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                            <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: 30 }}>
                                 <CircularProgress style={{ color: "#2074d4" }} />
-                            </div>
-                        ) : (
-                            errorCourses === true ? (
-                                <React.Fragment>
-                                    <Typography style={{ textAlign: "center" }}>
-                                    {
-                                        errorCode !== null && (
-                                            errorCode === "NO_COURSES" ? (
-                                                "No existen asignaturas asignados a ti aún"
-                                            ) : errorCode === "FIREBASE_GET_COURSES_ERROR" ? (
-                                                "Ha ocurrido un error al obtener las asignaturas asignados a tí"
-                                            ) : (
-                                                "Ha ocurrido un error, intente obtener las asignaturas nuevamente"
-                                            )
+                                <Typography style={{ marginTop: 15 }}>Cargando Asignaturas</Typography>
+                            </Paper>
+                        ) : errorCourses === true ? (
+                            <React.Fragment>
+                                <Typography style={{ textAlign: "center" }}>
+                                {
+                                    errorCode !== null && (
+                                        errorCode === "NO_COURSES" ? (
+                                            "No existen asignaturas asignados a ti aún"
+                                        ) : errorCode === "FIREBASE_GET_COURSES_ERROR" ? (
+                                            "Ha ocurrido un error al obtener las asignaturas asignados a tí"
+                                        ) : (
+                                            "Ha ocurrido un error, intente obtener las asignaturas nuevamente"
                                         )
-                                    }
-                                    </Typography>
+                                    )
+                                }
+                                </Typography>
                                     
-                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                        <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                        <Button onClick={() => handleGetTeacherStudentCourses()} style={{ color: "#2074d4" }}>Recargar Asignaturas</Button>
-                                    </div>
-                                </React.Fragment>
-                            ) : (
-                                courses === null ? (
-                                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-                                        <CircularProgress style={{ color: "#2074d4" }} />
-                                    </div>
-                                ) : (
-                                    <React.Fragment>
-                                        <List>
-                                        {
-                                            courses.map(doc => (
-                                                <Link key={doc.id} to={`/subject/${doc.id}`} style={{ color: "#333", textDecoration: "none" }}>
-                                                    <ListItem key={doc.id} button>
-                                                        <ListItemText primary={Decrypt(Decrypt(doc.data).name)} secondary={Decrypt(doc.data).code} />
-                                                    </ListItem>
-                                                </Link>
-                                            ))
-                                        }
-                                        </List>
+                                <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                    <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                    <Button onClick={async () => await handleGetTeacherStudentCourses()} style={{ color: "#2074d4" }}>Recargar Asignaturas</Button>
+                                </Paper>
+                            </React.Fragment>
+                        ) : courses === null ? (
+                            <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: 30 }}>
+                                <CircularProgress style={{ color: "#2074d4" }} />
+                                <Typography style={{ marginTop: 15 }}>Cargando Asignaturas</Typography>
+                            </Paper>
+                        ) : (
+                            <React.Fragment>
+                                <List>
+                                {
+                                    courses.map(doc => (
+                                        <Link key={doc.id} to={`/subject/${doc.id}`} style={{ color: "#333", textDecoration: "none" }}>
+                                            <ListItem key={doc.id} button>
+                                                <ListItemText primary={Decrypt(Decrypt(doc.data).name)} secondary={Decrypt(doc.data).code} />
+                                            </ListItem>
+                                        </Link>
+                                    ))
+                                }
+                                </List>
                                     
-                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                            <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                            <Button onClick={() => handleGetTeacherStudentCourses()} style={{ color: "#2074d4" }}>Recargar Asignaturas</Button>
-                                        </div>
-                                    </React.Fragment>
-                                )
-                            )
+                                <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                    <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                    <Button onClick={async () => await handleGetTeacherStudentCourses()} style={{ color: "#2074d4" }}>Recargar Asignaturas</Button>
+                                </Paper>
+                            </React.Fragment>
                         )
                     }
-                    </div>              
+                    </Paper>            
                 </CardContent>
             </Card>
-        </div>
+        </Paper>
     );
 };
 
