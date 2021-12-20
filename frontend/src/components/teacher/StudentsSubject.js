@@ -141,7 +141,7 @@ const StudentsSubject = () => {
 
                 await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-students-courses", {
                     params: {
-                        id: id
+                        subjectIdParam: Encrypt(id)
                     }
                 })
                 .then(result => {
@@ -1036,21 +1036,6 @@ const StudentsSubject = () => {
 
     useEffect(() => {
         let callQuery = async () => {
-            await handleGetStudentsCourse();
-        }
-
-        if (authorized === true)
-        {
-            callQuery();
-
-            return () => {
-                setStudents(null);
-            }
-        }
-    }, [authorized, handleGetStudentsCourse, setStudents]); 
-
-    useEffect(() => {
-        let callQuery = async () => {
             await handleGetDetailedSubject();
         }
 
@@ -1062,10 +1047,25 @@ const StudentsSubject = () => {
 
     useEffect(() => {
         let callQuery = async () => {
+            await handleGetStudentsCourse();
+        }
+
+        if (authorized === true  && subject !== null && subject !== undefined)
+        {
+            callQuery();
+
+            return () => {
+                setStudents(null);
+            }
+        }
+    }, [authorized, subject, handleGetStudentsCourse, setStudents]); 
+
+    useEffect(() => {
+        let callQuery = async () => {
             await handleGetTeacherCourse();
         }
 
-        if (authorized === true && subject !== undefined)
+        if (authorized === true && subject !== null && subject !== undefined)
         {
             return callQuery();
         }
@@ -1189,7 +1189,7 @@ const StudentsSubject = () => {
                                                     students.map(doc => (
                                                         <Paper key={doc.id} elevation={0} itemType="div">
                                                             <ListItem>
-                                                                <ListItemText style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", maxWidth: "50%" }} primary={`${Decrypt(Decrypt(doc.data).name)} ${Decrypt(Decrypt(doc.data).surname)}`} secondary={`Asignado a este Curso ${timeago(new Date(Decrypt(doc.data).created_at._seconds * 1000))}`} security="true" />
+                                                                <ListItemText style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", maxWidth: "50%" }} primary={`${Decrypt(doc.data.name)} ${Decrypt(doc.data.surname)}`} secondary={`Asignado a este Curso ${timeago(new Date(doc.data.created_at._seconds * 1000))}`} security="true" />
 
                                                                 <ListItemSecondaryAction>
                                                                 {
@@ -1207,11 +1207,6 @@ const StudentsSubject = () => {
                                                                             <Tooltip title={<Typography>Asignar Anotaciones a este estudiante</Typography>}>
                                                                                 <IconButton edge="end" onClick={async () => await handleOpenSetAnnotation(doc)} style={{ marginRight: 5 }}>
                                                                                     <PlaylistAdd />
-                                                                                </IconButton>
-                                                                            </Tooltip>
-                                                                            <Tooltip title={<Typography>Mas Información acerca de esto</Typography>}>
-                                                                                <IconButton edge="end">
-                                                                                    <Info />
                                                                                 </IconButton>
                                                                             </Tooltip>
                                                                         </Paper>
@@ -1240,7 +1235,7 @@ const StudentsSubject = () => {
                             </Card>
 
                             <Dialog open={gradesDialog} maxWidth={"md"} fullWidth={true} onClose={handleCloseSetGrades} fullScreen={fullScreen} scroll="paper">
-                                <DialogTitle>{selectedStudent === null ? "Asignar calificaciones al estudiante Seleccionado en esta Asignatura" : `Asignar calificaciones al Estudiante ${Decrypt(Decrypt(selectedStudent.data).name)} ${Decrypt(Decrypt(selectedStudent.data).surname)} en esta Asignatura`}</DialogTitle>
+                                <DialogTitle>{selectedStudent === null ? "Asignar calificaciones al estudiante Seleccionado en esta Asignatura" : `Asignar calificaciones al Estudiante ${Decrypt(selectedStudent.data.name)} ${Decrypt(selectedStudent.data.surname)} en esta Asignatura`}</DialogTitle>
                                 
                                 <DialogContent>
                                     <React.Fragment>
@@ -1330,7 +1325,7 @@ const StudentsSubject = () => {
                             </Dialog>
 
                             <Dialog open={annotationDialog} maxWidth={"xl"} fullWidth={true} onClose={handleCloseSetAnnotation} fullScreen={fullScreen} scroll="paper">
-                                <DialogTitle>{selectedStudent === null ? "Asignar Anotaciones al estudiante Seleccionado en esta Asignatura" : `Asignar Anotaciones al estudiante ${Decrypt(Decrypt(selectedStudent.data).name)} ${Decrypt(Decrypt(selectedStudent.data).surname)} en esta Asignatura`}</DialogTitle>
+                                <DialogTitle>{selectedStudent === null ? "Asignar Anotaciones al estudiante Seleccionado en esta Asignatura" : `Asignar Anotaciones al estudiante ${Decrypt(selectedStudent.data.name)} ${Decrypt(selectedStudent.data.surname)} en esta Asignatura`}</DialogTitle>
                                 
                                 <DialogContent>
                                     <React.Fragment>
@@ -1365,7 +1360,7 @@ const StudentsSubject = () => {
                                                             <React.Fragment>
                                                                 <Card variant="outlined" style={{ width: "100%", maxHeight: "59vh", overflow: "auto", marginLeft: 5, marginRight: 5, marginTop: 15 }}>
                                                                     <CardContent>
-                                                                        <Typography variant="h6">Todas las anotaciones del estudiante {Decrypt(Decrypt(selectedStudent.data).name)} {Decrypt(Decrypt(selectedStudent.data).surname)}</Typography>
+                                                                        <Typography variant="h6">Todas las anotaciones del estudiante {Decrypt(selectedStudent.data.name)} {Decrypt(selectedStudent.data.surname)}</Typography>
 
                                                                         <Button aria-haspopup="true" color="inherit" style={{ marginTop: 10 }} onClick={handleClickMenuFilter}>
                                                                             <Typography variant="button">Filtrar Anotaciones</Typography>

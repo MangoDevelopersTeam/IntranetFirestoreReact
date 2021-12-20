@@ -232,7 +232,7 @@ const MyStudentsAnnotation = () => {
 
             await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-units-course", {
                 params: {
-                    id: id
+                    subjectIdParam: Encrypt(id)
                 }
             })
             .then(result => {
@@ -857,8 +857,8 @@ const MyStudentsAnnotation = () => {
                                                                                             units.map((doc, index) => (
                                                                                                 <TableRow key={doc.id}>
                                                                                                     <TableCell align="center" component="th" scope="row">{index + 1}</TableCell>
-                                                                                                    <TableCell align="center">{Decrypt(doc.data).numberUnit}</TableCell>
-                                                                                                    <TableCell align="center">{Decrypt(doc.data).unit}</TableCell>
+                                                                                                    <TableCell align="center">{doc.data.numberUnit}</TableCell>
+                                                                                                    <TableCell align="center">{doc.data.unit}</TableCell>
                                                                                                     <TableCell align="center">
                                                                                                         <Typography color={grades.length > 0 ? grades.find(x => x.id === doc.id) !== undefined && grades.find(x => x.id === doc.id).data.valueGrade >= 40 ? `primary` : `error` : `inherit`}>{grades.length > 0 ? grades.find(x => x.id === doc.id) !== undefined ? grades.find(x => x.id === doc.id).data.valueGrade : "" : "?"}</Typography>
                                                                                                     </TableCell>

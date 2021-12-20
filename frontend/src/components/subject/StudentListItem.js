@@ -24,9 +24,9 @@ const StudentListItem = ({ subjectId, course, student, studentsCourse, setStuden
                 name: Decrypt(student.data).name,
                 surname: Decrypt(student.data).surname,
                 email: Decrypt(student.data).email,
-                courseCode: Decrypt(course)?.code,
-                courseName: Decrypt(course)?.courseName,
-                courseType: Decrypt(course)?.type,
+                courseCode: course.data.code,
+                courseName: course.data.courseName,
+                courseType: course.data.type,
             };
 
             let studentObject = Encrypt(object);

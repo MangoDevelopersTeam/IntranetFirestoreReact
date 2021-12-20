@@ -81,6 +81,9 @@ app.get("/get-users", [authMiddlewares.checkToken, authMiddlewares.checkIsAdmin]
 app.get("/get-numbers-admin", userGet.getNumbersOfAdmin);
 app.get("/get-system-students", [authMiddlewares.checkToken, authMiddlewares.checkIsAdmin], userGet.getSystemStudents);
 app.get("/filter-region-commune", [authMiddlewares.checkToken, authMiddlewares.checkIsAdmin], userGet.getUsersByRegionCommune)
+app.get("/get-detailed-user", [authMiddlewares.checkToken], userGet.getUsersProfile);
+app.put("/edit-user", [authMiddlewares.checkToken, authMiddlewares.checkIsAdmin], userPut.editUser);
+app.delete("/delete-user", [authMiddlewares.checkToken, authMiddlewares.checkIsAdmin], userDelete.deleteUser);
 
 
 
@@ -101,7 +104,7 @@ app.put("/change-helper-state", [authMiddlewares.checkToken, authMiddlewares.che
 
 app.delete("/remove-teacher-course", [authMiddlewares.checkToken, authMiddlewares.checkIsAdmin], coursesDelete.removeTeacherCourse);
 app.delete("/remove-student-course", [authMiddlewares.checkToken, authMiddlewares.checkIsTeacherAdmin], coursesDelete.removeStudentCourse);
-
+app.delete("/delete-course", [authMiddlewares.checkToken, authMiddlewares.checkIsAdmin], coursesDelete.deleteCourse);
 
 
 // Rutas de unidades de curso
@@ -166,6 +169,7 @@ app.get("/get-questions-forum", [authMiddlewares.checkToken, authMiddlewares.che
 app.get("/get-detailed-question", [authMiddlewares.checkToken, authMiddlewares.checkIsAdminStudent], forumGet.getDetailedQuestion);
 app.get("/get-question-rate", [authMiddlewares.checkToken, authMiddlewares.checkIsAdminStudent], forumGet.getRateQuestion);
 app.get("/get-question-comments", [authMiddlewares.checkToken, authMiddlewares.checkIsAdminStudent], forumGet.getCommentsQuestion);
+app.get("/get-filtered-questions-forum", [authMiddlewares.checkToken, authMiddlewares.checkIsAdminStudent], forumGet.getQuestionsFiltered);
 
 app.post("/post-question-forum", [authMiddlewares.checkToken, authMiddlewares.checkIsStudent], forumPost.postQuestionForum);
 app.post("/post-like-question", [authMiddlewares.checkToken, authMiddlewares.checkIsStudent], forumPost.postLikeQuestion);
@@ -174,6 +178,8 @@ app.post("/post-question-comment", [authMiddlewares.checkToken, authMiddlewares.
 
 app.put("/put-question-comment", [authMiddlewares.checkToken, authMiddlewares.checkIsStudent], forumPut.putQuestionComment);
 app.delete("/delete-question-comment", [authMiddlewares.checkToken, authMiddlewares.checkIsAdmin], forumDelete.deleteQuestionComment);
+app.delete("/delete-question-answer", [authMiddlewares.checkToken, authMiddlewares.checkIsAdmin], forumDelete.deleteQuestionAwnser);
+app.delete("/delete-question", [authMiddlewares.checkToken, authMiddlewares.checkIsAdmin], forumDelete.deleteQuestion);
 
 
 // Ruta de foro => Respuesta

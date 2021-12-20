@@ -121,6 +121,7 @@ const Login = () => {
         async () => {
             await axios.get(`${process.env.REACT_APP_API_URI}/get-numbers-admin`)
             .then(result => {
+                console.log(result);
                 if (result.status === 200 && result.data.code === "PROCESS_OK")
                 {
                     if (result.data.data > 0)

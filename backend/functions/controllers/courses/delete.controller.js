@@ -16,7 +16,7 @@ const controllers = {};
  * @param {Response} res objeto reponse
  * @returns mensaje informativo al usuario o el data del usuario
  */
-controllers.deleteCourse = async(req, res) => {
+/* controllers.deleteCourse = async(req, res) => {
     const { id } = req.body;
 
     // Se verifica si hay una token de autorización
@@ -46,7 +46,7 @@ controllers.deleteCourse = async(req, res) => {
             })
     }
     return res.send({ code: "ACCESS_DENIED", message: "No tienes privilegios de administrador para esta operación", type: "error" });
-};
+}; */
 
 
 /**
@@ -352,19 +352,12 @@ controllers.removeStudentCourse = async (req, res) => {
 };
 
 
-
-
-
-
-
-
-
 /**
  * Función para eliminar una unidad en intranet
  * @param {import("express").Request} req objeto request
  * @param {import("express").Response} res objeto response 
  */
- controllers.deleteUnitCourse = async (req, res) => {
+controllers.deleteUnitCourse = async (req, res) => {
     let { uid } = res.locals;
     let { paramIdSubject, paramIdUnit } = req.query;
 
@@ -466,6 +459,87 @@ controllers.removeStudentCourse = async (req, res) => {
     .finally(() => {
         res.status(status).send({ code: code, message: message, data: data, type: type });
         uid = null;
+        db = null;
+        code = null;            
+        message = null;
+        type = null;
+        status = null;
+            
+        return;
+    });
+};
+/////////////////////////////////////////
+
+controllers.deleteCourse = async (req, res) => {
+    let { uid } = res.locals;
+    let { paramIdSubject } = req.query;
+
+    let db = admin.firestore();
+
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+
+    if (paramIdSubject === null)
+    {
+        code = "DATA_NULL";
+        message = "Asegurese de enviar los datos correctamente"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        unit = null;
+        paramIdSubject = null;
+        paramIdUnit = null;
+        unit = null;
+        
+        return;
+    }
+    
+    let subjectId = Decrypt(paramIdSubject);
+
+    if (typeof(subjectId) !== "string")
+    {
+        code = "BAD_ID_PARAM_FORMAT";
+        message = "Asegurese de enviar los id de forma correcta"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        unit = null;
+        paramIdSubject = null;
+        paramIdUnit = null;
+        unit = null;
+        
+        return;
+    }
+
+    await db.collection("courses").doc(subjectId).update({
+        deleted: true,
+        deleted_at: admin.firestore.FieldValue.serverTimestamp(),
+        deleted_by: uid
+    })
+    .then(() => {
+        code = "PROCESS_OK";
+        message = "Proceso realizado correctamente";
+        type = "success";
+        status = 200;
+    })
+    .catch(error => {
+        code = error.code;
+        message = error.message;
+        type = "error";
+        status = 500;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
         db = null;
         code = null;            
         message = null;

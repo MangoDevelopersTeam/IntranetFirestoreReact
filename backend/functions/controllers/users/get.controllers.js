@@ -56,7 +56,6 @@ controllers.whoami = async (req, res) => {
     });
 };
 
-
 /**
  * Metodo para obtener a todos los alumnos del sistema
  * @param {import("express").Request} req Objeto Request
@@ -193,7 +192,7 @@ controllers.getSystemStudents = async (req, res) => {
         let gradeParam = dataFilter.grade.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
         let numberParam = dataFilter.number;
 
-        await db.collection("users").where("level", "==", "student").where("assignedToProxie", "==", false).where("number", "==", numberParam).where("letter", "==", letterParam).where("grade", "==", gradeParam).get()
+        await db.collection("users").where("deleted", "==", false).where("level", "==", "student").where("assignedToProxie", "==", false).where("number", "==", numberParam).where("letter", "==", letterParam).where("grade", "==", gradeParam).get()
         .then(result => {
             let array = [];
 
@@ -238,7 +237,7 @@ controllers.getSystemStudents = async (req, res) => {
     }
     else
     {
-        await db.collection("users").where("level", "==", "student").where("assignedToProxie", "==", false).get()
+        await db.collection("users").where("deleted", "==", false).where("level", "==", "student").where("assignedToProxie", "==", false).get()
         .then(result => {
             let array = [];
 
@@ -282,7 +281,6 @@ controllers.getSystemStudents = async (req, res) => {
         });
     }
 };
-
 
 /**
  * Metodo para obtener los usuarios de la base de datos
@@ -341,7 +339,7 @@ controllers.getUsers = async (req, res) => {
 
     if (level == "student" || level == "teacher" || level == "proxie")
     {
-        await db.collection("users").where("level", "==", level).get()
+        await db.collection("users").where("deleted", "==", false).where("level", "==", level).get()
         .then(result => {
             let array = [];
 
@@ -399,7 +397,6 @@ controllers.getUsers = async (req, res) => {
     }
 };
 
-
 /**
  * Metodo para obtener el numero de administradores creados
  * @param {import("express").Request} req objeto request
@@ -441,7 +438,6 @@ controllers.getNumbersOfAdmin = async (req, res) => {
     });
 };
 
-
 /**
  * Metodo para obtener los usuarios de la base de datos buscando por la region y comuna
  * @param {import("express").Request} req objeto request
@@ -462,7 +458,7 @@ controllers.getUsersByRegionCommune = async (req, res) => {
     let region = Decrypt(regionParam);
     let commune = Decrypt(communeParam);
 
-    await db.collection("users").get()
+    await db.collection("users").where("deleted", "==", false).get()
     .then(result => {
         let filtered = result.docs.filter(x => Decrypt(x.data().region) === region && Decrypt(x.data().commune) === commune);
 
@@ -502,7 +498,6 @@ controllers.getUsersByRegionCommune = async (req, res) => {
     });
 };
 
-
 /**
  * Metodo para obtener el nievel del usuario
  * @param {import("express").Request} req objeto request
@@ -540,6 +535,128 @@ controllers.getAccess = async (req, res) => {
         type = null;
         status = null;
 
+        return;
+    });
+};
+
+controllers.getUsersProfile = async (req, res) => {
+    let db = admin.firestore();
+
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+
+    let { uid } = res.locals;
+
+    if (uid == null)
+    {
+        code = "PARAMS_BAD_FORMATING";
+        message = "El id esta mal formateado";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (typeof(uid) != "string")
+    {
+        code = "BAD_TYPES_PARAM";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (uid == "")
+    {
+        code = "PARAMS_EMPTY";
+        message = "Los valores enviados no pueden ser vacios";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    await db.collection('users').doc(uid).get()
+    .then(result => {
+        
+        if (result.exists == true)
+        {
+            if (result.data().deleted == false)
+            {
+                let array = [];
+                
+                array.push({
+                    id: result.id,
+                    data: result.data()
+                });
+
+                code = "PROCESS_OK";
+                data = Encrypt(array);
+                type = "success";
+                status = 200;
+            }
+            else
+            {
+                code = "USER_NOT_FOUND";
+                message = "El usuario solicitado no ha sido encontrado, verfique que el identificador este bien escrito, intentelo nuevamente";
+                type = "error";
+                status = 404;
+            }
+        }
+        else
+        {
+            code = "USER_NOT_FOUND";
+            message = "El usuario solicitado no ha sido encontrado, verfique que el identificador este bien escrito, intentelo nuevamente";
+            type = "error";
+            status = 404;
+        }
+    })
+    .catch(error => {
+        code = error.code;
+        message = error.message;
+        type = "error";
+        status = 500;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+    
+        code = null;
+        data = null;
+        message = null;
+        type = null;
+        status = null;
+    
         return;
     });
 };

@@ -26,9 +26,9 @@ const TeacherListItem = ({ subjectId, course, teacher, teachers, teachersCourse,
                 name: Decrypt(teacher.data).name,
                 surname: Decrypt(teacher.data).surname,
                 email: Decrypt(teacher.data).email,
-                courseCode: Decrypt(course)?.code,
-                courseName: Decrypt(course)?.courseName,
-                courseType: Decrypt(course)?.type,
+                courseCode: course.data.code,
+                courseName: course.data.courseName,
+                courseType: course.data.type,
                 helper: false,
             };
 

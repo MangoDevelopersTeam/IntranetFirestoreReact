@@ -267,15 +267,6 @@ const Navigation = () => {
                                             </ListItem>
                                         </Link>
 
-                                        <Link to="/testing" style={{ textDecoration: "none", color: "#000" }}>
-                                            <ListItem button>
-                                                <ListItemIcon>
-                                                    <Build />
-                                                </ListItemIcon>
-                                                <ListItemText primary="Testeos" />
-                                            </ListItem>
-                                        </Link>
-
                                         <ListItem button onClick={() => handleSignOut()}>
                                             <ListItemIcon>
                                                 <ExitToApp />

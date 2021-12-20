@@ -1,16 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Link, useHistory } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { Link } from 'react-router-dom';
 
-import { Breadcrumbs, Button, Card, CardContent, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, FormControl, InputLabel, List, ListItem, ListItemText, MenuItem, Paper, Select, TextField, Typography, useMediaQuery, useTheme, createTheme, ThemeProvider } from '@material-ui/core';
-import { NavigateNext } from '@material-ui/icons';
+import { Breadcrumbs, Button, Card, CardContent, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, FormControl, InputLabel, List, ListItem, ListItemText, MenuItem, Paper, Select, TextField, Typography, useMediaQuery, useTheme, createTheme, ThemeProvider, ListItemSecondaryAction, IconButton } from '@material-ui/core';
+import { Delete, NavigateNext } from '@material-ui/icons';
 
 import { hideNewCourseDialog, showNewCourseDialog } from '../../helpers/dialogs/handleDialogs';
-import { clearAuthData } from '../../helpers/auth/handleGetLevel';
-import { verifyValidToken } from '../../helpers/auth/handleTokenVerified';
 import { showMessage } from '../../helpers/message/handleMessage';
 import { Decrypt, Encrypt } from '../../helpers/cipher/cipher';
-import history from './../../helpers/history/handleHistory';
 
 import { myGrades, myLetterGrades, myNumberGrades } from '../../utils/allGrades';
 import { myArrayCourses } from '../../utils/allCourses';
@@ -32,6 +29,7 @@ const InputTheme = createTheme({
 const ManageSubject = () => {
     // uses
     const themeApp = useTheme();
+    const history = useHistory();
     const fullScreen = useMediaQuery(themeApp.breakpoints.down('sm'));
     const newCourse = useSelector(SELECT_NEW_COURSE);
 
@@ -51,11 +49,19 @@ const ManageSubject = () => {
     const [letter, setLetter] = useState("");
     const [disabled, setDisabled] = useState(true);
 
+    const [loadingPostSubject, setLoadingPostSubject] = useState(false);
+    const [errorPostSubject, setErrorPostSubject] = useState(false);
+
+    const [loadingDeleteSubject, setLoadingDeleteSubject] = useState(false);
+    const [errorDeleteSubject, setErrorDeleteSubject] = useState(false);
+    const [deleteSubjectDialog, setDeleteSubjectDialog] = useState(false);
+    const [selectedSubject, setSelectedSubject] = useState(null);
+
     const [mutableGrades, setMutableGrades] = useState(myNumberGrades);
-    const [createSubjectProcess, setCreateSubjectProcess] = useState(false);
    
 
     // useCallbacks
+    // common callbacks
     /**
      * useCallback para limpiar los campos de texto
      */
@@ -73,44 +79,76 @@ const ManageSubject = () => {
     );
 
     /**
-     * useCallback para cerrar el dialogo de crear una nueva asignatura
-     */
-    const handleHideNewCourseDialog = useCallback(
-        (event, reason) => {
-            if (reason === 'backdropClick' || reason === "EscapeKeyDown") 
-            {
-                return;
-            }
-
-            handleClearFields();
-            hideNewCourseDialog();
-        },
-        [handleClearFields],
-    );
-
-    /**
      * useCallback para manejar el cambio de numeros de curso por el tipo de nivel, si es Básica o Media
      */
     const handleNumberCourseGrade = useCallback(
         (grade) => {
-            if (grade !== null)
+            if (grade === null)
             {
-                setGrade(grade);
-                setDisabled(false);
+                return;
+            }
+            
+            setGrade(grade);
+            setDisabled(false);
 
-                if (myGrades.find(x => x === grade) === "Media")
+            if (myGrades.find(x => x === grade) === "Media")
+            {
+                return setMutableGrades(myNumberGrades.slice(0, 4));
+            }
+            
+            return setMutableGrades(myNumberGrades);
+        },
+        [setGrade, setDisabled, setMutableGrades],
+    );
+
+    /**
+     * useCallback para obtener los cursos desde la API Rest
+     */
+    const handleGetCourses = useCallback(
+        async () => {
+            setLoadingSubjects(true);
+
+            await axios.get(`${process.env.REACT_APP_API_URI}/testing-get-course`)
+            .then(result => {
+                if (result.status === 200 && result.data.code === "PROCESS_OK")
                 {
-                    setMutableGrades(myNumberGrades.slice(0, 4));
-                    return;
+                    setSubjects(Decrypt(result.data.data));
+                    setLoadingSubjects(false);
+                    setErrorSubjects(false);
+                    setErrorCode(null);
                 }
                 else
                 {
-                    setMutableGrades(myNumberGrades);
-                    return;
+                    setLoadingSubjects(false);
+                    setSubjects(undefined);
+                    setErrorSubjects(true);
+                    setErrorCode(result.data.code);
                 }
-            }
+            })
+            .catch(error => {
+                setLoadingSubjects(false);
+                setSubjects(undefined);
+                setErrorSubjects(true);
+                
+                if (error.response)
+                {
+                    return setErrorCode(error.response.data.code);
+                }
+                else
+                {
+                    return setErrorCode("GET_SUBJECTS_ERROR")
+                }
+            })
+            .finally(() => {
+                return () => {
+                    setSubjects(null);
+                    setErrorCode(null);
+                    setLoadingSubjects(null);
+                    setErrorSubjects(null);
+                }
+            });
         },
-        [setGrade, setDisabled, setMutableGrades],
+        [setLoadingSubjects, setErrorSubjects, setErrorCode, setSubjects],
     );
 
     /**
@@ -118,6 +156,11 @@ const ManageSubject = () => {
      */
     const handleCreateCourse = useCallback(
         async () => {
+            if (type === null || grade === null || letter === null || courseName === null || description === null)
+            {
+                return showMessage("Complete todos los Datos", "info");
+            }
+
             if (type === "" || grade === "" || letter === "" || courseName === "" || description === "")
             {
                 return showMessage("Complete todos los Datos", "info");
@@ -135,113 +178,159 @@ const ManageSubject = () => {
 
             let courseIntranet = new course(null, Encrypt(type), Encrypt(grade), Encrypt(number), Encrypt(letter), Encrypt(courseName), Encrypt(description));
 
-            setCreateSubjectProcess(true);            
+            setLoadingPostSubject(true);      
 
-            await axios.post("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/create-course", {
-                course: courseIntranet,
-            }, {
-                headers: {
-                    "content-type": "application/json"
-                }
+            await axios.post(`${process.env.REACT_APP_API_URI}/create-course`, {
+                courseData: Encrypt(courseIntranet),
             })
-            .then(result => {
+            .then(async result => {
+                console.log(result);
                 if (result.status === 201 && result.data.code === "PROCESS_OK")
                 {
-                    setSubjects(Decrypt(result.data.data));
-
-                    handleClearFields();
+                    await handleGetCourses();
+                    setLoadingPostSubject(false);
+                    setErrorPostSubject(false);
+                    setErrorCode(null);
+                    
                     hideNewCourseDialog();
-                    showMessage(result.data.message, result.data.type);
-                }
-                else if (result.data.code === "EXISTING_COURSE")
-                {   
-                    showMessage(result.data.message, result.data.type);
+                    handleClearFields();
+
+                    return showMessage(result.data.message, result.data.type);
                 }
                 else
                 {
-                    showMessage("Ha ocurrido un error inesperado mientras se procesaba la solicitud", "error");
+                    setLoadingPostSubject(false);
+                    setErrorPostSubject(true);
+                    setErrorCode(result.data.code);
+
+                    return;
                 }
             })
             .catch(error => {
+                setLoadingPostSubject(false);
+                setErrorPostSubject(true);
+                
                 if (error.response)
                 {
-                    if (error.response.data.code === "COURSE_PARAMS_INVALID")
-                    {
-                        showMessage("Asegurese de que los tipos de datos sean correctos", "error");
-                    }
-                    else if (error.response.data.code === "COURSE_DATA_NULL")
-                    {
-                        showMessage("Asegurese de enviar el curso correctamente", "error");
-                    }
-                    else if (error.response.data.code === "EXISTING_COURSE")
-                    {
-                        showMessage("El curso que ha tratado de crear ya existe", "warning");
-                    }
-                    else if (error.response.data.code === "FIREBASE_CHECK_CODE_ERROR")
-                    {
-                        showMessage("Ha ocurrido un error al procesar la petición")
-                    }
-                    else
-                    {
-                        showMessage("Ha ocurrido un error inesperado mientras se procesaba la solicitud", "error");
-                    }
+                    console.log(error.response);
+                    return setErrorCode(error.response.data.code);
+                }
+                else
+                {
+                    return setErrorCode("POST_SUBJECT_ERROR");
                 }
             })
             .finally(() => {
-                setCreateSubjectProcess(false);
-
                 return () => {
+                    setLoadingPostSubject(null);
+                    setErrorPostSubject(null);
+                    setErrorCode(null);
                     setSubjects(null);
                 }
             });
         },
-        [type, grade, letter, number, courseName, description, setSubjects, setCreateSubjectProcess, handleClearFields],
+        [type, grade, letter, number, courseName, description, handleGetCourses, setSubjects, setErrorCode, setErrorPostSubject, setLoadingPostSubject, handleClearFields],
     );
 
-    /**
-     * useCallback para obtener los cursos desde la API Rest
-     */
-    const handleGetCourses = useCallback(
-        async () => {
-            setLoadingSubjects(true);
+    
 
-            await axios.get(`${process.env.REACT_APP_API_URI}/testing-get-course`)
-            .then(result => {
+
+    // dialogs
+    /**
+     * useCallback para cerrar el dialogo de crear una nueva asignatura
+     */
+    const handleHideNewCourseDialog = useCallback(
+        (event, reason) => {
+            if (reason === 'backdropClick' || reason === "escapeKeyDown") 
+            {
+                return;
+            }
+
+            handleClearFields();
+            hideNewCourseDialog();
+        },
+        [handleClearFields],
+    );
+
+    const handleShowNewCourseDialog = useCallback(
+        (doc) => {
+            if (doc === null)
+            {
+                return;
+            }
+
+            setSelectedSubject(doc);
+            setDeleteSubjectDialog(true);
+        },
+        [setSelectedSubject, setDeleteSubjectDialog],
+    );
+
+    const handleHideDeleteCourseDialog = useCallback(
+        (event, reason) => {
+            if (reason === 'backdropClick' || reason === "escapeKeyDown") 
+            {
+                return;
+            }
+
+            setDeleteSubjectDialog(false);
+        },
+        [setDeleteSubjectDialog],
+    );
+
+
+    // common callbacks
+    const handleDeleteCourse = useCallback(
+        async () => {
+            if (selectedSubject === null)
+            {
+                return;
+            }
+
+            setLoadingDeleteSubject(true);
+
+            await axios.delete(`${process.env.REACT_APP_API_URI}/delete-course`, {
+                params: {
+                    paramIdSubject: Encrypt(selectedSubject.id)
+                }
+            })
+            .then(async result => {
                 if (result.status === 200 && result.data.code === "PROCESS_OK")
                 {
-                    setSubjects(Decrypt(result.data.data));
-
-                    setLoadingSubjects(false);
-                    setErrorSubjects(false);
+                    await handleGetCourses();
+                    setLoadingDeleteSubject(false);
+                    setErrorDeleteSubject(false);
+                    setErrorCode(null);
+                    handleHideDeleteCourseDialog();
                 }
                 else
                 {
-                    setSubjects(undefined);
-
-                    setLoadingSubjects(false);
-                    setErrorSubjects(true);
+                    setLoadingDeleteSubject(false);
+                    setErrorDeleteSubject(false);
+                    setErrorCode(result.data.code);
                 }
             })
             .catch(error => {
+                setLoadingDeleteSubject(false);
+                setErrorDeleteSubject(false);
+                
                 if (error.response)
                 {
-                    console.log("the error is", error.response);
+                    return setErrorCode(error.response.data.code);
                 }
-
-                setSubjects(undefined);
-                setErrorSubjects(true);
-                setLoadingSubjects(false);
+                else
+                {
+                    return setErrorCode("GET_SUBJECTS_ERROR")
+                }
             })
             .finally(() => {
                 return () => {
-                    setSubjects(null);
+                    setLoadingDeleteSubject(null);
+                    setErrorDeleteSubject(null);
                     setErrorCode(null);
-                    setLoadingSubjects(null);
-                    setErrorSubjects(null);
                 }
             });
         },
-        [setLoadingSubjects, setErrorSubjects, setSubjects],
+        [selectedSubject, setLoadingDeleteSubject, setErrorDeleteSubject, setErrorCode, handleHideDeleteCourseDialog],
     );
 
 
@@ -286,75 +375,112 @@ const ManageSubject = () => {
                                 <CircularProgress style={{ color: "#2074d4" }} />
                                 <Typography style={{ marginTop: 15 }}>Obteniendo las Asignaturas</Typography>
                             </Paper>
-                        ) : (
-                            errorSubjects === true ? (
-                                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto" }}>
-                                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                        <Typography>Ha Ocurrido un error al Momento de obtener las Asignaturas</Typography>
-                                        <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetCourses()}>
-                                            <Typography variant="button">Recargar Contenido de la Asignatura</Typography>
-                                        </Button>
-                                    </Paper>
-                                </Paper>
-                            ) : (
-                                subjects === null ? (
-                                    <Paper elevation={0} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
-                                        <CircularProgress style={{ color: "#2074d4" }} />
-                                        <Typography style={{ marginTop: 15 }}>Cargando las Asignaturas</Typography>
-                                    </Paper>
-                                ) : (
-                                    subjects === undefined ? (
-                                        <Paper elevation={0}>
-                                            <Typography style={{ textAlign: "center" }}>No existen Asignaturas aquí aún</Typography>
-
-                                            <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                                <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                                <Button onClick={async () => await handleGetCourses()} style={{ color: "#2074d4" }}>
-                                                    <Typography variant="button">Recargar Asignaturas</Typography>
-                                                </Button>
-                                            </Paper>
-                                        </Paper>
-                                    ) : (
-                                        subjects.length > 0 ? (
-                                            <Paper elevation={0}>
-                                                <List style={{ marginTop: 6 }}>
-                                                {
-                                                    subjects.map(doc => (
-                                                        <Paper key={doc.id} elevation={0}>
-                                                            <Link to={`/subjects/${doc.id}`} style={{ color: "#333", textDecoration: "none" }}>
-                                                                <ListItem button>
-                                                                    <ListItemText primary={Decrypt(doc.data.courseName)} secondary={doc.data.code} />
-                                                                </ListItem>
-                                                            </Link>
-
-                                                            <Divider />
-                                                        </Paper>
-                                                    ))
-                                                }
-                                                </List>
-
-                                                <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                                    <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                                    <Button onClick={async () => await handleGetCourses()} style={{ color: "#2074d4" }}>
-                                                        <Typography variant="button">Recargar Asignaturas</Typography>
-                                                    </Button>
-                                                </Paper>
-                                            </Paper>
+                        ) : errorSubjects === true ? (
+                            <React.Fragment>
+                                <Typography style={{ textAlign: "center" }}>
+                                {
+                                    errorCode !== null ? (
+                                        errorCode === "COURSES_NOT_FOUND" ? (
+                                            "No existen asignaturas creadas aún"
+                                        ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                            "La sesión ha expirado, recargue el navegador para inciar sesión nuevamente"
                                         ) : (
-                                            <Paper elevation={0}>
-                                                <Typography style={{ textAlign: "center" }}>No existen Asignaturas aquí aún</Typography>
-
-                                                <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                                    <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                                    <Button onClick={async () => await handleGetCourses()} style={{ color: "#2074d4" }}>
-                                                        <Typography variant="button">Recargar Asignaturas</Typography>
-                                                    </Button>
-                                                </Paper>
-                                            </Paper>
+                                            "Algo inesperado ha ocurrido al obtener las asignaturas"
                                         )
-                                    )    
-                                )
-                            )
+                                    ) : (
+                                        "Algo inesperado ha ocurrido al obtener las asignaturas"
+                                    )
+                                }
+                                </Typography>
+
+                                <React.Fragment>
+                                {
+                                    errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
+                                        <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                            <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                            <Button onClick={async () => await handleGetCourses()} style={{ color: "#2074d4" }}>
+                                                <Typography variant="button">Recargar Asignaturas</Typography>
+                                            </Button>
+                                        </Paper>
+                                    )
+                                }
+                                </React.Fragment>
+                            </React.Fragment>
+                        ) : subjects === null ? (
+                            <Paper elevation={0} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
+                                <CircularProgress style={{ color: "#2074d4" }} />
+                                <Typography style={{ marginTop: 15 }}>Obteniendo las Asignaturas</Typography>
+                            </Paper>
+                        ) : subjects === undefined ? (
+                            <React.Fragment>
+                                <Typography style={{ textAlign: "center" }}>
+                                {
+                                    errorCode !== null ? (
+                                        errorCode === "COURSES_NOT_FOUND" ? (
+                                            "No existen asignaturas creadas aún"
+                                        ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                            "La sesión ha expirado, recargue el navegador para inciar sesión nuevamente"
+                                        ) : (
+                                            "Algo inesperado ha ocurrido al obtener las asignaturas"
+                                        )
+                                    ) : (
+                                        "Algo inesperado ha ocurrido al obtener las asignaturas"
+                                    )
+                                }
+                                </Typography>
+
+                                <React.Fragment>
+                                {
+                                    errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
+                                        <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                            <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                            <Button onClick={async () => await handleGetCourses()} style={{ color: "#2074d4" }}>
+                                                <Typography variant="button">Recargar Asignaturas</Typography>
+                                            </Button>
+                                        </Paper>
+                                    )
+                                }
+                                </React.Fragment>
+                            </React.Fragment>
+                        ) : subjects.length <= 0 ? (
+                            <React.Fragment>
+                                <Typography style={{ textAlign: "center" }}>Al parecer no hay asignaturas creadas, recargue el contenido con el botón inferior</Typography>
+
+                                <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                    <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                    <Button onClick={async () => await handleGetCourses()} style={{ color: "#2074d4" }}>
+                                        <Typography variant="button">Recargar Asignaturas</Typography>
+                                    </Button>
+                                </Paper>
+                            </React.Fragment>
+                        ) : (
+                            <Paper elevation={0}>
+                                <List style={{ marginTop: 5 }}>
+                                {
+                                    subjects.map(doc => (
+                                        <Paper key={doc.id} elevation={0}>
+                                            <ListItem button onClick={() => history.push(`/subjects/${doc.id}`)}>
+                                                <ListItemText primary={Decrypt(doc.data.courseName)} secondary={doc.data.code} />
+                                                <ListItemSecondaryAction>
+                                                    <IconButton onClick={() => handleShowNewCourseDialog(doc)} edge="end" aria-label="delete">
+                                                        <Delete />
+                                                    </IconButton>
+                                                </ListItemSecondaryAction>
+                                            </ListItem>
+
+                                            <Divider />
+                                        </Paper>
+                                    ))
+                                }
+                                </List>
+
+                                <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                    <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                    <Button onClick={async () => await handleGetCourses()} style={{ color: "#2074d4" }}>
+                                        <Typography variant="button">Recargar Asignaturas</Typography>
+                                    </Button>
+                                </Paper>
+                            </Paper>
                         )
                     }
                     </React.Fragment>                     
@@ -365,15 +491,64 @@ const ManageSubject = () => {
                 <DialogTitle>Crear Asignatura</DialogTitle>
 
                 <Paper elevation={0}>
-                {
-                    createSubjectProcess === true ? (
-                        <Paper elevation={0} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
-                            <CircularProgress style={{ color: "#2074d4" }} />
-                            <Typography style={{ marginTop: 15 }}>Procesando la solicitud</Typography>
-                        </Paper>
-                    ) : (
-                        <Paper elevation={0}>
-                            <DialogContent>
+                    <DialogContent>
+                    {
+                        loadingPostSubject === true ? (
+                            <Paper elevation={0} style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                    <CircularProgress style={{ color: "#2074d4" }} />
+                                    <Typography style={{ marginTop: 15 }}>Creando Asignatura</Typography>
+                                </Paper>
+                            </Paper>
+                        ) : errorPostSubject === true ? (
+                            <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(2% + 10px)" }}>
+                                <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                    <React.Fragment>
+                                    {
+                                        errorCode !== null && (
+                                            <React.Fragment>
+                                                <Typography style={{ textAlign: "center" }}>
+                                                {
+                                                    errorCode !== null ? (
+                                                        errorCode === "COURSE_PARAMS_INVALID" ? (
+                                                            "Asegurese de que los tipos de datos sean correctos, intentelo nuevamente"
+                                                        ) : errorCode === "COURSE_DATA_NULL" ? (
+                                                            "Asegurese de enviar los datos de forma correcta, intentelo nuevamente porfavor"
+                                                        ) : errorCode === "EXISTING_COURSE" ? (
+                                                            "El curso que ha tratado de crear ya existe en el sistema, intentelo nuevamente"
+                                                        ) : errorCode === "FIREBASE_CHECK_CODE_ERROR" ? (
+                                                            "Ha ocurrido un error al procesar la solicitud, intentelo nuevamente"
+                                                        ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                                            "La sesión ha expirado, recargue el navegador para inciar sesión nuevamente"
+                                                        ) : (
+                                                            "Ha ocurrido un error al intentar registrar la asignatura, intentelo nuevamente"
+                                                        )
+                                                    ) : (
+                                                        "Ha ocurrido un error al intentar registrar la asignatura, intentelo nuevamente"
+                                                    )
+                                                }
+                                                </Typography>
+
+                                                <React.Fragment>
+                                                {
+                                                    errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
+                                                        <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                            <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                            <Button onClick={() => setErrorPostSubject(false)} style={{ color: "#2074d4" }}>
+                                                                <Typography variant="button">Intentar Nuevamente</Typography>
+                                                            </Button>
+                                                        </Paper>
+                                                    )
+                                                }
+                                                </React.Fragment>
+                                            </React.Fragment>
+                                        )
+                                    }
+                                    </React.Fragment>
+                                </Paper>
+                            </Paper>
+                        ) : (
+                            <React.Fragment>
                                 <DialogContentText>
                                     Completa los valores en el formulario para crear una nueva asignatura en intranet, que este vinculada a un curso
                                 </DialogContentText>
@@ -397,7 +572,7 @@ const ManageSubject = () => {
                                         </FormControl>
 
                                         <TextField variant="outlined" type="text" value={description} label="Descripción de la Asignatura" style={{ marginTop: 15 }} security="true" fullWidth multiline onChange={(e) => setDescription(e.target.value)} />
-                                        
+                                                
                                         <Typography style={{ marginTop: 15, color: "#2074d4" }}>Datos del Curso de la Asignatura</Typography>
                                         <Divider style={{ height: 2, backgroundColor: "#2074d4" }} />
 
@@ -437,19 +612,112 @@ const ManageSubject = () => {
                                         </Paper>
                                     </ThemeProvider>
                                 </React.Fragment>
-                            </DialogContent>
-                            <DialogActions>
-                                <Button color="inherit" onClick={handleHideNewCourseDialog}>
-                                    <Typography variant="button">Cerrar Ventana</Typography>
-                                </Button>
-                                <Button style={{ color: "#2074d4" }} onClick={async () => await handleCreateCourse()}>
-                                    <Typography variant="button">Crear Asignatura</Typography>
-                                </Button>
-                            </DialogActions>
-                        </Paper>
-                    )
-                }
-                </Paper>
+                            </React.Fragment>
+                        )
+                    }
+                    </DialogContent>
+                    <DialogActions>
+                            {
+                                errorPostSubject === false && (
+                                    loadingPostSubject === true ? (
+                                        <Paper elevation={0} style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", padding: 5, marginRight: 15 }}>
+                                            <CircularProgress style={{ color: "#2074d4" }} />
+                                        </Paper>
+                                    ) : (
+                                        <React.Fragment>
+                                            <Button color="inherit" onClick={handleHideNewCourseDialog}>
+                                                <Typography variant="button">Cerrar Ventana</Typography>
+                                            </Button>
+                                            <Button style={{ color: "#2074d4" }} onClick={async () => await handleCreateCourse()}>
+                                                <Typography variant="button">Crear Asignatura</Typography>
+                                            </Button>
+                                        </React.Fragment>
+                                    )
+                                )
+                            }
+                    </DialogActions>
+                </Paper> 
+            </Dialog>
+
+            <Dialog open={deleteSubjectDialog} fullScreen={fullScreen} scroll="paper" onClose={handleHideNewCourseDialog}>
+                <DialogTitle>Eliminar Asignatura</DialogTitle>
+
+                <Paper elevation={0}>
+                    <DialogContent>
+                    {
+                        selectedSubject === null ? (
+                            <Paper elevation={0} style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                    <CircularProgress style={{ color: "#2074d4" }} />
+                                    <Typography style={{ marginTop: 15 }}>Cargando Asignatura seleccionad</Typography>
+                                </Paper>
+                            </Paper>
+                        ) : loadingDeleteSubject === true ? (
+                            <Paper elevation={0} style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                    <CircularProgress style={{ color: "#2074d4" }} />
+                                    <Typography style={{ marginTop: 15 }}>Creando Asignatura</Typography>
+                                </Paper>
+                            </Paper>
+                        ) : errorDeleteSubject === true ? (
+                            <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(2% + 10px)" }}>
+                                <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                    <React.Fragment>
+                                    {
+                                        errorCode !== null && (
+                                            <React.Fragment>
+                                                <Typography style={{ textAlign: "center" }}>
+                                                    Ha ocurrido un error al intentar eliminar la asignatura, intentelo nuevamente
+                                                </Typography>
+
+                                                <React.Fragment>
+                                                {
+                                                    errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
+                                                        <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                            <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                            <Button onClick={() => setErrorDeleteSubject(false)} style={{ color: "#2074d4" }}>
+                                                                <Typography variant="button">Intentar Nuevamente</Typography>
+                                                            </Button>
+                                                        </Paper>
+                                                    )
+                                                }
+                                                </React.Fragment>
+                                            </React.Fragment>
+                                        )
+                                    }
+                                    </React.Fragment>
+                                </Paper>
+                            </Paper>
+                        ) : (
+                            <React.Fragment>
+                                <DialogContentText>
+                                    Esta seguro de eliminar esta asignatura?, este paso es irreversible
+                                </DialogContentText>
+                            </React.Fragment>
+                        )
+                    }
+                    </DialogContent>
+                    <DialogActions>
+                    {
+                        errorDeleteSubject === false && (
+                            loadingDeleteSubject === true ? (
+                                <Paper elevation={0} style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", padding: 5, marginRight: 15 }}>
+                                    <CircularProgress style={{ color: "#2074d4" }} />
+                                </Paper>
+                            ) : (
+                                <React.Fragment>
+                                    <Button color="inherit" onClick={handleHideDeleteCourseDialog}>
+                                        <Typography variant="button">Cerrar Ventana</Typography>
+                                    </Button>
+                                    <Button style={{ color: "#2074d4" }} onClick={async () => await handleDeleteCourse()}>
+                                        <Typography variant="button">Eliminar Asignatura</Typography>
+                                    </Button>
+                                </React.Fragment>
+                            )
+                        )
+                    }
+                    </DialogActions>
+                </Paper>  
             </Dialog> 
         </Paper>
     );

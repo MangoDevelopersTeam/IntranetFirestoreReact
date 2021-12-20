@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useHistory } from 'react-router-dom';
 
 import { Accordion, AccordionDetails, AccordionSummary, AppBar, Box, Breadcrumbs, Button, Card, CardContent, CircularProgress, Divider, FormControl, InputLabel, List, ListItem, ListItemText, makeStyles, MenuItem, Paper, Select, Tab, Tabs, Typography } from '@material-ui/core';
 import { ExpandMore, NavigateNext } from '@material-ui/icons';
@@ -62,6 +62,7 @@ const Users = () => {
     // uses
     // eslint-disable-next-line
     const classes = useStyles();
+    const history = useHistory();
 
     // useStates
     const [value, setValue] = useState(0);
@@ -308,71 +309,6 @@ const Users = () => {
                 </Breadcrumbs>
             </Paper>
 
-            <Accordion variant="outlined" style={{ marginBottom: 15 }}>
-                <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Typography>Filtrar Usuarios</Typography>
-                </AccordionSummary>
-                <AccordionDetails>   
-                    <div style={{ display: "flex", flexDirection: "column" }}>
-                        <Typography style={{ color: "#2074d4" }}>Filtrar por Región y Comuna</Typography>
-                        <Divider style={{ marginBottom: 15 }} />
-
-                        <div style={{ display: "flex", flexDirection: "row" }}>
-                            <>
-                            {
-                                regions === null ? (
-                                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-                                        <CircularProgress style={{ color: "#2074d4" }} />
-                                    </div>
-                                ) : (
-                                    <>
-                                        <FormControl variant="outlined">
-                                            <InputLabel>Región</InputLabel>
-                                            <Select value={region} label="Región" onChange={(e) => handleChangeRegionCommune(e.target.value)}>
-                                            {
-                                                regions.length > 0 ? (
-                                                    regions.map(doc => (
-                                                    <MenuItem key={doc.id} value={doc.data.numero}>{doc.data.region}</MenuItem>
-                                                    ))
-                                                ) : (
-                                                    <MenuItem disabled={true}>No existen Regiones Aún</MenuItem>
-                                                )
-                                            }            
-                                            </Select>
-                                        </FormControl>
-                                    </>
-                                )   
-                            }
-                            </>
-
-                            <>
-                            {
-                                communes !== null && (
-                                    <FormControl style={{ marginLeft: 15 }} variant="outlined">
-                                        <InputLabel>Comuna</InputLabel>
-                                        <Select value={commune} label="Comuna" onChange={(e) => setCommune(e.target.value)}>                    
-                                        {
-                                            communes.length > 0 ? (
-                                                communes.map(doc => (
-                                                    <MenuItem key={doc.name} value={doc.name}>{doc.name}</MenuItem>
-                                                ))
-                                            ) : (
-                                                <MenuItem disabled={true}>No hay comunas aquí</MenuItem>
-                                            )
-                                        }
-                                        </Select>
-                                    </FormControl>
-                                )
-                            }    
-                            </>
-
-                            <Button onClick={() => handleFilterUserByRegionCommune()} style={{ color: "#2074d4", marginLeft: 15 }}>Filtrar</Button>
-                        </div>
-                    </div>
-
-                </AccordionDetails>
-            </Accordion>
-
             <AppBar position="sticky" variant="outlined" elevation={0} color="inherit" style={{ top: 65 }}>
                 <Tabs value={value} onChange={handleChange} TabIndicatorProps={{ style: { backgroundColor: "#2074d4"} }} textColor="inherit" centered>
                     <Tab wrapped label="Alumnos" {...a11yProps(0)} />
@@ -399,11 +335,9 @@ const Users = () => {
                                     <>
                                     {
                                         students.map(doc => (
-                                            <Link key={doc.id} to={`/users/${doc.id}`} style={{ textDecoration: "none", color: "#333" }}>
-                                                <ListItem button>
-                                                    <ListItemText primary={<Typography>{`${Decrypt(doc.data.name)} ${Decrypt(doc.data.surname)}`}</Typography>} secondary={<Typography>{Decrypt(doc.data.rut)}</Typography>} />
-                                                </ListItem>
-                                            </Link>
+                                            <ListItem key={doc.id} button onClick={() => history.push(`/users/${doc.id}`)}>
+                                                <ListItemText primary={<Typography>{`${Decrypt(doc.data.name)} ${Decrypt(doc.data.surname)}`}</Typography>} secondary={<Typography>{Decrypt(doc.data.rut)}</Typography>} />
+                                            </ListItem>
                                         ))
                                     }
 

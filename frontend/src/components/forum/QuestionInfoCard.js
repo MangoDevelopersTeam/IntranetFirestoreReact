@@ -246,7 +246,7 @@ const QuestionInfoCard = ({ doc, user, access }) => {
                 }
             });
         },
-        [setLoadingLike, handleGetRateQuestion],
+        [doc, setLoadingLike, handleGetRateQuestion],
     );
 
     const handleDislikeQuestion = useCallback(
@@ -289,7 +289,7 @@ const QuestionInfoCard = ({ doc, user, access }) => {
                 }
             });
         },
-        [setLoadingDislike, handleGetRateQuestion],
+        [doc, setLoadingDislike, handleGetRateQuestion],
     );
 
     const handleGetCommentsQuestion = useCallback(

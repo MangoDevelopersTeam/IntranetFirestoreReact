@@ -18,7 +18,7 @@ const InputTheme = createTheme({
     },
 });
 
-const AnswerCard = ({ doc, access, question }) => {
+const AnswerCard = ({ doc, access, question, handleGetAnswersQuestion }) => {
     // uses
     const themeApp = useTheme();
     const fullScreen = useMediaQuery(themeApp.breakpoints.down('sm'));
@@ -47,6 +47,7 @@ const AnswerCard = ({ doc, access, question }) => {
     const [commentAnswerDialog, setCommentAnswerDialog] = useState(false);
     const [editCommentAnswerDialog, setEditCommentAnswerDialog] = useState(false);
     const [deleteCommentAnswerDialog, setDeleteCommentAnswerDialog] = useState(false);
+    const [deleteAnswerDialog, setDeleteAnswerDialog] = useState(false);
 
 
     const [loadingPostComment, setLoadingPostComment] = useState(false);
@@ -54,6 +55,9 @@ const AnswerCard = ({ doc, access, question }) => {
 
     const [loadingDeleteComment, setLoadingDeleteComment] = useState(false);
     const [errorDeleteComment, setErrorDeleteComment] = useState(false);
+
+    const [loadingDeleteAnswer, setLoadingDeleteAnswer] = useState(false);
+    const [errorDeleteAnswer, setErrorDeleteAnswer] = useState(false);
 
     const [loadingEditComment, setLoadingEditComment] = useState(false);
     const [errorEditComment, setErrorEditComment] = useState(false);
@@ -72,7 +76,6 @@ const AnswerCard = ({ doc, access, question }) => {
         },
         [setCommentAnswerDialog, setSelectedAnswer],
     );
-
     const handleCloseCommentAnswerDialog = useCallback(
         (event, reason) => {
             if (reason === 'backdropClick' || reason === "escapeKeyDown") 
@@ -136,6 +139,27 @@ const AnswerCard = ({ doc, access, question }) => {
             return setDeleteCommentAnswerDialog(false);
         },
         [setDeleteCommentAnswerDialog, setSelectedAnswer, setSelectedComment, setCommentAnswer],
+    );
+
+
+    const handleOpenDeleteAnswerDialog = useCallback(
+        (answer) => {
+            setSelectedAnswer(answer);
+            setDeleteAnswerDialog(true);
+        },
+        [setSelectedAnswer, setDeleteAnswerDialog],
+    );
+    const handleCloseDeleteAnswerDialog = useCallback(
+        (event, reason) => {
+            if (reason === 'backdropClick' || reason === "escapeKeyDown") 
+            {
+                return;
+            }
+
+            setSelectedAnswer(null);
+            return setDeleteAnswerDialog(false);
+        },
+        [setDeleteAnswerDialog, setSelectedAnswer],
     );
 
 
@@ -252,7 +276,7 @@ const AnswerCard = ({ doc, access, question }) => {
                 }
             });
         },
-        [setLoadingLike, handleGetRateAnswer],
+        [doc, setLoadingLike, handleGetRateAnswer],
     );
 
     const handleDislikeAnswer = useCallback(
@@ -296,7 +320,7 @@ const AnswerCard = ({ doc, access, question }) => {
                 }
             });
         },
-        [setLoadingDislike, handleGetRateAnswer],
+        [doc, setLoadingDislike, handleGetRateAnswer],
     );
 
 
@@ -496,17 +520,16 @@ const AnswerCard = ({ doc, access, question }) => {
 
     const handleDeleteCommentAnswer = useCallback(
         async () => {
-            if (selectedAnswer === null || selectedAnswer.id === null || question === null || question.id === null || selectedComment === null || selectedComment.id === null)
+            if (selectedAnswer === null || selectedAnswer.id === null || question === null || question.id === null)
             {
                 return;
             }
-
-            setLoadingDeleteComment(true);
+            // /delete-answer-comment
+            setLoadingDeleteAnswer(true);
 
             await axios.delete(`${process.env.REACT_APP_API_URI}/delete-answer-comment`, {
                 params: {
                     questionIdParam: Encrypt(question.id),
-                    commentIdParam: Encrypt(selectedComment.id),
                     answerIdParam: Encrypt(selectedAnswer.id)
                 }
             })
@@ -515,12 +538,12 @@ const AnswerCard = ({ doc, access, question }) => {
                 
                 if (result.status === 200 && result.data.code === "PROCESS_OK")
                 {
-                    handleCloseDeleteCommentAnswerDialog();
-                    setLoadingDeleteComment(false);
-                    setErrorDeleteComment(false);
+                    handleCloseDeleteAnswerDialog();
+                    setLoadingDeleteAnswer(false);
+                    setErrorDeleteAnswer(false);
                     setErrorCode(null);
 
-                    await handleGetCommentsAnswer();
+                    await handleGetAnswersQuestion
                     showMessage(result.data.message, result.data.type);
                 }
                 else
@@ -552,6 +575,65 @@ const AnswerCard = ({ doc, access, question }) => {
         [selectedAnswer, selectedComment, question, handleGetCommentsAnswer, setLoadingDeleteComment, setErrorDeleteComment, setErrorCode, handleCloseDeleteCommentAnswerDialog],
     );
 
+    const handleDeleteAnswer = useCallback(
+        async () => {
+            if (selectedAnswer === null || selectedAnswer.id === null || question === null || question.id === null)
+            {
+                return;
+            }
+
+            setLoadingDeleteAnswer(true);
+
+            await axios.delete(`${process.env.REACT_APP_API_URI}/delete-question-answer`, {
+                params: {
+                    questionIdParam: Encrypt(question.id),
+                    answerIdParam: Encrypt(selectedAnswer.id)
+                }
+            })
+            .then(async result => {
+                console.log(result);
+                
+                if (result.status === 200 && result.data.code === "PROCESS_OK")
+                {
+                    handleCloseDeleteAnswerDialog();
+                    setLoadingDeleteAnswer(false);
+                    setErrorDeleteAnswer(false);
+                    setErrorCode(null);
+
+                    await handleGetAnswersQuestion()
+                    showMessage(result.data.message, result.data.type);
+                }
+                else
+                {
+                    setLoadingDeleteAnswer(false);
+                    setErrorDeleteAnswer(true);
+                    setErrorCode(result.data.code);
+                }
+            })
+            .catch(error => {
+                setLoadingDeleteAnswer(false);
+                setErrorDeleteAnswer(true);
+                setErrorCode("DELETE_ANSWER_QUESTION_ERROR");
+
+                if (error.response)
+                {    
+                    console.log(error.response);
+                    // showMessage(result.data.message, result.data.type);
+                }
+            })
+            .finally(() => {
+                return () => {
+                    setLoadingDeleteAnswer(null);
+                    setErrorDeleteAnswer(null);
+                    setErrorCode(null);
+                }
+            });
+        },
+        [selectedAnswer, question, handleGetAnswersQuestion, setLoadingDeleteAnswer, setErrorDeleteAnswer, setErrorCode, handleCloseDeleteAnswerDialog],
+    );
+
+
+
 
     useEffect(() => {
         let callQuery = async () => {
@@ -569,7 +651,7 @@ const AnswerCard = ({ doc, access, question }) => {
                 setErrorCode(null);
             }
         }
-    }, [doc, handleGetRateAnswer, setLoadingAnswerRate, setErrorAnswerRate, setAnswerRate, setErrorCode]);
+    }, [access, doc, handleGetRateAnswer, setLoadingAnswerRate, setErrorAnswerRate, setAnswerRate, setErrorCode]);
 
     useEffect(() => {
         let callQuery = async () => {
@@ -696,8 +778,20 @@ const AnswerCard = ({ doc, access, question }) => {
                                 }
                                 </Grid>
 
-                                <Grid item xs={11}>
+                                <Grid item xs={9}>
                                     <Typography>{doc.data.answer}</Typography>
+                                </Grid>
+
+                                <Grid item xs={2}>
+                                {
+                                    access === "admin" && (
+                                        <Tooltip title={<Typography>Eliminar Respuesta</Typography>}>
+                                            <IconButton onClick={() => handleOpenDeleteAnswerDialog(doc)}>
+                                                <Delete />
+                                            </IconButton>
+                                        </Tooltip>
+                                    )
+                                }
                                 </Grid>
 
                                 <Grid item xs={12} style={{ marginLeft: 15, marginRight: 15, display: 'flex', flexDirection: 'row' }}>
@@ -1141,6 +1235,106 @@ const AnswerCard = ({ doc, access, question }) => {
                                             </Button>
                                             <Button onClick={async () => await handleDeleteCommentAnswer()} style={{ color: "#2074d4" }}>
                                                 Eliminar Comentario
+                                            </Button>
+                                        </React.Fragment>
+                                    )
+                                )
+                            )
+                        }
+                        </DialogActions>
+                    </Dialog>
+
+                    <Dialog open={deleteAnswerDialog} fullScreen={fullScreen} onClose={handleCloseDeleteAnswerDialog} fullWidth={true} maxWidth="sm" scroll="paper">
+                        <DialogTitle>Eliminar la respuesta seleccionada</DialogTitle>
+                        <DialogContent>
+                        {
+                            selectedAnswer === null ? (
+                                <Paper elevation={0} style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                        <CircularProgress style={{ color: "#2074d4" }} />
+                                        <Typography style={{ marginTop: 15 }}>Cargando respuesta seleccionada</Typography>
+                                    </Paper>
+                                </Paper>
+                            ) : (
+                                <React.Fragment>
+                                {
+                                    loadingDeleteAnswer === true ? (
+                                        <Paper elevation={0} style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                            <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                <CircularProgress style={{ color: "#2074d4" }} />
+                                                <Typography style={{ marginTop: 15 }}>Eliminando Respuesta en el foro</Typography>
+                                            </Paper>
+                                        </Paper>
+                                    ) : errorDeleteAnswer === true ? (
+                                        <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(2% + 10px)" }}>
+                                            <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                <React.Fragment>
+                                                {
+                                                    errorCode !== null && (
+                                                        <React.Fragment>
+                                                            <Typography style={{ textAlign: "center" }}>
+                                                            {
+                                                                errorCode === "DATA_SENT_NULL" ? (
+                                                                    "Verifique que los datos los haya enviado correctamente, porfavor, intentelo nuevamente"
+                                                                ) : errorCode === "DATA_SENT_INVALID" ? (
+                                                                    "Verifique que los datos enviados sean correctos, intentelo nuevamente"
+                                                                ) : errorCode === "BODY_SENT_NULL" ? (
+                                                                    "Verifique que los datos los haya enviado correctamente, porfavor, intentelo nuevamente"
+                                                                ) : errorCode === "BAD_TYPE_BODY_VALUES" ? (
+                                                                    "Verifique los datos enviados, e intentelo nuevamente"
+                                                                ) : errorCode === "delete-question-comment" ? (
+                                                                    "No estas autorizado a realizar esta acción"
+                                                                ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                                                    "La sesión ha expirado, recargue el navegador para inciar sesión nuevamente o bien"
+                                                                ) : (
+                                                                    "Ha ocurrido un error al intentar eliminar el comentario, intentelo nuevamente"
+                                                                )
+                                                            }
+                                                            </Typography>
+
+                                                            <React.Fragment>
+                                                            {
+                                                                errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
+                                                                    <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                                        <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                                        <Button onClick={() => setErrorDeleteAnswer(false)} style={{ color: "#2074d4" }}>
+                                                                            <Typography variant="button">Intentar Nuevamente</Typography>
+                                                                        </Button>
+                                                                    </Paper>
+                                                                )
+                                                            }
+                                                            </React.Fragment>
+                                                        </React.Fragment>
+                                                    )
+                                                }
+                                                </React.Fragment>
+                                            </Paper>
+                                        </Paper>
+                                    ) : (
+                                        <React.Fragment>
+                                            <DialogContentText>Esta seguro de eliminar esta respuesta?, este paso es irreversible</DialogContentText>
+                                        </React.Fragment>
+                                    )
+                                }
+                                </React.Fragment>
+                            )
+                        }
+                        </DialogContent>
+                        <DialogActions>
+                        {
+                            selectedAnswer !== null && (
+                                errorDeleteAnswer === false && (
+                                    loadingDeleteAnswer === true ? (
+                                        <Paper elevation={0} style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end", padding: 5, marginRight: 15 }}>
+                                            <CircularProgress style={{ color: "#2074d4" }} />
+                                        </Paper>
+                                    ) : (
+                                        <React.Fragment>
+                                            <Button color="inherit" onClick={() => handleCloseDeleteAnswerDialog()}>
+                                                Cerrar Ventana
+                                            </Button>
+                                            <Button onClick={async () => await handleDeleteAnswer()} style={{ color: "#2074d4" }}>
+                                                Eliminar Respuesta
                                             </Button>
                                         </React.Fragment>
                                     )

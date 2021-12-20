@@ -22,7 +22,7 @@ controllers.getCourses = async (req, res) => {
     let type = "";
     let status = 0;
 
-    await db.collection("courses").get()
+    await db.collection("courses").where("deleted", "==", false).get()
     .then(result => {
         code = "PROCESS_OK";
         type = "success";
@@ -123,7 +123,6 @@ controllers.getCourses = async (req, res) => {
     }); */
 };
 
-
 /**
  * Función para buscar el curso por la id
  * @param {Request} req objeto request
@@ -131,48 +130,145 @@ controllers.getCourses = async (req, res) => {
  * @returns Objeto con la información de la asignatura
  */
 controllers.getCourseById = async (req, res) => {
-    let { id } = req.query;
-
     let db = admin.firestore();
 
     let code = "";
+    let type = "";
+    let status = 0;
     let data = null;
     let message = "";
-    let type = "";
 
-    await db.collection('courses').doc(id).get()
-        .then((result) => {
-            if (result.exists === true) {
-                code = "PROCESS_OK";
-                data = Encrypt(result.data());
-                type = "success";
-            }
-            else {
+    let { subjectIdParam } = req.query;
+
+    if (subjectIdParam == null)
+    {
+        code = "PARAM_NULL";
+        message = "El identificador no puede ser nulo";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (subjectIdParam.startsWith("U2FsdGVkX") == false)
+    {
+        code = "PARAM_BAD_FORMATING";
+        message = "El identificador enviado esta mal formateado";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    let subjectId = Decrypt(subjectIdParam);
+
+    if (typeof(subjectId) != "string")
+    {
+        code = "BAD_TYPES_PARAM";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (subjectId == "")
+    {
+        code = "PARAM_EMPTY";
+        message = "El valor enviado no puede ser vacio";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    await db.collection('courses').doc(subjectId).get()
+    .then(result => {
+        if (result.exists == true) 
+        {
+            if (result.data().deleted == true)
+            {
                 code = "COURSE_NOT_FOUND";
-                data = undefined;
                 message = "No se encontro el curso con el id escrito";
                 type = "error";
+                status = 404;
             }
-        })
-        .catch((error) => {
-            code = "FIREBASE_GET_ERROR";
-            message = error?.message;
+            else
+            {
+                let object = {
+                    id: result.id,
+                    data: result.data()
+                };
+
+                code = "PROCESS_OK";
+                data = Encrypt(object);
+                type = "success";
+                status = 200;
+            }
+        }
+        else 
+        {
+            code = "COURSE_NOT_FOUND";
+            message = "No se encontro el curso con el id escrito";
             type = "error";
-        })
-        .finally(() => {
-            res.send({ code: code, message: message, data: data, type: type });
+            status = 404;
+        }
+    })
+    .catch(error => {
+        code = error.code;
+        message = error.message;
+        type = "error";
+        status = 500;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
 
-            message = null;
-            code = null;
-            data = null;
-            type = null;
-            db = null;
-            id = null;
+        message = null;
+        code = null;
+        data = null;
+        type = null;
+        db = null;
+        status = null;
 
-            return;
-        });
+        return;
+    });
 };
-
 
 /**
  * Función para obtener los profesores que esten ligados a los cursos de la asignatura
@@ -230,7 +326,6 @@ controllers.getTeachers = async (req, res) => {
             return;
         });
 };
-
 
 /**
  * Función para obtener los alumnos que esten ligados al curso de la asignatura
@@ -297,7 +392,6 @@ controllers.getStudents = async (req, res) => {
         });
 };
 
-
 /**
  * Función para obtener el arreglo de usuarios profesores dentro de la asignatura
  * @param {Request} req objeto request
@@ -305,56 +399,138 @@ controllers.getStudents = async (req, res) => {
  * @returns arreglo de usuarios de profesores ligados a la asignatura
  */
 controllers.getTeachersCourse = async (req, res) => {
-    let { id } = req.query;
-
     let db = admin.firestore();
 
     let code = "";
+    let type = "";
+    let status = 0;
     let data = null;
     let message = "";
-    let type = "";
 
-    await db.collection("courses").doc(id).collection("teachers").get()
-        .then((result) => {
-            if (result.docs.length > 0) {
-                let array = [];
+    let { subjectIdParam } = req.query;
 
-                result.forEach(doc => {
-                    array.push({
-                        id: doc.id,
-                        data: Encrypt(doc.data())
-                    });
+    if (subjectIdParam == null)
+    {
+        code = "PARAM_NULL";
+        message = "El identificador no puede ser nulo";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (subjectIdParam.startsWith("U2FsdGVkX") == false)
+    {
+        code = "PARAM_BAD_FORMATING";
+        message = "El identificador enviado esta mal formateado";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    let subjectId = Decrypt(subjectIdParam);
+
+    if (typeof(subjectId) != "string")
+    {
+        code = "BAD_TYPES_PARAM";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (subjectId == "")
+    {
+        code = "PARAM_EMPTY";
+        message = "El valor enviado no puede ser vacio";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    await db.collection("courses").doc(subjectId).collection("teachers").get()
+    .then(result => {
+        if (result.size > 0) 
+        {
+            let array = [];
+
+            result.forEach(doc => {
+                array.push({
+                    id: doc.id,
+                    data: doc.data()
                 });
+            });
 
-                code = "PROCESS_OK";
-                data = Encrypt(array);
-                type = "success";
-            }
-            else {
-                code = "NO_TEACHERS_FOUNDED";
-                message = "No hay profesores en esta asignatura aún";
-                type = "warning";
-            }
-        })
-        .catch((error) => {
-            code = "FIREBASE_GET_ERROR";
-            message = error.message;
-            type = "error";
-        })
-        .finally(() => {
-            res.send({ code: code, message: message, data: data, type: type });
+            code = "PROCESS_OK";
+            data = Encrypt(array);
+            type = "success";
+            status = 200;
+        }
+        else 
+        {
+            code = "NO_TEACHERS_FOUNDED";
+            message = "No hay profesores en esta asignatura aún";
+            type = "warning";
+            status = 404;
+        }
+    })
+    .catch((error) => {
+        code = "FIREBASE_GET_ERROR";
+        message = error.message;
+        type = "error";
+        status = 500;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
 
-            message = null;
-            code = null;
-            data = null;
-            type = null;
-            db = null;
-            id = null;
+        message = null;
+        code = null;
+        data = null;
+        type = null;
+        status = null;
 
-            return;
-        });
+        return;
+    });
 };
-
 
 /**
  * Función para obtener el arreglo de usuarios alumnos dentro de la asignatura
@@ -363,27 +539,28 @@ controllers.getTeachersCourse = async (req, res) => {
  * @returns arreglo de usuarios de alumnos ligados a la asignatura
  */
 controllers.getStudentsCourse = async (req, res) => {
-    let { id } = req.query;
-
     let db = admin.firestore();
 
     let code = "";
-    let data = null;
-    let message = "";
     let type = "";
     let status = 0;
+    let data = null;
+    let message = "";
 
-    if (id == null) {
-        code = "COURSE_ID_NULL";
-        message = "El id no puede ser nulo";
+    let { subjectIdParam } = req.query;
+
+    if (subjectIdParam == null)
+    {
+        code = "PARAM_NULL";
+        message = "El identificador no puede ser nulo";
         type = "error";
         status = 400;
 
         res.status(status).send({ code: code, message: message, data: data, type: type });
-
+                
         db = null;
         data = null;
-        code = null;
+        code = null;  
         message = null;
         type = null;
         status = null;
@@ -391,48 +568,110 @@ controllers.getStudentsCourse = async (req, res) => {
         return;
     }
 
-    await db.collection("courses").doc(id).collection("students").get()
-        .then((result) => {
-            if (result.docs.length > 0) {
-                let array = [];
+    if (subjectIdParam.startsWith("U2FsdGVkX") == false)
+    {
+        code = "PARAM_BAD_FORMATING";
+        message = "El identificador enviado esta mal formateado";
+        type = "error";
+        status = 400;
 
-                result.forEach(doc => {
-                    array.push({
-                        id: doc.id,
-                        data: Encrypt(doc.data())
-                    });
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    let subjectId = Decrypt(subjectIdParam);
+
+    if (typeof(subjectId) != "string")
+    {
+        code = "BAD_TYPES_PARAM";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (subjectId == "")
+    {
+        code = "PARAM_EMPTY";
+        message = "El valor enviado no puede ser vacio";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    await db.collection("courses").doc(subjectId).collection("students").get()
+    .then(result => {
+        if (result.size > 0) 
+        {
+            let array = [];
+
+            result.forEach(doc => {
+                array.push({
+                    id: doc.id,
+                    data: doc.data()
                 });
+            });
 
-                code = "PROCESS_OK";
-                data = Encrypt(array);
-                type = "success";
-            }
-            else {
-                code = "NO_STUDENTS_FOUNDED";
-                message = "No hay estudiantes en esta asignatura aún";
-                type = "warning";
-            }
-        })
-        .catch((error) => {
-            code = "FIREBASE_GET_ERROR";
-            message = error.message;
-            type = "error";
-        })
-        .finally(() => {
-            res.send({ code: code, message: message, data: data, type: type });
+            code = "PROCESS_OK";
+            data = Encrypt(array);
+            type = "success";
+            status = 200;
+        }
+        else 
+        {
+            code = "NO_STUDENTS_FOUNDED";
+            message = "No hay estudiantes en esta asignatura aún";
+            type = "warning";
+            status = 404;
+        }
+    })
+    .catch(error => {
+        code = error.code;
+        message = error.message;
+        type = "error";
+        status = 500;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
 
-            message = null;
-            code = null;
-            data = null;
-            type = null;
-            db = null;
-            id = null;
+        message = null;
+        code = null;
+        data = null;
+        status = null;
+        type = null;
+        db = null;
 
-            return;
-        });
+        return;
+    });
 };
-
-
 
 /**
  * Función para obtener las unidades en un curso especifico
@@ -441,54 +680,144 @@ controllers.getStudentsCourse = async (req, res) => {
  * @returns arreglo de unidades del curso o un mensaje informativo
  */
 controllers.getUnitsCourse = async (req, res) => {
-    let { id } = req.query;
-
     let db = admin.firestore();
 
     let code = "";
-    let data = null;
-    let message = "";
     let type = "";
     let status = 0;
+    let data = null;
+    let message = "";
 
-    await db.collection("courses").doc(id).collection("units").orderBy("numberUnit", "asc").get()
-        .then((result) => {
+    let { subjectIdParam } = req.query;
+
+    if (subjectIdParam == null)
+    {
+        code = "PARAM_NULL";
+        message = "El identificador no puede ser nulo";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (subjectIdParam.startsWith("U2FsdGVkX") == false)
+    {
+        code = "PARAM_BAD_FORMATING";
+        message = "El identificador enviado esta mal formateado";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    let subjectId = Decrypt(subjectIdParam);
+
+    if (typeof(subjectId) != "string")
+    {
+        code = "BAD_TYPES_PARAM";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (subjectId == "")
+    {
+        code = "PARAM_EMPTY";
+        message = "El valor enviado no puede ser vacio";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    await db.collection("courses").doc(subjectId).collection("units").get()
+    .then(result => {
+        if (result.size > 0)
+        {
             let array = [];
 
-            if (result.size > 0) {
-                result.forEach(doc => {
+            result.forEach(doc => {
+                if (doc.data().deleted === false)
+                {
                     array.push({
                         id: doc.id,
-                        data: Encrypt(doc.data())
+                        data: doc.data()
                     });
-                });
-            }
-
+                }
+            });
+ 
             code = "PROCESS_OK";
             data = Encrypt(array);
             type = "success";
             status = 200;
-        })
-        .catch((error) => {
-            code = "FIREBASE_GET_UNITS_ERROR";
-            message = error.message;
+        }
+        else
+        {
+            code = "NO_UNITS_FOUNDED";
             type = "error";
-            status = 400;
-        })
-        .finally(() => {
-            res.status(status).send({ code: code, message: message, data: data, type: type });
+            status = 404;
+        }
+    })
+    .catch(error => {
+        code = "FIREBASE_GET_UNITS_ERROR";
+        message = error.message;
+        type = "error";
+        status = 500;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
 
-            message = null;
-            status = null;
-            code = null;
-            data = null;
-            type = null;
-            db = null;
-            id = null;
+        message = null;
+        status = null;
+        code = null;
+        data = null;
+        type = null;
 
-            return;
-        });
+        return;
+    });
 };
+
+
+
+
 
 
 

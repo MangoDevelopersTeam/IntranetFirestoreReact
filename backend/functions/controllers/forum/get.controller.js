@@ -64,15 +64,19 @@ controllers.getQuestionsForum = async (req, res) => {
         return;
     }
 
-    await db.collection("users").where("level", "==", "student").where("deleted", "==", false).get()
+
+    await db.collection("users").where("level", "==", "student").get()
     .then(result => {
         if (result.size > 0)
         {
             result.docs.forEach(doc => {
-                arrayStudents.push({
-                    id: doc.id,
-                    data: doc.data()
-                });
+                if (doc.data().deleted === false)
+                {
+                    arrayStudents.push({
+                        id: doc.id,
+                        data: doc.data()
+                    });
+                }
             });
         }
     })
@@ -93,7 +97,7 @@ controllers.getQuestionsForum = async (req, res) => {
         return;
     });
 
-    await db.collection("questions").get()
+    await db.collection("questions").where("deleted", "==", false).get()
     .then(result => {
         if (result.size > 0)
         {
@@ -262,15 +266,18 @@ controllers.getDetailedQuestion = async (req, res) => {
         return;
     }
 
-    await db.collection("users").where("level", "==", "student").where("deleted", "==", false).get()
+    await db.collection("users").where("level", "==", "student").get()
     .then(result => {
         if (result.size > 0)
         {
             result.docs.forEach(doc => {
-                arrayStudents.push({
-                    id: doc.id,
-                    data: doc.data()
-                });
+                if (doc.data().deleted == false)
+                {
+                    arrayStudents.push({
+                        id: doc.id,
+                        data: doc.data()
+                    });
+                }
             });
         }
     })
@@ -293,21 +300,31 @@ controllers.getDetailedQuestion = async (req, res) => {
 
     await db.collection("questions").doc(questionId).get()
     .then(result => {
-        let filter = arrayStudents.filter(x => x.id === result.data().created_by);
-
-        if (filter.length > 0)
+        if (result.data().deleted == false)
         {
-            if (result.exists == true)
-            {
-                array.push({
-                    id: result.id,
-                    data: result.data()
-                });
+            let filter = arrayStudents.filter(x => x.id === result.data().created_by);
 
-                code = "PROCESS_OK";
-                data = Encrypt(array);
-                type = "success";
-                status = 200;
+            if (filter.length > 0)
+            {
+                if (result.exists == true)
+                {
+                    array.push({
+                        id: result.id,
+                        data: result.data()
+                    });
+
+                    code = "PROCESS_OK";
+                    data = Encrypt(array);
+                    type = "success";
+                    status = 200;
+                }
+                else
+                {
+                    code = "QUESTION_NOT_FOUND";
+                    message = "La pregunta no ha sido encontrada, verifique el idenfificador e intetelo nuevamente";
+                    type = "error";
+                    status = 404;
+                }
             }
             else
             {
@@ -436,6 +453,30 @@ controllers.getRateQuestion = async (req, res) => {
 
         return;
     }
+
+    await db.collection("questions").doc(questionId).get()
+    .then(result => {
+        if (result.data().deleted == true)
+        {
+            code = "QUESTION_NOT_FOUND";
+            message = "La pregunta no ha sido encontrada, verifique el idenfificador e intetelo nuevamente";
+            type = "error";
+            status = 404;
+        }
+        
+        if (result.exists == false)
+        {
+            code = "QUESTION_NOT_FOUND";
+            message = "La pregunta no ha sido encontrada, verifique el idenfificador e intetelo nuevamente";
+            type = "error";
+            status = 404;
+        }
+    })
+    .catch(error => {
+        code = error.code;
+        type = "error";
+        status = 404;
+    });
 
     await db.collection("questions").doc(questionId).collection("rate").get()
     .then(result => {
@@ -588,15 +629,42 @@ controllers.getCommentsQuestion = async (req, res) => {
         return;
     }
 
-    await db.collection("users").where("level", "==", "student").where("deleted", "==", false).get()
+    await db.collection("questions").doc(questionId).get()
+    .then(result => {
+        if (result.data().deleted == true)
+        {
+            code = "QUESTION_NOT_FOUND";
+            message = "La pregunta no ha sido encontrada, verifique el idenfificador e intetelo nuevamente";
+            type = "error";
+            status = 404;
+        }
+        
+        if (result.exists == false)
+        {
+            code = "QUESTION_NOT_FOUND";
+            message = "La pregunta no ha sido encontrada, verifique el idenfificador e intetelo nuevamente";
+            type = "error";
+            status = 404;
+        }
+    })
+    .catch(error => {
+        code = error.code;
+        type = "error";
+        status = 404;
+    });
+
+    await db.collection("users").where("level", "==", "student").get()
     .then(result => {
         if (result.size > 0)
         {
             result.docs.forEach(doc => {
-                arrayStudents.push({
-                    id: doc.id,
-                    data: doc.data()
-                });
+                if (doc.data().deleted == false)
+                {
+                    arrayStudents.push({
+                        id: doc.id,
+                        data: doc.data()
+                    });
+                }
             });
         }
     })
@@ -767,15 +835,42 @@ controllers.getAnswersQuestion = async (req, res) => {
         return;
     }
 
-    await db.collection("users").where("level", "==", "student").where("deleted", "==", false).get()
+    await db.collection("questions").doc(questionId).get()
+    .then(result => {
+        if (result.data().deleted == true)
+        {
+            code = "QUESTION_NOT_FOUND";
+            message = "La pregunta no ha sido encontrada, verifique el idenfificador e intetelo nuevamente";
+            type = "error";
+            status = 404;
+        }
+        
+        if (result.exists == false)
+        {
+            code = "QUESTION_NOT_FOUND";
+            message = "La pregunta no ha sido encontrada, verifique el idenfificador e intetelo nuevamente";
+            type = "error";
+            status = 404;
+        }
+    })
+    .catch(error => {
+        code = error.code;
+        type = "error";
+        status = 404;
+    });
+
+    await db.collection("users").where("level", "==", "student").get()
     .then(result => {
         if (result.size > 0)
         {
             result.docs.forEach(doc => {
-                arrayStudents.push({
-                    id: doc.id,
-                    data: doc.data()
-                });
+                if (doc.data().deleted == false)
+                {
+                    arrayStudents.push({
+                        id: doc.id,
+                        data: doc.data()
+                    });
+                }
             });
         }
     })
@@ -796,7 +891,7 @@ controllers.getAnswersQuestion = async (req, res) => {
         return;
     });
 
-    await db.collection("questions").doc(questionId).collection("answers").get()
+    await db.collection("questions").doc(questionId).collection("answers").where("deleted", "==", false).get()
     .then(result => {
         if (result.size > 0)
         {
@@ -944,6 +1039,30 @@ controllers.getRateAnswer = async (req, res) => {
 
         return;
     }
+
+    await db.collection("questions").doc(questionId).get()
+    .then(result => {
+        if (result.data().deleted == true)
+        {
+            code = "QUESTION_NOT_FOUND";
+            message = "La pregunta no ha sido encontrada, verifique el idenfificador e intetelo nuevamente";
+            type = "error";
+            status = 404;
+        }
+        
+        if (result.exists == false)
+        {
+            code = "QUESTION_NOT_FOUND";
+            message = "La pregunta no ha sido encontrada, verifique el idenfificador e intetelo nuevamente";
+            type = "error";
+            status = 404;
+        }
+    })
+    .catch(error => {
+        code = error.code;
+        type = "error";
+        status = 404;
+    });
 
     await db.collection("questions").doc(questionId).collection("answers").doc(answerId).collection("rate").get()
     .then(result => {
@@ -1097,15 +1216,42 @@ controllers.getCommentsAnswer = async (req, res) => {
         return;
     }
 
-    await db.collection("users").where("level", "==", "student").where("deleted", "==", false).get()
+    await db.collection("questions").doc(questionId).get()
+    .then(result => {
+        if (result.data().deleted == true)
+        {
+            code = "QUESTION_NOT_FOUND";
+            message = "La pregunta no ha sido encontrada, verifique el idenfificador e intetelo nuevamente";
+            type = "error";
+            status = 404;
+        }
+        
+        if (result.exists == false)
+        {
+            code = "QUESTION_NOT_FOUND";
+            message = "La pregunta no ha sido encontrada, verifique el idenfificador e intetelo nuevamente";
+            type = "error";
+            status = 404;
+        }
+    })
+    .catch(error => {
+        code = error.code;
+        type = "error";
+        status = 404;
+    });
+
+    await db.collection("users").where("level", "==", "student").get()
     .then(result => {
         if (result.size > 0)
         {
             result.docs.forEach(doc => {
-                arrayStudents.push({
-                    id: doc.id,
-                    data: doc.data()
-                });
+                if (doc.data().deleted == false)
+                {
+                    arrayStudents.push({
+                        id: doc.id,
+                        data: doc.data()
+                    });
+                }
             });
         }
     })
@@ -1180,5 +1326,227 @@ controllers.getCommentsAnswer = async (req, res) => {
         return;
     });
 };
+
+
+
+controllers.getQuestionsFiltered = async (req, res) => {
+    let db = admin.firestore();
+
+    let code = "";
+    let data = null;
+    let message = "";
+    let type = "";
+    let status = 0;
+    let query = "";
+
+    let array = [];
+    let arrayStudents = [];
+
+    let { uid } = res.locals;
+    let { themeParam } = req.query;
+
+    if (uid == null || themeParam == null)
+    {
+        code = "UID_NULL";
+        message = "Asegurese de enviar los datos no nulos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (themeParam.startsWith("U2FsdGVkX") == false)
+    {
+        code = "PARAMS_BAD_FORMATING";
+        message = "El id esta mal formateado";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    let theme = Decrypt(themeParam);
+
+    if (typeof(uid) != "string" || typeof(theme) != "string")
+    {
+        code = "BAD_TYPE_UID_VALUE";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (uid == "" || theme == "")
+    {
+        code = "PARAMS_EMPTY";
+        message = "Los valores enviados no pueden ser vacios";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    await db.collection("users").where("level", "==", "student").get()
+    .then(result => {
+        if (result.size > 0)
+        {
+            result.docs.forEach(doc => {
+                if (doc.data().deleted === false)
+                {
+                    arrayStudents.push({
+                        id: doc.id,
+                        data: doc.data()
+                    });
+                }
+            });
+        }
+    })
+    .catch(error => {
+        code = error.code;
+        type = "error";
+        status = 500;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        db = null;
+        code = null;
+        data = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    });
+
+    if (theme == "none")
+    {
+        query = db.collection("questions").where("deleted", "==", false)
+    }
+    else
+    {
+        query = db.collection("questions").where("deleted", "==", false).where("theme", "==", theme.normalize('NFD').replace(/[\u0300-\u036f]/g, ""))
+    }
+
+    await query.get()
+    .then(result => {
+        if (result.size > 0)
+        {
+            if (arrayStudents.length > 0)
+            {
+                result.docs.forEach(doc => {
+                    if (doc.data().deleted == false)
+                    {
+                        let filter = arrayStudents.filter(x => x.id === doc.data().created_by);
+
+                        if (filter.length > 0)
+                        {
+                            array.push({
+                                id: doc.id,
+                                uid: uid,
+                                data: {
+                                    idQuestion: doc.data().idQuestion,
+                                    question: doc.data().question,
+                                    description: doc.data().description,
+                                    theme: doc.data().theme,
+                                    created_at: doc.data().created_at,
+                                    created_by: doc.data().created_by,
+                                    name: filter[0].data.name,
+                                    surname: filter[0].data.surname
+                                }
+                            });
+                        }
+                    }
+                });
+
+                code = "PROCESS_OK";
+                data = Encrypt(array);
+                type = "success";
+                status = 200;
+            }
+            else
+            {
+                result.docs.forEach(doc => {
+                    if (doc.data().deleted == false)
+                    {
+                        array.push({
+                            id: doc.id,
+                            uid: uid,
+                            data: doc.data()
+                        });
+                    }
+                });
+
+                code = "PROCESS_OK";
+                data = Encrypt(array);
+                type = "success";
+                status = 200;
+            } 
+        }
+        else
+        {
+            code = "NO_QUESTIONS_FORUM";
+            message = "No existen preguntas en el foro";
+            type = "error";
+            status = 404;
+        }
+    })
+    .catch(error => {
+        code = error.code;
+        message = "No existen preguntas en el foro";
+        type = "error";
+        status = 500;
+    })
+    .finally(() => {
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    });
+};
+
+
 
 module.exports = controllers;

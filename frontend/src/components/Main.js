@@ -26,7 +26,6 @@ import StudentsSubject from './teacher/StudentsSubject';
 import ManageSubject from './subject/ManageSubject';
 import HomeStudent from './student/HomeStudent';
 
-import Testing from './others/Testing';
 import RouteNotFound from './others/RouteNotFound';
 
 import axios from 'axios';
@@ -206,7 +205,6 @@ const Main = () => {
                                                 <Route exact path="/users/:id" component={UserDetail} />
                                                 <Route exact path="/subjects" component={ManageSubject} />
                                                 <Route exact path="/subjects/:id" component={Subject} />
-                                                <Route exact path="/testing" component={Testing} />
                                                 <Route exact path="/forum" component={Forum} />
                                                 <Route exact path="/forum/:idQuestion" component={DetailedQuestion} />
                                                 <Route exact path="/profile" component={Profile} />

@@ -15,6 +15,9 @@ controllers.getUserCourses = async (req, res) => {
     let type = "";
     let status = 0;
 
+    let arraySubjects = [];
+    let arraySubjectsUser = [];
+
     if (level == null)
     {
         code = "LEVEL_NULL";
@@ -36,7 +39,91 @@ controllers.getUserCourses = async (req, res) => {
 
     if (Decrypt(level) == "student" || Decrypt(level) == "teacher")
     {
-        await db.collection("users").doc(uid).collection("courses").get()
+        await db.collection("courses").get()
+        .then(async resultSubject => {
+            resultSubject.docs.forEach(doc => {
+                arraySubjects.push({
+                    id: doc.id,
+                    data: doc.data()
+                });
+            });
+
+            await db.collection("users").doc(uid).collection("courses").get()
+            .then(resultSubjectUser => {
+                if (resultSubjectUser.size > 0)
+                {
+                    resultSubjectUser.docs.forEach(doc => {
+                        let filter = arraySubjects.filter(x => x.id === doc.id);
+
+                        if (filter.length > 0)
+                        {
+                            if (filter[0].data.deleted == false)
+                            {
+                                arraySubjectsUser.push({
+                                    id: doc.id,
+                                    data: Encrypt({
+                                        id: doc.id,
+                                        idCourse: doc.id,
+                                        uid: uid,
+                                        code: filter[0].data.code,
+                                        name: filter[0].data.courseName,
+                                        subject: filter[0].data.type,
+                                        created_at: doc.data().created_at,
+                                    })
+                                });
+                            }
+                        }
+                    });
+
+                    code = "PROCESS_OK";
+                    data = Encrypt(arraySubjectsUser);
+                    type = "success";
+                    status = 200;
+                }
+                else
+                {
+                    code = "NO_COURSES";
+                    message = "No existen cursos asignados";
+                    type = "error";
+                    status = 404;
+                }
+            })
+            .catch(error => {
+                code = error.code;
+                type = "error";
+                status = 500;
+            })
+            .finally(() => {
+                res.status(status).send({ code: code, message: message, data: data, type: type });
+
+                db = null;
+                code = null;
+                data = null;
+                message = null;
+                type = null;
+                status = null;
+
+                return;
+            });
+        })
+        .catch(error => {
+            code = error.code;
+            type = "error";
+            status = 500;
+
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+
+            db = null;
+            code = null;
+            data = null;
+            message = null;
+            type = null;
+            status = null;
+
+            return;
+        });
+
+        /* await db.collection("users").doc(uid).collection("courses").get()
         .then(result => {
             if (result.size > 0)
             {
@@ -79,7 +166,7 @@ controllers.getUserCourses = async (req, res) => {
             db = null;
 
             return;
-        });
+        }); */
     }
     else
     {
@@ -181,35 +268,59 @@ controllers.getDetailedCourse = async (req, res) => {
     .then(async response => {
         if (response.exists == true)
         {
-            let arraySub = [];
+            if (response.data().deleted == false)
+            {
+                let arraySub = [];
 
-            arraySub.push({
-                id: response.id,
-                data: response.data()
-            });
-            object.subject = Encrypt(arraySub);
+                arraySub.push({
+                    id: response.id,
+                    data: response.data()
+                });
+                object.subject = Encrypt(arraySub);
 
-            await db.collection('courses').doc(idCourse).collection('units').orderBy("numberUnit", "asc").get()
-            .then(response => {
-                let arrayUni = [];
+                await db.collection('courses').doc(idCourse).collection('units').orderBy("numberUnit", "asc").get()
+                .then(response => {
+                    let arrayUni = [];
 
-                if (response.size > 0)
-                {
-                    response.forEach(doc => {
-                        arrayUni.push({
-                            id: doc.id,
-                            data: doc.data()
+                    if (response.size > 0)
+                    {
+                        response.forEach(doc => {
+                            if (doc.data().deleted == false)
+                            {
+                                arrayUni.push({
+                                    id: doc.id,
+                                    data: doc.data()
+                                });
+                            }
                         });
-                    });
-                }
+                    }
 
-                object.units = Encrypt(arrayUni);
-            })
+                    object.units = Encrypt(arrayUni);
+                })
 
-            code = "PROCESS_OK";
-            data = Encrypt(object);
-            type = "success";
-            status = 200;
+                code = "PROCESS_OK";
+                data = Encrypt(object);
+                type = "success";
+                status = 200;
+            }
+            else
+            {
+                code = "SUBJECT_NOT_FOUND";
+                message = "La asignatura no ha sido encontrada, asegurese que de la id sea correcta e intente nuevamente";
+                type = "error";
+                status = 404;
+
+                res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+                message = null;
+                status = null;
+                code = null;  
+                data = null;
+                type = null;
+                db = null;
+
+                return;
+            }
         }
         else
         {
@@ -229,37 +340,6 @@ controllers.getDetailedCourse = async (req, res) => {
 
             return;
         }
-    
-
-       /*  let courseData = [];
-
-        courseData.push({
-            id: res.id,
-            data: res.data()
-        })
-
-        course.course = courseData;
-    
-        await db.collection('courses').doc(courseID).collection('units').orderBy("numberUnit", "asc").get()
-        .then((units)=>{
-            let arrai = []
-
-            units.forEach(elem =>{
-                arrai.push({
-                    id:elem.id,
-                    unit:elem.data()
-                })
-            })
-
-            course.units = arrai;
-        })
-
-        //resultado
-        code = "PROCESS_OK";
-        data = course;
-        type = "success";
-        status = 200; */
-
     })
     .catch(error =>{
         code = "FIREBASE_GET_COURSES_ERROR";

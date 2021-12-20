@@ -352,18 +352,21 @@ controllers.getStudentSubjects = async (req, res) => {
 
                     if (filter.length > 0)
                     {
-                        arraySubjectsStudent.push({
-                            id: doc.id,
-                            data: {
+                        if (filter[0].data.deleted == false)
+                        {
+                            arraySubjectsStudent.push({
                                 id: doc.id,
-                                idCourse: doc.id,
-                                uid: studentId,
-                                code: filter[0].data.code,
-                                name: filter[0].data.courseName,
-                                subject: filter[0].data.type,
-                                created_at: doc.data().created_at,
-                            }
-                        });
+                                data: {
+                                    id: doc.id,
+                                    idCourse: doc.id,
+                                    uid: studentId,
+                                    code: filter[0].data.code,
+                                    name: filter[0].data.courseName,
+                                    subject: filter[0].data.type,
+                                    created_at: doc.data().created_at,
+                                }
+                            });
+                        }
                     }
                 });
 

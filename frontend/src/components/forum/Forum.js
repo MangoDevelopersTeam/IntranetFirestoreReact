@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { Button, Card, CardContent, CircularProgress, createTheme, Paper, Typography, useMediaQuery, useTheme, ThemeProvider, Divider, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, FormControl, InputLabel, Select, MenuItem, TextField, Breadcrumbs } from '@material-ui/core'
+import { Button, Card, CardContent, CircularProgress, createTheme, Paper, Typography, useMediaQuery, useTheme, ThemeProvider, Divider, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, FormControl, InputLabel, Select, MenuItem, TextField, Breadcrumbs, FormLabel, FormControlLabel, Radio, RadioGroup } from '@material-ui/core'
 import { FilterList, NavigateNext } from '@material-ui/icons';
 
 import { Decrypt, Encrypt } from '../../helpers/cipher/cipher';
@@ -39,13 +39,60 @@ const Forum = () => {
     const [theme, setTheme] = useState("");
     const [question, setQuestion] = useState("");
     const [description, setDescription] = useState("");
+    const [filter, setFilter] = useState("");
 
     const [loadingPostQuestion, setLoadingPostQuestion] = useState(false);
     const [errorPostQuestion, setErrorPostQuestion] = useState(false);
 
+    const [loadingFilterQuestions, setLoadingFilterQuestions] = useState(false);
+    const [errorFilterQuestions, setErrorFilterQuestions] = useState(false);
+
     const [newQuestionDialog, setNewQuestionDialog] = useState(false);
+    const [filterDialog, setFilterDialog] = useState(false);
 
     // useCallbacks
+    // dialogsCallbacks
+    const handleOpenNewQuestionDialog = useCallback(
+        () => {
+            setNewQuestionDialog(true);
+        },
+        [setNewQuestionDialog],
+    );
+    const handleCloseNewQuestionDialog = useCallback(
+        (event, reason) => {
+            if (reason === 'backdropClick' || reason === "escapeKeyDown") 
+            {
+                return;
+            }
+
+            setTheme("");
+            setQuestion("");
+            setDescription("");
+            return setNewQuestionDialog(false);
+        },
+        [setNewQuestionDialog, setTheme, setQuestion, setDescription],
+    );
+    
+    const handleOpenFilterDialog = useCallback(
+        () => {
+            setFilterDialog(true);
+        },
+        [setFilterDialog],
+    );
+    const handleCloseFilterDialog = useCallback(
+        (event, reason) => {
+            if (reason === 'backdropClick' || reason === "escapeKeyDown") 
+            {
+                return;
+            }
+
+            return setFilterDialog(false);
+        },
+        [setFilterDialog],
+    );
+
+    
+    // functionalCallbacks
     const handleGetAccess = useCallback(
         async () => {
             setLoadingAccess(true);
@@ -144,6 +191,66 @@ const Forum = () => {
         [setQuestions, setErrorQuestions, setErrorCode, setLoadingQuestions],
     );
 
+    const handleGetFilteredQuestions = useCallback(
+        async () => {
+            if (filter === "")
+            {
+                return showMessage("Complete los valores requeridos para filtrar las preguntas", "info");
+            }
+
+            setLoadingFilterQuestions(true);
+
+            await axios.get(`${process.env.REACT_APP_API_URI}/get-filtered-questions-forum`, {
+                params: {
+                    themeParam: Encrypt(filter)
+                }
+            })
+            .then(result => {
+                console.log(result);
+                if (result.status === 200 && result.data.code === "PROCESS_OK")
+                {
+                    setQuestions(Decrypt(result.data.data));
+                    setErrorFilterQuestions(false);
+                    setErrorCode(null);
+                }
+                else
+                {
+                    setQuestions(undefined);
+                    setErrorFilterQuestions(false);
+                    setErrorCode(result.data.code);
+                }
+
+                handleCloseFilterDialog();
+                setLoadingFilterQuestions(false);
+            })
+            .catch(error => {
+                setErrorFilterQuestions(true);
+                setQuestions(undefined);
+
+                if (error.response)
+                {
+                    setErrorCode(error.response.data.code);
+                }
+                else
+                {
+                    setErrorCode("GET_QUESTIONS_ERROR");
+                }
+
+                handleCloseFilterDialog();
+                setLoadingFilterQuestions(false);
+            })
+            .finally(() => {
+                return () => {
+                    setQuestions(null);
+                    setErrorFilterQuestions(null);
+                    setErrorCode(null);
+                    setLoadingFilterQuestions(null);
+                }
+            });
+        },
+        [filter, setQuestions, setErrorFilterQuestions, setErrorCode, setLoadingFilterQuestions, handleCloseFilterDialog],
+    );
+
     const handleAddQuestion = useCallback(
         async () => {
             if (theme === null || question === null || description === null)
@@ -207,31 +314,10 @@ const Forum = () => {
                 }
             });
         },
-        [theme, question, description, setErrorCode, setErrorPostQuestion, setLoadingPostQuestion],
+        [theme, question, description, setErrorCode, setErrorPostQuestion, setLoadingPostQuestion, handleGetQuestions, handleCloseNewQuestionDialog],
     );
 
 
-    const handleOpenNewQuestionDialog = useCallback(
-        () => {
-            setNewQuestionDialog(true);
-        },
-        [setNewQuestionDialog],
-    );
-
-    const handleCloseNewQuestionDialog = useCallback(
-        (event, reason) => {
-            if (reason === 'backdropClick' || reason === "escapeKeyDown") 
-            {
-                return;
-            }
-
-            setTheme("");
-            setQuestion("");
-            setDescription("");
-            return setNewQuestionDialog(false);
-        },
-        [setNewQuestionDialog, setTheme, setQuestion, setDescription],
-    );
 
     // useEffects
     useEffect(() => {
@@ -402,7 +488,7 @@ const Forum = () => {
                                     }
                                     </React.Fragment>
 
-                                    <Button startIcon={<FilterList />} style={{ color: "#2074d4" }} /* onClick={() => setFilterDialog(true)} */>
+                                    <Button startIcon={<FilterList />} style={{ color: "#2074d4" }} onClick={handleOpenFilterDialog}>
                                         <Typography variant="button">Filtrar Preguntas</Typography> 
                                     </Button>        
                                 </Paper>
@@ -491,7 +577,7 @@ const Forum = () => {
                                         <React.Fragment>
                                         {
                                             questions.map(doc => (
-                                                <QuestionCard key={doc.id} idUser={doc.uid} access={access} doc={doc} />
+                                                <QuestionCard key={doc.id} idUser={doc.uid} access={access} doc={doc} handleGetQuestions={handleGetQuestions} />
                                             ))
                                         }
                                         </React.Fragment>
@@ -600,6 +686,92 @@ const Forum = () => {
                                 )
                             )
                         }
+                        </DialogActions>
+                    </Dialog>
+
+
+                    <Dialog open={filterDialog} fullScreen={fullScreen} onClose={handleCloseFilterDialog} fullWidth={false} maxWidth="xs" scroll="paper">
+                        <DialogTitle>Filtrar Preguntas</DialogTitle>
+                        <DialogContent>
+                        {
+                            loadingFilterQuestions === true ? (
+                                <Paper elevation={0} style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                        <CircularProgress style={{ color: "#2074d4" }} />
+                                        <Typography style={{ marginTop: 15 }}>Filtrando Preguntas en el foro</Typography>
+                                    </Paper>
+                                </Paper>
+                            ) : errorFilterQuestions === true ? (
+                                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(2% + 10px)" }}>
+                                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                        <React.Fragment>
+                                        {
+                                            errorCode !== null && (
+                                                <React.Fragment>
+                                                    <Typography style={{ textAlign: "center" }}>
+                                                    {
+                                                        errorCode === "DATA_SENT_NULL" ? (
+                                                            "Verifique que los datos los haya enviado correctamente, porfavor, intentelo nuevamente"
+                                                        ) : errorCode === "DATA_SENT_INVALID" ? (
+                                                            "Verifique que los datos enviados sean correctos, intentelo nuevamente"
+                                                        ) : errorCode === "BODY_SENT_NULL" ? (
+                                                            "Verifique que los datos los haya enviado correctamente, porfavor, intentelo nuevamente"
+                                                        ) : errorCode === "BAD_TYPE_BODY_VALUES" ? (
+                                                            "Verifique los datos enviados, e intentelo nuevamente"
+                                                        ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                                            "La sesión ha expirado, recargue el navegador para inciar sesión nuevamente o bien"
+                                                        ) : errorCode === "NO_QUESTIONS_FORUM" ? (
+                                                            "No existen preguntas con el tema aplicado"
+                                                        ) : (
+                                                            "Ha ocurrido un error al intentar filtrar las preguntas, intentelo nuevamente"
+                                                        )
+                                                    }
+                                                    </Typography>
+
+                                                    <React.Fragment>
+                                                    {
+                                                        errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
+                                                            <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                                <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                                <Button onClick={() => setErrorFilterQuestions(false)} style={{ color: "#2074d4" }}>
+                                                                    <Typography variant="button">Intentar Nuevamente</Typography>
+                                                                </Button>
+                                                            </Paper>
+                                                        )
+                                                    }
+                                                    </React.Fragment>
+                                                </React.Fragment>
+                                            )
+                                        }
+                                        </React.Fragment>
+                                    </Paper>
+                                </Paper>
+                            ) : (
+                                <React.Fragment>
+                                    <Paper elevation={0} itemType="div" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
+                                        <FormControl component="fieldset">
+                                            <FormLabel component="h2">Tema</FormLabel>
+                                            <RadioGroup value={filter} onChange={(e) => setFilter(e.target.value)}>
+                                                <FormControlLabel value="none" control={<Radio />} label="Ninguno" />
+                                                {
+                                                    myArrayCourses.map((doc, index) => (
+                                                        <FormControlLabel key={index} value={doc} control={<Radio />} label={doc} />
+                                                    ))
+                                                }
+                                            </RadioGroup>
+                                        </FormControl>
+                                    </Paper>
+                                </React.Fragment>
+                            )
+                        }
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={handleCloseFilterDialog} color="inherit">
+                            <Typography variant="button">Cerrar ventana</Typography>
+                            </Button>
+                            <Button onClick={async () => await handleGetFilteredQuestions()} style={{ color: "#2074d4"}}>
+                                <Typography variant="button">Aplicar Filtro</Typography>
+                            </Button>
                         </DialogActions>
                     </Dialog>
                 </React.Fragment>

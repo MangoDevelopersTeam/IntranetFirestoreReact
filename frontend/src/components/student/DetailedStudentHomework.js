@@ -695,50 +695,53 @@ const DetailedStudentHomework = () => {
             await handleGetHomeworkInfo();
         }
 
-        if (authorized === true)
+        if (authorized === true && subject !== null && subject !== undefined)
         {
             return callQuery();
         }
-    }, [authorized, handleGetHomeworkInfo]);
+    }, [authorized, subject, handleGetHomeworkInfo]);
 
     useEffect(() => {
         let callQuery = async () => {
             await handleGetStudentHomeworkInfo();
         }
 
-        if (authorized === true)
+        if (authorized === true && subject !== null && subject !== undefined)
         {
             return callQuery();
         }
-    }, [authorized, handleGetStudentHomeworkInfo]);
+    }, [authorized, subject, handleGetStudentHomeworkInfo]);
 
     useEffect(() => {
-        if (authorized === true)
+        if (authorized === true && subject !== null && subject !== undefined)
         {
             return handleGetRemainingTime("GET_TIME_COUNT");
         }
-    }, [authorized, handleGetRemainingTime]);
+    }, [authorized, subject, handleGetRemainingTime]);
 
     useEffect(() => {
         if (authorized === true && detailedHomework !== null && detailedHomework !== undefined)
         {
-            if (studentHomework !== null && studentHomework !== undefined)
+            if (subject !== null && subject !== undefined)
             {
-                if (studentHomework[0].data.calificated === true)
+                if (studentHomework !== null && studentHomework !== undefined)
                 {
-                    let callQuery = async () => {
-                        await handleGetFeedback();
-                    }
+                    if (studentHomework[0].data.calificated === true)
+                    {
+                        let callQuery = async () => {
+                            await handleGetFeedback();
+                        }
 
-                    callQuery();
+                        callQuery();
 
-                    return () => {
-                        setFeedback(null);
+                        return () => {
+                            setFeedback(null);
+                        }
                     }
                 }
             }
         }    
-    }, [authorized, detailedHomework, studentHomework, handleGetFeedback]);
+    }, [authorized, subject, detailedHomework, studentHomework, handleGetFeedback]);
 
 
 
@@ -822,13 +825,11 @@ const DetailedStudentHomework = () => {
 
                                 <React.Fragment>
                                 {
-                                    errorCode !== null && (
-                                        errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
-                                            <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetAuthorizedAccess()}>
-                                                <Typography variant="button">Recargar Verificar Acceso</Typography>
-                                            </Button>
-                                        )
-                                    )
+                                    errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
+                                        <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetAuthorizedAccess()}>
+                                            <Typography variant="button">Recargar Verificar Acceso</Typography>
+                                        </Button>
+                                    )                
                                 }
                                 </React.Fragment>
                             </Paper>

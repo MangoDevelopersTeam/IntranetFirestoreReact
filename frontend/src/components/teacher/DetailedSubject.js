@@ -346,7 +346,7 @@ const DetailedSubject = () => {
             {
                 await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-students-courses", {
                     params: {
-                        id: id
+                        subjectIdParam: Encrypt(id)
                     }
                 })
                 .then(result => {
@@ -426,12 +426,12 @@ const DetailedSubject = () => {
      */
     const handleOpenStudentsDialog = useCallback(
         async () => {
+            setStudentsDialog(true);
+
             if (students === null)
             {
                 await handleGetStudents();
             }
-    
-            setStudentsDialog(true);
         },
         [students, handleGetStudents, setStudentsDialog],
     );
@@ -1218,7 +1218,7 @@ const DetailedSubject = () => {
             await handleGetStudentsCourse();
         }
 
-        if (authorized === true)
+        if (authorized === true && subject !== null && subject !== undefined)
         {
             callQuery();
 
@@ -1226,14 +1226,14 @@ const DetailedSubject = () => {
                 setStudentsCourse(null);
             }
         }
-    }, [authorized, handleGetStudentsCourse, setStudentsCourse]);
+    }, [authorized, subject, handleGetStudentsCourse, setStudentsCourse]);
 
     useEffect(() => {
         let callQuery = async () => {
             await handleGetUnitFiles();
         }
 
-        if (authorized === true && subject !== null)
+        if (authorized === true && subject !== null && subject !== undefined)
         {
             return callQuery();
         }
@@ -1533,9 +1533,12 @@ const DetailedSubject = () => {
                                                                                     students.length > 0 ? (
                                                                                         <React.Fragment>
                                                                                             <List style={{ width: "100%" }}>
+                                                                                                {
+                                                                                                    console.log("data is", Decrypt(subject.subject)[0].data)
+                                                                                                }
                                                                                             {
                                                                                                 students.map(doc => (
-                                                                                                    <StudentListItem key={doc.id} subjectId={id} course={Encrypt(Decrypt(subject.subject)[0].data)} student={doc} students={students} studentsCourse={studentsCourse} setStudentsCourse={setStudentsCourse} />
+                                                                                                    <StudentListItem key={doc.id} subjectId={id} course={Decrypt(subject.subject)[0]} student={doc} students={students} studentsCourse={studentsCourse} setStudentsCourse={setStudentsCourse} />
                                                                                                 ))
                                                                                             }
                                                                                             </List> 

@@ -60,6 +60,7 @@ const MyGrades = () => {
                     }
                 })
                 .then(result => {
+                    console.log(result);
                     if (Decrypt(Decrypt(result.data.data).subject)[0].data === undefined)
                     {
                         setErrorSubject(true);
@@ -295,22 +296,22 @@ const MyGrades = () => {
             await handleGetGrades();
         }
 
-        if (authorized === true)
+        if (authorized === true && subject !== null && subject !== undefined)
         {
             return callQuery();
         }
-    }, [authorized, handleGetGrades]);
+    }, [authorized, subject, handleGetGrades]);
 
     useEffect(() => {
         let callQuery = async () => {
             await calculateAverage();
         }
 
-        if (authorized === true)
+        if (authorized === true && subject !== null && subject !== undefined)
         {
             return callQuery();
         }
-    }, [authorized, calculateAverage]);
+    }, [authorized, subject, calculateAverage]);
 
     return (
         <div>

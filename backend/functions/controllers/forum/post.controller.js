@@ -126,10 +126,11 @@ controllers.postQuestionForum = async (req, res) => {
     let objectPostData = {
         question: object.question,
         description: object.description, 
-        theme: object.theme,
+        theme: object.theme.normalize('NFD').replace(/[\u0300-\u036f]/g, ""),
         created_at: admin.firestore.FieldValue.serverTimestamp(),
         created_by: uid,
-        idQuestion: questionRef.id
+        idQuestion: questionRef.id,
+        deleted: false
     }
 
     await questionRef.set(objectPostData)
@@ -829,7 +830,8 @@ controllers.postQuestionComment = async (req, res) => {
         created_at: admin.firestore.FieldValue.serverTimestamp(),
         created_by: uid,
         idComment: commentRef.id,
-        idQuestion: questionId
+        idQuestion: questionId,
+        deleted: false
     }
 
     await commentRef.set(objectPostData)
@@ -978,7 +980,8 @@ controllers.postQuestionAnswer = async (req, res) => {
         created_at: admin.firestore.FieldValue.serverTimestamp(),
         created_by: uid,
         idAnswer: answerRef.id,
-        idQuestion: questionId
+        idQuestion: questionId,
+        deleted: false
     }
 
     await answerRef.set(objectPostData)
@@ -1685,7 +1688,8 @@ controllers.postAnswerComment = async (req, res) => {
         created_by: uid,
         idComment: commentRef.id,
         idQuestion: questionId,
-        idAnswer: answerId
+        idAnswer: answerId,
+        deleted: false
     }
 
     await commentRef.set(objectPostData)

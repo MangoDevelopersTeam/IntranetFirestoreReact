@@ -87,7 +87,7 @@ controllers.getStudentAnnotations = async (req, res) => {
         userId = uid;
     }
 
-    await db.collection("courses").get()
+    await db.collection("courses").where("deleted", "==", false).get()
     .then(async resultSubject => {
         resultSubject.docs.forEach(doc => {
             arraySubjects.push({

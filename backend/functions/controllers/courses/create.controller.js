@@ -48,7 +48,6 @@ const generateCode = (subjectName, courseGrade, courseNumber, courseLetter) => {
     return code;
 };
 
-
 /**
  * Función para verificar si existe el curso o no
  * @param {String} subjectName nombre de la asignatura
@@ -93,7 +92,6 @@ const verifyExistCourse = async (subjectName, courseGrade, courseNumber, courseL
     return data;
 };
 
-
 /**
  * Función para crear y registrar una asignatura
  * @param {import("express").Request} req objeto request
@@ -101,9 +99,6 @@ const verifyExistCourse = async (subjectName, courseGrade, courseNumber, courseL
  * @returns mensaje informativo al usuario o el data del usuario
  */
 controllers.createCourse = async (req, res) => {
-    let { course } = req.body;
-    let { uid } = res.locals;
-
     let db = admin.firestore();
 
     let code = "";
@@ -112,7 +107,10 @@ controllers.createCourse = async (req, res) => {
     let type = "";
     let status = 0;
 
-    if (course === null)
+    let { courseData } = req.body;
+    let { uid } = res.locals;
+
+    if (courseData == null)
     {
         code = "COURSE_DATA_NULL";
         message = "Asegurate de que hayas completado los campos del formulario"; 
@@ -129,6 +127,65 @@ controllers.createCourse = async (req, res) => {
         status = null;
     }
 
+    if (courseData.startsWith("U2FsdGVkX1") == false)
+    {
+        code = "DATA_SENT_INVALID";
+        message = "Asegurese de enviar los datos con el formato correcto"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    let course = Decrypt(courseData);
+
+    if (course.courseName == null || course.type == null || course.description == null || course.grade == null || course.number == null || course.letter == null)
+    {
+        code = "DATA_SENT_INVALID";
+        message = "Asegurese de enviar los datos con el formato correcto"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
+    if (course.courseName.startsWith("U2FsdGVkX1") == false || course.type.startsWith("U2FsdGVkX1") == false || course.description.startsWith("U2FsdGVkX1") == false || course.grade.startsWith("U2FsdGVkX1") == false || course.number.startsWith("U2FsdGVkX1") == false || course.letter.startsWith("U2FsdGVkX1") == false)
+    {
+        code = "DATA_SENT_INVALID";
+        message = "Asegurese de enviar los datos con el formato correcto"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
     let nameSubject = Decrypt(course.courseName);
     let typeSubject = Decrypt(course.type);
     let descriptionSubject = Decrypt(course.description);
@@ -137,7 +194,7 @@ controllers.createCourse = async (req, res) => {
     let numberCourse = Decrypt(course.number);
     let letterCourse = Decrypt(course.letter);
 
-    if (typeof(nameSubject) !== "string" || typeof(typeSubject) !== "string" || typeof(descriptionSubject) !== "string" || typeof(gradeCourse) !== "string" || typeof(numberCourse) !== "number" || typeof(letterCourse) !== "string")
+    if (typeof(nameSubject) != "string" || typeof(typeSubject) != "string" || typeof(descriptionSubject) != "string" || typeof(gradeCourse) != "string" || typeof(numberCourse) != "number" || typeof(letterCourse) != "string")
     {
         code = "COURSE_PARAMS_INVALID";
         message = "Asegurate de que los datos sean correctos"; 
@@ -154,18 +211,37 @@ controllers.createCourse = async (req, res) => {
         status = null;
     }
 
+    if (nameSubject == "" || typeSubject == "" || descriptionSubject == "" || gradeCourse == "" || numberCourse == "" || letterCourse == "")
+    {
+        code = "DATA_SENT_INVALID";
+        message = "Asegurese de enviar los datos con el formato correcto"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
     nameSubject = nameSubject.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
     typeSubject = typeSubject.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
     gradeCourse = gradeCourse.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
 
     let verifyCode = await verifyExistCourse(nameSubject, gradeCourse, numberCourse, letterCourse);
 
-    if (verifyCode.exist === true)
+    if (verifyCode.exist == true)
     {
         code = verifyCode.code;
         message = verifyCode.message; 
         type = "error";
-        status = 200;
+        status = 400;
 
         res.status(status).send({ code: code, message: message, data: data, type: type });
 
@@ -194,7 +270,7 @@ controllers.createCourse = async (req, res) => {
         status = null;
     }
 
-    let courseRef = db.collection("courses").doc();
+    let subjectRef = db.collection("courses").doc();
 
     let codeCourse = generateCode(nameSubject, gradeCourse, numberCourse, letterCourse);
     
@@ -206,14 +282,15 @@ controllers.createCourse = async (req, res) => {
     course.number = numberCourse;
     course.letter = letterCourse; 
     course.type = typeSubject; 
-    course.id = courseRef.id;
+    course.idSubject = subjectRef.id;
+    course.deleted = false;
 
-    await courseRef.set(course)
+    await subjectRef.set(course)
     .catch(() => {
         code = "FIREBASE_CREATE_COURSE_ERROR";
         message = "La asignatura no se ha podido crear";
         type = "error";
-        status = 400;
+        status = 500;
                 
         res.status(status).send({ code: code, message: message, data: data, type: type });
 
@@ -235,7 +312,7 @@ controllers.createCourse = async (req, res) => {
             result.forEach(doc => {
                 array.push({
                     id: doc.id,
-                    data: Encrypt(doc.data())
+                    data: doc.data()
                 });
             });
         }
@@ -250,7 +327,7 @@ controllers.createCourse = async (req, res) => {
         code = "FIREBASE_GET_COURSES_ERROR";
         message = error.message;
         type = "error";
-        code = 400;
+        code = 500;
     })
     .finally(() => {
         res.status(status).send({ code: code, message: message, data: data, type: type });
@@ -309,6 +386,25 @@ controllers.setTeachersCourse = async (req, res) => {
 
     await db.collection("courses").doc(idCourse).collection("teachers").get()
     .then(async result => {
+        if (result.size >= 2)
+        {
+            message = "No puede añadir a mas de dos docentes dentro de la asignatura";
+            code = "TEACHERS_LIMIT_REACHED";
+            type = "error";
+            status = 400;
+
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+
+            db = null;
+            code = null;
+            data = null;
+            message = null;
+            type = null;
+            status = null;
+
+            return;
+        }
+
         if (result.size == 0)
         {
             dataTeacher.idTeacher = idTeacher;

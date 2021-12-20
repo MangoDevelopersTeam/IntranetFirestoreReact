@@ -410,7 +410,7 @@ const DetailedQuestion = () => {
                 setErrorCode(null);
             }
         }
-    }, [detailedQuestion, handleGetAnswersQuestion, setLoadingQuestionAnswers, setErrorQuestionAnswers, setLoadingQuestionAnswers, setErrorCode]);
+    }, [detailedQuestion, handleGetAnswersQuestion, setLoadingQuestionAnswers, setErrorQuestionAnswers, setErrorCode]);
 
 
     return (
@@ -752,14 +752,14 @@ const DetailedQuestion = () => {
                                     <Paper elevation={0} itemType="div" style={{ marginTop: 15 }}>
                                     {
                                         loadingQuestionAnswers === true ? (
-                                            <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", padding: 10, marginTop: "calc(2% + 15px)" }}>
+                                            <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", padding: 30 }}>
                                                 <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                                                     <CircularProgress style={{ color: "#2074d4" }} />
                                                     <Typography style={{ marginTop: 15 }}>Cargando Respuestas de la pregunta</Typography>
                                                 </Paper>
                                             </Paper>
                                         ) : errorQuestionAnswers ? (
-                                            <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", padding: 10, marginTop: "calc(2% + 15px)" }}>
+                                            <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", padding: 30 }}>
                                                 <Typography style={{ textAlign: "center" }}>
                                                 {
                                                     errorCode !== null ? (
@@ -790,14 +790,14 @@ const DetailedQuestion = () => {
                                                 </React.Fragment>
                                             </Paper>
                                         ) : questionAnswers === null ? (
-                                            <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", padding: 10, marginTop: "calc(2% + 15px)" }}>
+                                            <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", padding: 30 }}>
                                                 <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                                                     <CircularProgress style={{ color: "#2074d4" }} />
                                                     <Typography style={{ marginTop: 15 }}>Cargando Respuestas de la pregunta</Typography>
                                                 </Paper>
                                             </Paper>
                                         ) : questionAnswers === undefined ? (
-                                            <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", padding: 10, marginTop: "calc(2% + 15px)" }}>
+                                            <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", padding: 30 }}>
                                                 <Typography style={{ textAlign: "center" }}>
                                                 {
                                                     errorCode !== null ? (
@@ -831,7 +831,7 @@ const DetailedQuestion = () => {
                                             <React.Fragment>
                                             {
                                                 questionAnswers.map(doc => (
-                                                    <AnswerCard key={doc.id} doc={doc} question={detailedQuestion[0]} access={Decrypt(access)} />
+                                                    <AnswerCard key={doc.id} doc={doc} question={detailedQuestion[0]} access={Decrypt(access)} handleGetAnswersQuestion={handleGetAnswersQuestion} />
                                                 ))
                                             }
                                             </React.Fragment>
