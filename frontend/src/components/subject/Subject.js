@@ -3,19 +3,25 @@ import { Link, useParams } from 'react-router-dom';
 import ReactDOM from 'react-dom';
 
 import { Delete, Edit, ExpandMore, NavigateNext, PlaylistAdd } from '@material-ui/icons';
-import { Accordion, AccordionDetails, AccordionSummary, Breadcrumbs, Button, Card, CardActions, CardContent, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, IconButton, List, ListItem, ListItemSecondaryAction, ListItemText, Paper, TextField, Tooltip, Typography, useMediaQuery, useTheme } from '@material-ui/core';
+import { Accordion, AccordionDetails, AccordionSummary, Breadcrumbs, Button, Card, CardActions, CardContent, CircularProgress, createTheme, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, IconButton, List, ListItem, ListItemSecondaryAction, ListItemText, Paper, TextField, Tooltip, Typography, useMediaQuery, useTheme, ThemeProvider } from '@material-ui/core';
 
 import { Decrypt, Encrypt } from '../../helpers/cipher/cipher';
 import { showMessage } from '../../helpers/message/handleMessage';
 
 import TeacherListItem from './TeacherListItem';
 import StudentListItem from './StudentListItem';
-import Loading from '../others/Loading';
-import Error from '../others/Error';
 
 import axios from 'axios';
 
 import { timeago } from './../../helpers/format/handleFormat'
+
+const InputTheme = createTheme({
+    palette: {
+        primary: {
+            main: "#2074d4"
+        }
+    },
+});
 
 const Subject = () => {
     // uses
@@ -25,10 +31,6 @@ const Subject = () => {
 
 
     // useStates
-    /* const [course, setCourse] = useState(null); */
-    /* const [teachers, setTeachers] = useState(null); */
-    /* const [students, setStudents] = useState(null); */
-
     const [course, setCourse] = useState(null);
     const [loadingCourse, setLoadingCourse] = useState(true);
     const [errorCourse, setErrorCourse] = useState(false);
@@ -36,6 +38,7 @@ const Subject = () => {
     const [errorCode2, setErrorCode2] = useState(null);
     const [errorCode3, setErrorCode3] = useState(null);
     const [errorCode4, setErrorCode4] = useState(null);
+    // eslint-disable-next-line
     const [errorCode, setErrorCode] = useState(null);
 
     const [teachersCourse, setTeachersCourse] = useState(null);
@@ -67,13 +70,6 @@ const Subject = () => {
     const [unitsDialog,       setUnitsDialog] = useState(false);
     const [editUnitDialog, setEditUnitDialog] = useState(false);
     const [deleteUnitDialog, setDeleteUnitDialog] = useState(false);
-
-    /* const [teachersCourse, setTeachersCourse] = useState(null);
-    const [studentsCourse, setStudentsCourse] = useState(null);
-    const [unitsCourse,       setUnitsCourse] = useState(null); */
-
-    /* const [loadingTeachers, setLoadingTeachers] = useState(true); */
-    /* const [loadingStudents, setLoadingStudents] = useState(true); */
 
     const [unitsFields,   setUnitsFields] = useState(0);
     const [unitSelected, setUnitSelected] = useState(null);
@@ -439,9 +435,6 @@ const Subject = () => {
     );
 
     
-
-
-
     // dialogs
     /**
      * useCallback para cerrar el dialogo de setear profesores para escoger
@@ -615,7 +608,6 @@ const Subject = () => {
 
 
     
-
     /**
      * useCallback para añadir un campo de texto de unidades del curso
      */
@@ -727,6 +719,7 @@ const Subject = () => {
             .then(async result => {
                 if (result.data.code === "PROCESS_OK")
                 {
+                    handleCloseUnitsDialog();
                     await handleGetUnitsCourse();
                     showMessage(result.data.message, result.data.type);
                 }
@@ -750,7 +743,7 @@ const Subject = () => {
                 }
             });
         },
-        [id, unitsFields, unitsCourse, handleCheckUnitField, setUnitsCourse],
+        [id, unitsFields, unitsCourse, handleCheckUnitField, setUnitsCourse, handleCloseUnitsDialog, handleGetUnitsCourse],
     );
 
     /**
@@ -778,8 +771,8 @@ const Subject = () => {
             .then(async result => {
                 if (result.data.code === "PROCESS_OK")
                 {
-                    await handleGetUnitsCourse();
                     handleCloseEditUnitDialog();
+                    await handleGetUnitsCourse();
                     showMessage(result.data.message, result.data.type);
                 }
                 else
@@ -797,7 +790,7 @@ const Subject = () => {
                 }
             });
         },
-        [id, unitName, unitSelected],
+        [id, unitName, unitSelected, handleGetUnitsCourse, handleCloseEditUnitDialog],
     );
 
     /**
@@ -819,8 +812,8 @@ const Subject = () => {
             .then(async result => {
                 if (result.data.code === "PROCESS_OK")
                 {
-                    await handleGetUnitsCourse();
                     handleCloseDeleteUnitDialog();
+                    await handleGetUnitsCourse();
                     showMessage(result.data.message, result.data.type);
                 }
                 else
@@ -838,7 +831,7 @@ const Subject = () => {
                 }
             });
         },
-        [id, unitSelected],
+        [id, unitSelected, handleGetUnitsCourse, handleCloseDeleteUnitDialog],
     );
 
 
@@ -848,12 +841,15 @@ const Subject = () => {
             await handleGetCourse();
         };
 
-        callQuery();
+        if (id !== null)
+        {  
+            callQuery();
 
-        return () => {
-            setCourse(null);
-        };
-    }, [handleGetCourse, setCourse]);
+            return () => {
+                setCourse(null);
+            };
+        }
+    }, [id, handleGetCourse, setCourse]);
 
     useEffect(() => {
         let callQuery = async () => {
@@ -862,7 +858,7 @@ const Subject = () => {
             await handleGetUnitsCourse();
         }
 
-        if (course !== undefined && course !== null)
+        if (course !== undefined && course !== null && id !== null)
         {
             callQuery();
 
@@ -872,7 +868,7 @@ const Subject = () => {
                 setUnitsCourse(null);
             }
         }
-    }, [course, handleGetTeachersCourse, handleGetStudentsCourse, handleGetUnitsCourse, setTeachersCourse, setStudentsCourse, setUnitsCourse]);
+    }, [id, course, handleGetTeachersCourse, handleGetStudentsCourse, handleGetUnitsCourse, setTeachersCourse, setStudentsCourse, setUnitsCourse]);
 
 
     return (
@@ -1055,7 +1051,7 @@ const Subject = () => {
                                 }
                                 </CardContent>
                                 <CardActions>
-                                    <Button style={{ color: "#2074d4" }} onClick={() => handleShowTeacherDialog()}>Establecer un docente a cargo</Button>
+                                    <Button style={{ color: "#2074d4" }} onClick={async () => await handleShowTeacherDialog()}>Establecer un docente a cargo</Button>
                                 </CardActions>
                             </React.Fragment>
                         )
@@ -1243,6 +1239,7 @@ const Subject = () => {
                     </Card>
 
 
+
                     <Dialog open={studentsDialog} maxWidth={"md"} fullWidth={true} onClose={handleCloseStudentsDialog} fullScreen={fullScreen} scroll="paper">
                         <DialogTitle>Asignar estudiantes a la asignatura {Decrypt(course.data.courseName)}</DialogTitle>
                         <DialogContent>
@@ -1264,7 +1261,17 @@ const Subject = () => {
                                         ) : errorStudents === true ? (
                                             <React.Fragment>
                                                 <Typography style={{ textAlign: "center" }}>
-                                                    Ha ocurrido un error al obtener los estudiantes del sistema
+                                                {
+                                                    errorCode !== null ? (
+                                                        errorCode === "NO_STUDENTS" ? (
+                                                            "No hay estudiantes relacionados con esta asignatura"
+                                                        ) : (
+                                                            "Algo inesperado acaba de ocurrir al obtener los estudiantes del sistema"
+                                                        )
+                                                    ) : (
+                                                        "Algo inesperado acaba de ocurrir al obtener los estudiantes del sistema"
+                                                    )
+                                                }
                                                 </Typography>
 
                                                 <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -1278,6 +1285,19 @@ const Subject = () => {
                                             <Paper elevation={0} itemType="div" style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
                                                 <CircularProgress style={{ color: "#2074d4" }} />
                                             </Paper>
+                                        ) : students === undefined ? (
+                                            <React.Fragment>
+                                                <Typography style={{ textAlign: "center" }}>
+                                                    Algo inesperado acaba de ocurrir al obtener los estudiantes del sistema
+                                                </Typography>
+
+                                                <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                    <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                    <Button onClick={async () => await handleGetStudents(course.data.number, course.data.letter, course.data.grade)} style={{ color: "#2074d4" }}>
+                                                        <Typography variant="button">Recargar Estudiantes</Typography>
+                                                    </Button>
+                                                </Paper>
+                                            </React.Fragment>
                                         ) : (
                                             students.length > 0 ? ( 
                                                 <React.Fragment>
@@ -1352,6 +1372,23 @@ const Subject = () => {
                                             <Paper elevation={0} itemType="div" style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
                                                 <CircularProgress style={{ color: "#2074d4" }} />
                                             </Paper>
+                                        ) : teachersCourse === null ? (
+                                            <Paper elevation={0} itemType="div" style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                                <CircularProgress style={{ color: "#2074d4" }} />
+                                            </Paper>
+                                        ) : teachersCourse === undefined ? (
+                                            <React.Fragment>
+                                                <Typography style={{ textAlign: "center" }}>
+                                                    Algo inesperado acaba de ocurrir al obtener los docentes del sistema
+                                                </Typography>
+
+                                                <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                    <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                    <Button onClick={async () => await handleGetTeachersCourse()} style={{ color: "#2074d4" }}>
+                                                        <Typography variant="button">Recargar Docentes</Typography>
+                                                    </Button>
+                                                </Paper>
+                                            </React.Fragment>
                                         ) : (
                                             teachers.length > 0 ? ( 
                                                 <React.Fragment>
@@ -1391,7 +1428,6 @@ const Subject = () => {
                         </DialogActions>
                     </Dialog>
 
-
                     <Dialog open={unitsDialog} maxWidth={"md"} fullWidth={true} onClose={handleCloseUnitsDialog} fullScreen={fullScreen} scroll="paper">
                         <DialogTitle>Crear unidades en el curso {Decrypt(course.data.courseName)}</DialogTitle>
                         <DialogContent>
@@ -1419,52 +1455,62 @@ const Subject = () => {
                         </DialogActions>
                     </Dialog>
 
-                        <Dialog open={editUnitDialog} maxWidth={"sm"} fullWidth={true} onClose={handleCloseEditUnitDialog} fullScreen={fullScreen} scroll="paper">
-                        {
-                            unitSelected !== null && (
-                                <>
-                                    <DialogTitle>Editar {`Unidad ${unitSelected.data.numberUnit} : ${unitSelected.data.unit}`}</DialogTitle>
-                                    <DialogContent>
-                                        <DialogContentText>
-                                            Edite los valores de la {`unidad ${unitSelected.data.numberUnit} : ${unitSelected.data.unit}`}
-                                        </DialogContentText>
+                    <Dialog open={editUnitDialog} maxWidth={"sm"} fullWidth={true} onClose={handleCloseEditUnitDialog} fullScreen={fullScreen} scroll="paper">
+                    {
+                        unitSelected === null ? (
+                            <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: 15 }}>
+                                <CircularProgress style={{ color: "#2074d4" }} />
+                                <Typography style={{ marginTop: 15 }}>Cargando unidad seleccionada</Typography>
+                            </Paper>
+                        ) : (
+                            <React.Fragment>
+                                <DialogTitle>Editar {`Unidad ${unitSelected.data.numberUnit} : ${unitSelected.data.unit}`}</DialogTitle>
+                                <DialogContent>
+                                    <DialogContentText>
+                                        Edite los valores de la {`unidad ${unitSelected.data.numberUnit} : ${unitSelected.data.unit}`}
+                                    </DialogContentText>
 
-                                        <TextField type="text"   label="Nombre de la unidad" variant="outlined" security="true" value={unitName} fullWidth onChange={(e) => setUnitName(e.target.value)} style={{ marginBottom: 15 }} />
-                                    </DialogContent>
-                                    <DialogActions>
-                                        <Button color="inherit" onClick={handleCloseEditUnitDialog}>Cerrar Ventana</Button>
-                                        <Button onClick={() => handleEditUnit()} style={{ color: "#2074d4" }}>Editar Unidad</Button>
-                                    </DialogActions>
-                                </>
-                            )
-                        }
-                        </Dialog>
+                                    <ThemeProvider theme={InputTheme}>
+                                        <TextField type="text" label="Nombre de la unidad" variant="outlined" security="true" value={unitName} fullWidth onChange={(e) => setUnitName(e.target.value)} style={{ marginBottom: 15 }} />
+                                    </ThemeProvider>
+                                </DialogContent>
+                                <DialogActions>
+                                    <Button color="inherit" onClick={handleCloseEditUnitDialog}>Cerrar Ventana</Button>
+                                    <Button onClick={async () => await handleEditUnit()} style={{ color: "#2074d4" }}>Editar Unidad</Button>
+                                </DialogActions>
+                            </React.Fragment>
+                        )
+                    }
+                    </Dialog>
                     
-                        <Dialog open={deleteUnitDialog} maxWidth={"sm"} fullWidth={true} onClose={handleCloseDeleteUnitDialog} fullScreen={fullScreen} scroll="paper">
-                        {
-                            unitSelected !== null && (
-                                <>
-                                    <DialogTitle>Eliminar {`Unidad ${unitSelected.data.numberUnit} : ${unitSelected.data.unit}`}</DialogTitle>
-                                    <DialogContent>
-                                        <DialogContentText>
-                                            Esta seguro de eliminar esta unidad?
-                                        </DialogContentText>
-                                    </DialogContent>
-                                    <DialogActions>
-                                        <Button color="inherit" onClick={handleCloseDeleteUnitDialog}>Cancelar</Button>
-                                        <Button onClick={async () => await handleDeleteUnit()} style={{ color: "#2074d4" }}>Eliminar unidad</Button>
-
-                                        </DialogActions>
-                                        </>
-                                    )
-                                }      
-                        </Dialog>
-
+                    <Dialog open={deleteUnitDialog} maxWidth={"sm"} fullWidth={true} onClose={handleCloseDeleteUnitDialog} fullScreen={fullScreen} scroll="paper">
+                    {
+                        unitSelected === null ? (
+                            <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: 15 }}>
+                                <CircularProgress style={{ color: "#2074d4" }} />
+                                <Typography style={{ marginTop: 15 }}>Cargando unidad seleccionada</Typography>
+                            </Paper>
+                        ) : (
+                            <React.Fragment>
+                                <DialogTitle>Eliminar {`Unidad ${unitSelected.data.numberUnit} : ${unitSelected.data.unit}`}</DialogTitle>
+                                <DialogContent>
+                                    <DialogContentText>
+                                        Esta seguro de eliminar esta unidad?
+                                    </DialogContentText>
+                                </DialogContent>
+                                <DialogActions>
+                                    <Button color="inherit" onClick={handleCloseDeleteUnitDialog}>Cancelar</Button>
+                                    <Button onClick={async () => await handleDeleteUnit()} style={{ color: "#2074d4" }}>Eliminar unidad</Button>
+                                </DialogActions>
+                            </React.Fragment>
+                        )
+                    }      
+                    </Dialog>
                 </React.Fragment>
             )
         }
         </Paper>
-    )
-}
+    );
+};
 
-export default Subject
+export default Subject;

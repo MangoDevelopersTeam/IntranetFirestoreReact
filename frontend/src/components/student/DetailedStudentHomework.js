@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, withRouter, useLocation, Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 
-import { Breadcrumbs, Button, Card, CardContent, CircularProgress, ThemeProvider, createTheme, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, useMediaQuery, useTheme, TextField, LinearProgress } from '@material-ui/core';
-import { Feedback, NavigateNext } from '@material-ui/icons';
+import { Breadcrumbs, Button, Card, CardContent, CircularProgress, ThemeProvider, createTheme, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Paper, Table, TableBody, TableCell, TableContainer, TableRow, Typography, useMediaQuery, useTheme, TextField, LinearProgress } from '@material-ui/core';
+import { NavigateNext } from '@material-ui/icons';
 
 import { showMessage } from '../../helpers/message/handleMessage';
 import { Decrypt, Encrypt } from '../../helpers/cipher/cipher';
@@ -566,7 +566,7 @@ const DetailedStudentHomework = () => {
                 });
             });
         },
-        [idHomework, idUnit, idSubject, file, inTime, handleGetRemainingTime],
+        [detailedHomework, user, idHomework, idUnit, idSubject, file, inTime, handleGetRemainingTime],
     );
 
     const handleOpenHomeWorkDialog = useCallback(

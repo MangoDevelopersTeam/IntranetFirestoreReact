@@ -1,11 +1,14 @@
-import { CircularProgress, List, ListItem, ListItemText, Typography, Divider, Paper, Breadcrumbs, Button, Card, CardContent, ListItemSecondaryAction, IconButton, Tooltip, useTheme, ThemeProvider, useMediaQuery, Dialog, DialogTitle, DialogContent, DialogActions, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, InputBase, Grid, createTheme, TextField, FormControl, MenuItem, Select, InputLabel, Menu } from '@material-ui/core';
-import { AddCircleOutline, Delete, Edit, GridOn, Info, NavigateNext, PlaylistAdd, PostAdd, RemoveCircleOutline, Visibility } from '@material-ui/icons';
-import axios from 'axios';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+
+import { CircularProgress, List, ListItem, ListItemText, Typography, Divider, Paper, Breadcrumbs, Button, Card, CardContent, ListItemSecondaryAction, IconButton, Tooltip, useTheme, ThemeProvider, useMediaQuery, Dialog, DialogTitle, DialogContent, DialogActions, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, InputBase, Grid, createTheme, TextField, FormControl, MenuItem, Select, InputLabel, Menu } from '@material-ui/core';
+import { AddCircleOutline, Delete, Edit, GridOn, NavigateNext, PlaylistAdd, PostAdd, RemoveCircleOutline, Replay, Visibility } from '@material-ui/icons';
+
+import { showMessage } from '../../helpers/message/handleMessage';
 import { Decrypt, Encrypt } from '../../helpers/cipher/cipher';
 import { timeago } from '../../helpers/format/handleFormat';
-import { showMessage } from '../../helpers/message/handleMessage';
+
+import axios from 'axios';
 
 const InputTheme = createTheme({
     palette: {
@@ -20,7 +23,6 @@ const StudentsSubject = () => {
     const { id } = useParams();
     const themeApp = useTheme();
     const fullScreen = useMediaQuery(themeApp.breakpoints.down('sm'));
-
 
 
     // useStates
@@ -45,8 +47,13 @@ const StudentsSubject = () => {
     const [errorAuthorized, setErrorAuthorized] = useState(false);
     const [loadingAuthorized, setLoadingAuthorized] = useState(true);
 
+    const [editAnnotation, setEditAnnotation] = useState(false);
+    const [deleteAnnotation, setDeleteAnnotation] = useState(false);
+    const [selectedAnnotation, setSelectedAnnotation] = useState(null);
+
     const [helper, setHelper] = useState(null);
-    const [selectedStudent, setSelectedStudent] = useState(null);
+    const [errorHelper, setErrorHelper] = useState(false);
+    const [loadingHelper, setLoadingHelper] = useState(true);
 
     const [gradesDialog, setGradesDialog] = useState(false);
     const [annotationDialog, setAnnotationDialog] = useState(false);
@@ -54,136 +61,138 @@ const StudentsSubject = () => {
     const [type, setType] = useState("");
     const [description, setDescription] = useState("");
 
-    const [editAnnotation, setEditAnnotation] = useState(false);
-    const [deleteAnnotation, setDeleteAnnotation] = useState(false);
-    const [selectedAnnotation, setSelectedAnnotation] = useState(null);
+    
+    const [selectedStudent, setSelectedStudent] = useState(null);
 
     const [menuSelect, setMenuSelect] = useState(null);
     const [useFilter, setUseFilter] = useState(false);
 
 
-
     // useCallbacks
-    /* ------- SUBJECT CALLBACK ------ */
     /**
      * useCallback para obtener el detalle del curso
      */
     const handleGetDetailedSubject = useCallback(
         async () => {
-            if (id !== null)
+            if (id === null)
             {
-                setLoadingSubject(true);
-
-                await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-detailed-course", {
-                    params: {
-                        courseID: Encrypt(id)
-                    }
-                })
-                .then(result => {
-                    console.log(Decrypt(Decrypt(result.data.data).subject)[0]);
-
-
-                    if (Decrypt(Decrypt(result.data.data).subject)[0].data === undefined)
-                    {
-                        setErrorSubject(true);
-                        setSubject(undefined);
-                        setErrorCode(result.data.code);
-                    }
-                    else
-                    {
-                        setErrorSubject(false);
-                        setSubject(Decrypt(result.data.data));
-                        setErrorCode(null);
-                    }
-
-                    setLoadingSubject(false);
-                })
-                .catch(error => {
-                    setErrorSubject(true);
-                    setSubject(undefined);
-                    
-                    if (error.response)
-                    {
-                        setErrorCode(error.response.data.code);
-                    }
-                    else
-                    {
-                        setErrorCode("GET_DETAILED_SUBJECT_ERROR");
-                    }
-
-                    setLoadingSubject(false);
-                })
-                .finally(() => {
-                    return () => {
-                        setSubject(null); 
-                        setErrorSubject(null);
-                        setErrorCode(null);
-                        setLoadingSubject(null);
-                    }
-                });
+                return;
             }
+
+            setLoadingSubject(true);
+
+            await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-detailed-course", {
+                params: {
+                    courseID: Encrypt(id)
+                }
+            })
+            .then(result => {
+                console.log("Asignatura response =", result);
+
+                if (result.status === 200 && result.data.code === "PROCESS_OK")
+                {
+                    setSubject(Decrypt(result.data.data));
+                    setErrorSubject(false);
+                    setErrorCode(null);
+                }
+                else
+                {
+                    setSubject(undefined);
+                    setErrorSubject(true);
+                    setErrorCode(result.data.code);
+                }
+
+                setLoadingSubject(false);
+            })
+            .catch(error => {
+                setErrorSubject(true);
+                setSubject(undefined);
+                    
+                if (error.response)
+                {
+                    console.log(error.response);
+                    setErrorCode(error.response.data.code);
+                }
+                else
+                {
+                    setErrorCode("GET_DETAILED_SUBJECT_ERROR");
+                }
+
+                setLoadingSubject(false);
+            })
+            .finally(() => {
+                return () => {
+                    setSubject(null); 
+                    setErrorSubject(null);
+                    setErrorCode(null);
+                    setLoadingSubject(null);
+                }
+            });
         },
         [id, setSubject, setErrorSubject, setErrorCode, setLoadingSubject],
     );
-    /* ------- SUBJECT CALLBACK ------ */
 
-
-
-    /* ------ STUDENTS CALLBACK ------ */
     /**
      * useCallback para obtener los estudiantes de la asignatura relacionadas con el curso
      */
     const handleGetStudentsCourse = useCallback(
         async () => {
-            if (id !== null && authorized === true)
+            if (id === null || authorized === false)
             {
-                setLoadingStudents(true);
-
-                await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-students-courses", {
-                    params: {
-                        subjectIdParam: Encrypt(id)
-                    }
-                })
-                .then(result => {
-                    if (result.status === 200 && result.data.code === "PROCESS_OK")
-                    {   
-                        setErrorStudents(false);
-                        setStudents(Decrypt(result.data.data));
-                        setErrorCode(null);
-                    }
-                    else
-                    {
-                        setErrorStudents(true);
-                        setStudents(null);
-                        setErrorCode(result.data.code);
-                    }
-
-                    setLoadingStudents(false);
-                })
-                .catch(error => {
-                    setErrorStudents(true);
-                    setStudents(null);
-                    
-                    if (error.response)
-                    {
-                        setErrorCode(error.response.data.code);
-                    }
-                    else
-                    {
-                        setErrorCode("GET_DETAILED_SUBJECT_ERROR");
-                    }
-
-                    setLoadingStudents(false);
-                })
-                .finally(() => {
-                    return () => {
-                        setStudents(null); 
-                        setErrorStudents(null);
-                        setErrorCode(null);
-                        setLoadingStudents(null);
-                    }
-                });
+                return;
             }
+      
+            setLoadingStudents(true);
+
+            await axios.get(`${process.env.REACT_APP_API_URI}/get-students-courses`, {
+                params: {
+                    subjectIdParam: Encrypt(id)
+                }
+            })
+            .then(result => {
+                console.log("estudiantes response =", result);
+                if (result.status === 200 && result.data.code === "PROCESS_OK")
+                {   
+                    setStudents(Decrypt(result.data.data));
+                    setErrorStudents(false);
+                    setErrorCode(null);
+
+                    setLoadingStudents(false);
+                }
+                else
+                {
+                    setStudents(undefined);
+                    setErrorStudents(true);
+                    setErrorCode(result.data.code);
+
+                    setLoadingStudents(false);
+                }
+
+                setLoadingStudents(false);
+            })
+            .catch(error => {
+                setErrorStudents(true);
+                setStudents(undefined);
+                    
+                if (error.response)
+                {
+                    setErrorCode(error.response.data.code);
+                }
+                else
+                {
+                    setErrorCode("GET_STUDENTS_SUBJECT_ERROR");
+                }
+
+                setLoadingStudents(false);
+            })
+            .finally(() => {
+                return () => {
+                    setStudents(null); 
+                    setErrorStudents(null);
+                    setErrorCode(null);
+                    setLoadingStudents(null);
+                }
+            });    
         },
         [id, authorized, setStudents, setErrorStudents, setErrorCode, setLoadingStudents],
     );
@@ -193,233 +202,236 @@ const StudentsSubject = () => {
      */
     const handleGetGradesStudentCourse = useCallback(
         async (userId) => {
-            if (id !== null && userId !== null && authorized === true)
+            if (id === null || userId === null || authorized === false)
             {
-                setLoadingGrades(true);
-
-                await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-grades-student-course", {
-                    params: {
-                        idCourse: Encrypt(id), 
-                        idUser: Encrypt(userId)
-                    }
-                })
-                .then(result => {
-                    if (result.status === 200 && result.data.code === "PROCESS_OK")
-                    {   
-                        setErrorGrades(false);
-                        setGrades(Decrypt(result.data.data));
-                        setErrorCode(null);
-                    }
-                    else
-                    {
-                        setErrorGrades(true);
-                        setGrades(null);
-                        setErrorCode(result.data.code);
-                    }
-
-                    setLoadingGrades(false);
-                })
-                .catch(error => {
-                    setErrorGrades(true);
-                    setGrades(null);
-                    
-                    if (error.response)
-                    {
-                        setErrorCode(error.response.data.code);
-                    }
-                    else
-                    {
-                        setErrorCode("GET_DETAILED_SUBJECT_ERROR");
-                    }
-
-                    setLoadingGrades(false);
-                })
-                .finally(() => {
-                    return () => {
-                        setGrades(null); 
-                        setErrorGrades(null);
-                        setErrorCode(null);
-                        setLoadingGrades(null);
-                    }
-                });
+                return;
             }
+            
+            setLoadingGrades(true);
+
+            await axios.get(`${process.env.REACT_APP_API_URI}/get-grades-student-course`, {
+                params: {
+                    idCourse: Encrypt(id), 
+                    idUser: Encrypt(userId)
+                }
+            })
+            .then(result => {
+                if (result.status === 200 && result.data.code === "PROCESS_OK")
+                {   
+                    setGrades(Decrypt(result.data.data));
+                    setErrorGrades(false);
+                    setErrorCode(null);
+                }
+                else
+                {
+                    setGrades(undefined);
+                    setErrorGrades(true);
+                    setErrorCode(result.data.code);
+                }
+                
+                setLoadingGrades(false);
+            })
+            .catch(error => {
+                setErrorGrades(true);
+                setGrades(undefined);
+                    
+                if (error.response)
+                {
+                    setErrorCode(error.response.data.code);
+                }
+                else
+                {
+                    setErrorCode("GET_DETAILED_SUBJECT_ERROR");
+                }
+
+                setLoadingGrades(false);
+            })
+            .finally(() => {
+                return () => {
+                    setGrades(null); 
+                    setErrorGrades(null);
+                    setErrorCode(null);
+                    setLoadingGrades(null);
+                }
+            });
         },
         [id, authorized, setLoadingGrades, setGrades, setErrorGrades, setErrorCode],
     );
-    /* ------ STUDENTS CALLBACK ------ */
 
-
-
-    /* ------ ACCESS CALLBACK ------ */
     /**
      * useCallback para verificar si el alumno o profesor tiene asignación a este recurso
      */
     const handleGetAuthorizedAccess = useCallback(
         async () => {
-            if (id !== null)
+            if (id === null)
             {
-                setLoadingAuthorized(true);
-
-                await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-authorized-access", {
-                    params: {
-                        idCourse: Encrypt(id)
-                    }
-                })
-                .then(result => {
-                    console.log(result);
-                    if (result.status === 200 && result.data.code === "PROCESS_OK")
-                    {
-                        setErrorAuthorized(false);
-                        setAuthorized(result.data.data);
-                        setErrorCode(null);
-                    }
-                    else
-                    {
-                        setErrorAuthorized(true);
-                        setAuthorized(false);
-                        setErrorCode(result.data.code);
-                    }
-
-                    setLoadingAuthorized(false);
-                })
-                .catch(error => {
-                    setErrorAuthorized(true);
-                    setAuthorized(false);
-
-                    if (error.response)
-                    {   
-                        console.log(error.response);
-                        setErrorCode(error.response.data.code);
-                    }
-                    else
-                    {
-                        setErrorCode("GET_UNIT_FILES_ERROR");
-                    }
-
-                    setLoadingAuthorized(false);
-                })
-                .finally(() => {
-                    return () => {
-                        setAuthorized(null);
-                        setErrorAuthorized(null);
-                        setErrorCode(null);
-                    }
-                });
+                return;
             }
+
+            setLoadingAuthorized(true);
+
+            await axios.get(`${process.env.REACT_APP_API_URI}/get-authorized-access`, {
+                params: {
+                    idCourse: Encrypt(id)
+                }
+            })
+            .then(result => {
+                console.log("authorized response =", result);
+                if (result.status === 200 && result.data.code === "PROCESS_OK")
+                {
+                    setAuthorized(result.data.data);
+                    setErrorAuthorized(false);
+                    setErrorCode(null);
+                }
+                else
+                {
+                    setAuthorized(undefined);
+                    setErrorAuthorized(true);
+                    setErrorCode(result.data.code);
+                }
+
+                setLoadingAuthorized(false);
+            })
+            .catch(error => {
+                setErrorAuthorized(true);
+                setAuthorized(undefined);
+
+                if (error.response)
+                {   
+                    console.log(error.response);
+                    setErrorCode(error.response.data.code);
+                }
+                else
+                {
+                    setErrorCode("GET_UNIT_FILES_ERROR");
+                }
+
+                setLoadingAuthorized(false);
+            })
+            .finally(() => {
+                return () => {
+                    setAuthorized(null);
+                    setErrorAuthorized(null);
+                    setErrorCode(null);
+                }
+            });
+            
         },
         [id, setAuthorized, setErrorAuthorized, setErrorCode],
     );
-    /* ------ ACCESS CALLBACK ------ */
 
-
-
-    /* ------ TEACHER CALLBACK ------ */
     /**
      * useCallback para obtener al usuario profesor en el curso actual
      */
     const handleGetTeacherCourse = useCallback(
         async () => {
-            if (id !== null)
+            if (id === null)
             {
-                await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-teacher-course", {
-                    params: {
-                        idCourse: Encrypt(id)
-                    }
-                })
-                .then(result => {
-                    if (result.status === 200 && result.data.code === "PROCESS_OK")
+                return
+            }
+
+            setLoadingHelper(true);
+                
+            await axios.get(`${process.env.REACT_APP_API_URI}/get-teacher-course`, {
+                params: {
+                    idCourse: Encrypt(id)
+                }
+            })
+            .then(result => {
+                if (result.status === 200 && result.data.code === "PROCESS_OK")
+                {
+                    console.log(Decrypt(Decrypt(result.data.data)[0].data).helper);
+                    if (Decrypt(Decrypt(result.data.data)[0].data).helper === true)
                     {
-                        if (Decrypt(Decrypt(result.data.data)[0].data).helper === true)
-                        {
-                            setHelper(true);
-                        }
-                        else
-                        {
-                            setHelper(false);
-                        }
+                        setHelper(true);
                     }
                     else
                     {
-                        setHelper(true);
+                        setHelper(false);
                     }
-                })
-                .catch(error => {
-                    if (error.response)
-                    {
-                        showMessage(error.response.message, "error");
-                        setHelper(true);
-                    }
-                })
-                .finally(() => {
-                    return () => {
-                        setHelper(null);
-                    }
-                });
-            }
+
+                    setErrorHelper(false);
+                }
+                else
+                {
+                    setHelper(undefined);
+                    setErrorHelper(true);
+                }
+
+                setLoadingHelper(false);
+            })
+            .catch(() => {
+                setHelper(undefined);
+                setErrorHelper(true);
+            })
+            .finally(() => {
+                return () => {
+                    setHelper(null);
+                    setErrorHelper(null);
+                }
+            });    
         },
-        [id, setHelper],
+        [id, setHelper, setErrorHelper],
     );
-    /* ------ TEACHER CALLBACK ------ */
 
-
-
-    /* ------ ANNOTATIONS CALLBACK ------ */
     /**
      * useCallback para obtener las anotaciones
      */
     const handleGetAnnotations = useCallback(
         async (idStudent) => {
-            if (idStudent !== null)
-            {   
-                setLoadingAnnotations(true);
-                setUseFilter(false);
-            
-                await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/get-annotations-student-course", {
-                    params: {
-                        idUserParam: Encrypt(idStudent),
-                        idSubjectParam: Encrypt(id)
-                    }
-                })
-                .then(result => {
-                    if (result.status === 200 && result.data.code === "PROCESS_OK")
-                    {
-                        setErrorAnnotations(false);
-                        setAnnotations(Decrypt(result.data.data));
-                        setErrorCode(null);
-                    }
-                    else
-                    {
-                        setErrorAnnotations(true);
-                        setAnnotations(null);
-                        setErrorCode(result.data.code);
-                    }
-
-                    setLoadingAnnotations(false);
-                })
-                .catch(error => {
-                    setErrorAnnotations(true);
-                    setAnnotations(null);
-                    
-                    if (error.response)
-                    {
-                        setErrorCode(error.response.data.code);
-                    }
-                    else
-                    {
-                        setErrorCode("GET_DETAILED_SUBJECT_ERROR");
-                    }
-
-                    setLoadingAnnotations(false);
-                })
-                .finally(() => {
-                    return () => {
-                        setAnnotations(null); 
-                        setErrorAnnotations(null);
-                        setErrorCode(null);
-                        setLoadingAnnotations(null);
-                    }
-                });
+            if (idStudent == null || id == null)
+            {
+                return;
             }
+  
+            setLoadingAnnotations(true);
+            setUseFilter(false);
+            
+            await axios.get(`${process.env.REACT_APP_API_URI}/get-annotations-student-course`, {
+                params: {
+                    idUserParam: Encrypt(idStudent),
+                    idSubjectParam: Encrypt(id)
+                }
+            })
+            .then(result => {
+                if (result.status === 200 && result.data.code === "PROCESS_OK")
+                {
+                    setAnnotations(Decrypt(result.data.data));
+                    setErrorAnnotations(false);
+                    setErrorCode(null);
+                }
+                else
+                {
+                    setAnnotations(undefined);
+                    setErrorAnnotations(true);
+                    setErrorCode(result.data.code);
+                }
+
+                setLoadingAnnotations(false);
+            })
+            .catch(error => {
+                setErrorAnnotations(true);
+                setAnnotations(undefined);
+                    
+                if (error.response)
+                {
+                    setErrorCode(error.response.data.code);
+                }
+                else
+                {
+                    setErrorCode("GET_DETAILED_SUBJECT_ERROR");
+                }
+
+                setLoadingAnnotations(false);
+            })
+            .finally(() => {
+                return () => {
+                    setAnnotations(null); 
+                    setErrorAnnotations(null);
+                    setErrorCode(null);
+                    setLoadingAnnotations(null);
+                }
+            });
         },
         [id, setAnnotations, setLoadingAnnotations, setErrorAnnotations, setErrorCode, setUseFilter],
     );
@@ -429,13 +441,18 @@ const StudentsSubject = () => {
      */
     const handleAddAnnotation = useCallback(
         async () => {
-            if (id !== null && selectedStudent !== null)
+            if (id === null || selectedStudent === null)
             {
-                if (type === "" || description === "")
-                {
-                    return showMessage("Complete los campos de texto", "info");
-                }
+                return;
+            }
+            
+            if (type === "" || description === "")
+            {
+                return showMessage("Complete los campos de texto", "info");
+            }
 
+            if (type === "positive" || type === "negative" || type === "observation")
+            {
                 let object = {
                     idSubject: id,
                     type: type,
@@ -510,8 +527,6 @@ const StudentsSubject = () => {
         [id, selectedStudent, type, description, setAnnotations, setLoadingAnnotations, setErrorAnnotations, setErrorCode],
     );
 
-
-
     /**
      * useCallback para configurar el formulario de editar la anotación
      */
@@ -546,19 +561,24 @@ const StudentsSubject = () => {
      */
     const handleEditAnnotation = useCallback(
         async () => {
-            if (selectedStudent !== null && selectedAnnotation !== null && id !== null)
+            if (selectedStudent === null || selectedAnnotation === null || id === null)
             {
-                let object = {
-                    idSubject: id,
-                    type: type,
-                    description: Encrypt(description),
-                }
+                return;
+            }
 
-                if (type === "" || description === "")
-                {
-                    return showMessage("Complete los campos de texto", "info");
-                }
+            let object = {
+                idSubject: id,
+                type: type,
+                description: Encrypt(description),
+            }
 
+            if (type === "" || description === "")
+            {
+                return showMessage("Complete los campos de texto", "info");
+            }
+            
+            if (type === "positive" || type === "negative" || type === "observation")
+            {
                 await axios.put("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/put-annotation-student-course", {
                     annotationData: Encrypt(object)
                 }, {
@@ -627,8 +647,6 @@ const StudentsSubject = () => {
         },
         [id, type, description, selectedStudent, selectedAnnotation, setAnnotations, setErrorAnnotations, setErrorCode, setLoadingAnnotations, setEditAnnotation],
     );
-
-
     
     /**
      * useCallback para configurar el formulario de eliminar la anotación
@@ -726,11 +744,7 @@ const StudentsSubject = () => {
         },
         [id, selectedStudent, selectedAnnotation, setAnnotations, setErrorAnnotations, setErrorCode, setLoadingAnnotations],
     );
-    /* ------ ANNOTATIONS CALLBACK ------ */
 
-
-
-    /* ------ GRADES CALLBACK ------ */
     const handleAddGrades = useCallback(
         async (idUnit, numberUnit, nameUnit) => {
             if (id !== null && selectedStudent !== null && idUnit !== null && numberUnit !== null && nameUnit !== null)
@@ -817,11 +831,9 @@ const StudentsSubject = () => {
         },
         [id, selectedStudent, setGrades, setErrorGrades, setErrorCode, setLoadingGrades],
     );
-    /* ------ GRADES CALLBACK ------ */
 
 
 
-    /* ------ DIALOG CALLBACKS ------ */
     /**
      * useCallback para mostrar el dialogo de asignar notas
      */
@@ -860,8 +872,6 @@ const StudentsSubject = () => {
         [setGradesDialog, setGrades, setSelectedStudent],
     );
 
-
-
     /**
      * useCallback para mostrar el dialogo de asignar notas
      */
@@ -899,11 +909,8 @@ const StudentsSubject = () => {
         },
         [setAnnotationDialog, setAnnotations, setSelectedStudent],
     );
-    /* ------ DIALOG CALLBACKS ------ */
 
 
-
-    /* ------ FILTER CALLBACKS ------ */
     /**
      * useCallback para filtrar las anotaciones desde la base de datos
      */
@@ -993,7 +1000,6 @@ const StudentsSubject = () => {
         },
         [selectedStudent, handleGetAnnotations],
     );
-    /* ------ FILTER CALLBACKS ------ */
 
 
     // Functions
@@ -1050,7 +1056,7 @@ const StudentsSubject = () => {
             await handleGetStudentsCourse();
         }
 
-        if (authorized === true  && subject !== null && subject !== undefined)
+        if (authorized === true && subject !== null && subject !== undefined)
         {
             callQuery();
 
@@ -1117,6 +1123,38 @@ const StudentsSubject = () => {
                     <CircularProgress style={{ color: "#2074d4" }} />
                     <Typography style={{ marginTop: 15 }}>Cargando Acceso al Curso</Typography>
                 </Paper>
+            ) : authorized === undefined ? (
+                <Paper elevation={0} itemType="div" style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto" }}>
+                    <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "calc(10% + 110px)" }}>
+                        <Typography>
+                        {
+                            errorCode !== null ? (
+                                errorCode === "NO_ADDED" ? (
+                                    "El identificador ingresado es incorrecto, o no estas asignado a este curso, intentelo nuevamente"
+                                ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                    "Recargue la página para inicar sesión nuevamente, debido a que la sesión se ha vencido"
+                                ) : (
+                                    "Ha ocurrido un error al momento de verificar el Acceso al Contenido"
+                                )
+                            ) : (
+                                "Ha ocurrido un error al momento de verificar el Acceso al Contenido"
+                            )
+                        }
+                        </Typography>
+
+                        <React.Fragment>
+                        {
+                            errorCode !== null && (
+                                errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
+                                    <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetAuthorizedAccess()}>
+                                        <Typography variant="button">Recargar Verificar Acceso</Typography>
+                                    </Button>
+                                )
+                            )
+                        }
+                        </React.Fragment>
+                    </Paper>
+                </Paper>
             ) : (
                 <Paper elevation={0} itemType="div">
                 {
@@ -1126,11 +1164,32 @@ const StudentsSubject = () => {
                             <Typography style={{ marginTop: 15 }}>Obteniendo los Datos del Curso</Typography>
                         </Paper>
                     ) : errorSubject === true ? (
-                        <Paper elevation={0} itemType="div" style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
-                            <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                <Typography>Ha Ocurrido un error al Momento de Cargar la Asignatura</Typography>
+                        <Paper elevation={0} itemType="div" style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto" }}>
+                            <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "calc(10% + 110px)" }}>
+                                <Typography>
+                                {
+                                    errorCode !== null ? (
+                                        errorCode === "COURSE_ID_NULL" ? (
+                                            "Verifique el identificador enviado e intente nuevamente"
+                                        ) : errorCode === "COURSE_ID_BAD_FORMATING" ? (
+                                            "Verifique el formato del identificador enviado e intentelo nuevamente"
+                                        ) : errorCode === "COURSE_ID_BAD_TYPE" ? (
+                                            "Verifique el tipo de dato enviado, intentelo nuevamente"
+                                        ) :  errorCode === "SUBJECT_NOT_FOUND" ? (
+                                            "La asignatura no ha sido encontrada, verifique el identificador e intentelo nuevamente"
+                                        ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                            "Recargue la página para inicar sesión nuevamente, debido a que la sesión se ha vencido"
+                                        ) : (
+                                            "Ha ocurrido algo inesperado al obtener la asignatura"
+                                        )
+                                    ) : (
+                                        "Ha ocurrido algo inesperado al obtener la asignatura"
+                                    )
+                                }
+                                </Typography>
+
                                 <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetDetailedSubject()}>
-                                    <Typography>Recargar Contenido de la Asignatura</Typography>
+                                    <Typography variant="button">Recargar Contenido de la Asignatura</Typography>
                                 </Button>
                             </Paper>
                         </Paper>
@@ -1138,6 +1197,36 @@ const StudentsSubject = () => {
                         <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: "calc(10% + 110px)" }}>
                             <CircularProgress style={{ color: "#2074d4" }} />
                             <Typography style={{ marginTop: 15 }}>Cargando Contenido de la Asignatura</Typography>
+                        </Paper>
+                    ) : subject === undefined ? (
+                        <Paper elevation={0} itemType="div" style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto" }}>
+                            <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "calc(10% + 110px)" }}>
+                                <Typography>
+                                {
+                                    errorCode !== null ? (
+                                        errorCode === "COURSE_ID_NULL" ? (
+                                            "Verifique el identificador enviado e intente nuevamente"
+                                        ) : errorCode === "COURSE_ID_BAD_FORMATING" ? (
+                                            "Verifique el formato del identificador enviado e intentelo nuevamente"
+                                        ) : errorCode === "COURSE_ID_BAD_TYPE" ? (
+                                            "Verifique el tipo de dato enviado, intentelo nuevamente"
+                                        ) :  errorCode === "SUBJECT_NOT_FOUND" ? (
+                                            "La asignatura no ha sido encontrada, verifique el identificador e intentelo nuevamente"
+                                        ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                            "Recargue la página para inicar sesión nuevamente, debido a que la sesión se ha vencido"
+                                        ) : (
+                                            "Ha ocurrido algo inesperado al obtener la asignatura"
+                                        )
+                                    ) : (
+                                        "Ha ocurrido algo inesperado al obtener la asignatura"
+                                    )
+                                }
+                                </Typography>
+
+                                <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetDetailedSubject()}>
+                                    <Typography variant="button">Recargar Contenido de la Asignatura</Typography>
+                                </Button>
+                            </Paper>
                         </Paper>
                     ) : (
                         <React.Fragment>
@@ -1171,7 +1260,27 @@ const StudentsSubject = () => {
                                         ) : errorStudents === true ? (
                                             <Paper elevation={0} itemType="div" style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
                                                 <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                                    <Typography>Ha Ocurrido un error al Momento de Cargar los Estudiantes</Typography>
+                                                    <Typography>
+                                                    {
+                                                        errorCode !== null ? (
+                                                            errorCode === "PARAM_NULL" ? (
+                                                                "Verifique el identificador enviado e intente nuevamente"
+                                                            ) : errorCode === "PARAM_BAD_FORMATING" ? (
+                                                                "Verifique el formato del identificador enviado e intentelo nuevamente"
+                                                            ) : errorCode === "PARAM_EMPTY" ? (
+                                                                "Verifique el tipo de dato enviado, intentelo nuevamente"
+                                                            ) :  errorCode === "NO_STUDENTS_FOUNDED" ? (
+                                                                "No existen estudiantes compruebe nuevamente"
+                                                            ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                                                "Recargue la página para inicar sesión nuevamente, debido a que la sesión se ha vencido"
+                                                            ) : (
+                                                                "Ha ocurrido algo inesperado al obtener la asignatura"
+                                                            )
+                                                        ) : (
+                                                            "Ha ocurrido algo inesperado al obtener la asignatura"
+                                                        )
+                                                    }
+                                                    </Typography>
                                                     <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetStudentsCourse()}>
                                                         <Typography>Recargar Estudiantes de la asignatura</Typography>
                                                     </Button>
@@ -1181,6 +1290,35 @@ const StudentsSubject = () => {
                                             <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
                                                 <CircularProgress style={{ color: "#2074d4" }} />
                                                 <Typography style={{ marginTop: 15 }}>Cargando los Estudiantes de la Asignatura</Typography>
+                                            </Paper>
+                                        ) : students === undefined ? (
+                                            <Paper elevation={0} itemType="div" style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
+                                                <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                    <Typography>
+                                                    {
+                                                        errorCode !== null ? (
+                                                            errorCode === "PARAM_NULL" ? (
+                                                                "Verifique el identificador enviado e intente nuevamente"
+                                                            ) : errorCode === "PARAM_BAD_FORMATING" ? (
+                                                                "Verifique el formato del identificador enviado e intentelo nuevamente"
+                                                            ) : errorCode === "PARAM_EMPTY" ? (
+                                                                "Verifique el tipo de dato enviado, intentelo nuevamente"
+                                                            ) :  errorCode === "NO_STUDENTS_FOUNDED" ? (
+                                                                "No existen estudiantes compruebe nuevamente"
+                                                            ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                                                "Recargue la página para inicar sesión nuevamente, debido a que la sesión se ha vencido"
+                                                            ) : (
+                                                                "Ha ocurrido algo inesperado al obtener la asignatura"
+                                                            )
+                                                        ) : (
+                                                            "Ha ocurrido algo inesperado al obtener la asignatura"
+                                                        )
+                                                    }
+                                                    </Typography>
+                                                    <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetStudentsCourse()}>
+                                                        <Typography>Recargar Estudiantes de la asignatura</Typography>
+                                                    </Button>
+                                                </Paper>
                                             </Paper>
                                         ) : (
                                             <React.Fragment>
@@ -1193,11 +1331,31 @@ const StudentsSubject = () => {
 
                                                                 <ListItemSecondaryAction>
                                                                 {
-                                                                    helper === null ? (
+                                                                    loadingHelper === true ? (
                                                                         <Paper elevation={0} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
-                                                                            <Typography>Cargando</Typography>
+                                                                            <CircularProgress style={{ color: "#2074d4" }} />
                                                                         </Paper>
-                                                                    ) : helper === false && (
+                                                                    ) : errorHelper === true ? (
+                                                                        <Paper elevation={0} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
+                                                                            <Tooltip title={<Typography>Recargar nivel</Typography>}>
+                                                                                <IconButton onClick={async () => await handleGetTeacherCourse()}>
+                                                                                    <Replay />
+                                                                                </IconButton>
+                                                                            </Tooltip>
+                                                                        </Paper>
+                                                                    ) : helper === null ? (
+                                                                        <Paper elevation={0} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
+                                                                            <CircularProgress style={{ color: "#2074d4" }} />
+                                                                        </Paper>
+                                                                    ) : helper === undefined ? (
+                                                                        <Paper elevation={0} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
+                                                                            <Tooltip title={<Typography>Recargar nivel</Typography>}>
+                                                                                <IconButton onClick={async () => await handleGetTeacherCourse()}>
+                                                                                    <Replay />
+                                                                                </IconButton>
+                                                                            </Tooltip>
+                                                                        </Paper>
+                                                                    ) : helper === false ? (
                                                                         <Paper elevation={0} style={{ width: "100%", display: "flex", flexDirection: "row", alignItems: "center" }}>
                                                                             <Tooltip title={<Typography>Asignar Notas a este Estudiante</Typography>}>
                                                                                 <IconButton edge="end" onClick={async () => await handleOpenSetGrades(doc)} style={{ marginRight: 5 }}>
@@ -1210,7 +1368,10 @@ const StudentsSubject = () => {
                                                                                 </IconButton>
                                                                             </Tooltip>
                                                                         </Paper>
-                                                                    )                        
+                                                                    ) : (
+                                                                        <React.Fragment>
+                                                                        </React.Fragment>
+                                                                    )
                                                                 }
                                                                 </ListItemSecondaryAction>
                                                             </ListItem>
@@ -1263,6 +1424,15 @@ const StudentsSubject = () => {
                                                 ) : grades === null ? (
                                                     <Paper elevation={0} itemType="div" style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
                                                         <Typography style={{ marginTop: 15 }}>Cargando Calificaciones del Estudiante</Typography>
+                                                    </Paper>
+                                                ) : grades === undefined ? (
+                                                    <Paper elevation={0} itemType="div" style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
+                                                        <Typography style={{ marginTop: 15 }}>Ha ocurrido un error al obtener las Calificaciones del Estudiante</Typography>
+
+                                                        <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                        <Button onClick={async () => await handleGetGradesStudentCourse(selectedStudent.id)} style={{ color: "#2074d4" }}>
+                                                            <Typography variant="button">Recargar Calificaciones</Typography>
+                                                        </Button>
                                                     </Paper>
                                                 ) : (
                                                     <React.Fragment>
@@ -1356,26 +1526,47 @@ const StudentsSubject = () => {
                                                             <Paper elevation={0} itemType="div" style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
                                                                 <Typography style={{ marginTop: 15 }}>Cargando las Anotaciones del Estudiante</Typography>
                                                             </Paper>
+                                                        ) : annotations === undefined ? (
+                                                            <Paper elevation={0} itemType="div" style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column" }}>
+                                                                <Typography style={{ marginTop: 15 }}>Ha ocurrido un error al obtener las Anotaciones del Estudiante</Typography>
+
+                                                                <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                                <Button onClick={async () => await handleGetAnnotations(selectedStudent.id)} style={{ color: "#2074d4" }}>
+                                                                    <Typography variant="button">Recargar Annotaciones</Typography>
+                                                                </Button>
+                                                            </Paper>
                                                         ) : (
                                                             <React.Fragment>
                                                                 <Card variant="outlined" style={{ width: "100%", maxHeight: "59vh", overflow: "auto", marginLeft: 5, marginRight: 5, marginTop: 15 }}>
                                                                     <CardContent>
                                                                         <Typography variant="h6">Todas las anotaciones del estudiante {Decrypt(selectedStudent.data.name)} {Decrypt(selectedStudent.data.surname)}</Typography>
 
-                                                                        <Button aria-haspopup="true" color="inherit" style={{ marginTop: 10 }} onClick={handleClickMenuFilter}>
-                                                                            <Typography variant="button">Filtrar Anotaciones</Typography>
-                                                                        </Button>
+                                                                        <React.Fragment>
+                                                                        {
+                                                                            annotations.length > 0 && (
+                                                                                <React.Fragment>
+                                                                                    <Button aria-haspopup="true" color="inherit" style={{ marginTop: 10 }} onClick={handleClickMenuFilter}>
+                                                                                        <Typography variant="button">Filtrar Anotaciones</Typography>
+                                                                                    </Button>
 
-                                                                        <Menu anchorEl={menuSelect} keepMounted open={Boolean(menuSelect)} onClose={handleCloseMenuFilter} style={{ marginTop: 50 }}>
-                                                                            <MenuItem onClick={() => handleFilterAnnotations("positive")}>Filtrar por Anotaciones Positivas</MenuItem>
-                                                                            <MenuItem onClick={() => handleFilterAnnotations("negative")}>Filtrar por Anotaciones Negativas</MenuItem>
-                                                                            <MenuItem onClick={() => handleFilterAnnotations("observation")}>Filtrar por Anotaciones de Observación</MenuItem>
-                                                                        </Menu>
+                                                                                    <Menu anchorEl={menuSelect} keepMounted open={Boolean(menuSelect)} onClose={handleCloseMenuFilter} style={{ marginTop: 50 }}>
+                                                                                        <MenuItem onClick={async () => await handleFilterAnnotations("positive")}>Filtrar por Anotaciones Positivas</MenuItem>
+                                                                                        <MenuItem onClick={async () => await handleFilterAnnotations("negative")}>Filtrar por Anotaciones Negativas</MenuItem>
+                                                                                        <MenuItem onClick={async () => await handleFilterAnnotations("observation")}>Filtrar por Anotaciones de Observación</MenuItem>
+                                                                                    </Menu>
+                                                                                </React.Fragment>
+                                                                            )
+                                                                        }
+                                                                        </React.Fragment>
 
                                                                         <List>
                                                                         {
-                                                                            annotations.map(doc => (
-                                                                                <Paper elevation={0} key={doc.id}>
+                                                                            annotations.length <= 0 ? (
+                                                                                <React.Fragment>
+                                                                                    <Typography>No hay anotaciones creadas en este usuario, intente recargar anotaciones para refrescar las anotaciones</Typography>
+                                                                                </React.Fragment>
+                                                                            ) : annotations.map(doc => (
+                                                                                <Paper key={doc.id} elevation={0}>
                                                                                     <ListItem key={doc.id}>
                                                                                         <ListItemText primary={
                                                                                             <React.Fragment>
@@ -1427,8 +1618,7 @@ const StudentsSubject = () => {
                                                                         </List>
 
                                                                         <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                                                            <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                                                                                
+                                                                            <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />   
                                                                             <Button style={{ color: "#2074d4", marginBottom: 5 }} onClick={async () => await handleGetAnnotations(selectedStudent.id)}>
                                                                                 <Typography variant="button">Recargar Anotaciones</Typography>
                                                                             </Button>
@@ -1436,7 +1626,7 @@ const StudentsSubject = () => {
                                                                             <React.Fragment>
                                                                             {
                                                                                 useFilter === true && (
-                                                                                    <Button style={{ color: "#34495E" }} onClick={handleRemoveFilterAnnotations}>
+                                                                                    <Button style={{ color: "#34495E" }} onClick={async () => await handleRemoveFilterAnnotations()}>
                                                                                         <Typography variant="button">Quitar Filtro</Typography>
                                                                                     </Button>
                                                                                 )
@@ -1456,16 +1646,15 @@ const StudentsSubject = () => {
                                                                 <Paper elevation={0} style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
                                                                 {
                                                                     selectedAnnotation === null ? (
-                                                                        <Typography variant="h6">Cargando Datos</Typography>
+                                                                        <Typography variant="h6">Crea una nueva anotación, o bien seleccione una anotación para editarla o eliminarla</Typography>
+                                                                    ) : editAnnotation === true ? (
+                                                                        <Typography variant="h6">Editar anotación {Decrypt(selectedAnnotation.data.description)}</Typography>
+                                                                    ) : deleteAnnotation === true ? (
+                                                                        <Typography variant="h6">Eliminar anotación {Decrypt(selectedAnnotation.data.description)}</Typography>
                                                                     ) : (
-                                                                        editAnnotation === true ? (
-                                                                            <Typography variant="h6">Editar anotación {Decrypt(selectedAnnotation.data.description)}</Typography>
-                                                                        ) : deleteAnnotation === true ? (
-                                                                            <Typography variant="h6">Eliminar anotación {Decrypt(selectedAnnotation.data.description)}</Typography>
-                                                                        ) : (
-                                                                            <Typography variant="h6">Crear una nueva anotación</Typography>
-                                                                        )
+                                                                        <Typography variant="h6">Crea una nueva anotación, o bien seleccione una anotación para editarla o eliminarlan</Typography>
                                                                     )
+                                                                    
                                                                 }
                                                                 </Paper>
 

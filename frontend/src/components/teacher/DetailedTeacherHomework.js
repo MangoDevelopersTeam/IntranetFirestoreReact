@@ -27,7 +27,6 @@ const DetailedTeacherHomework = () => {
     const fullScreen = useMediaQuery(themeApp.breakpoints.down('sm'));
     
 
-
     // useStates
     const [subject,   setSubject] = useState(null);
     const [errorSubject, setErrorSubject] = useState(false);
@@ -49,10 +48,8 @@ const DetailedTeacherHomework = () => {
     const [feedbackData, setFeedbackData] = useState(null);
     const [loadingFeedback, setLoadingFeedback] = useState(false);
 
-
     const [feedback, setFeedback] = useState("");
     const [selectedHomework, setSelectedHomework] = useState(null);
-
 
     const [loadingPostFeedback, setLoadingPostFeedback] = useState(false);
     const [errorPostfeedback, setErrorPostFeedback] = useState(false);
@@ -75,8 +72,6 @@ const DetailedTeacherHomework = () => {
 
     const [anchorEl, setAnchorEl] = useState(null);
 
-
-
     // functions
     const useQuery = () => {
         return new URLSearchParams(useLocation().search);
@@ -86,13 +81,9 @@ const DetailedTeacherHomework = () => {
         setAnchorEl(event.currentTarget);
     };
     
-
-
     const query = useQuery();
     const idSubject = query.get("subject");
     const idUnit = query.get("unit");
-
-
 
     // useCallbacks
     const handleOpenFeedbackDialog = useCallback(
@@ -149,7 +140,6 @@ const DetailedTeacherHomework = () => {
     );
 
 
-
     const handleGetDetailedSubject = useCallback(
         async () => {
             if (idSubject !== null)
@@ -164,17 +154,17 @@ const DetailedTeacherHomework = () => {
                 .then(result => {
                     console.log(Decrypt(Decrypt(result.data.data).subject)[0]);
 
-                    if (Decrypt(Decrypt(result.data.data).subject)[0].data === undefined)
+                    if (result.status === 200 && result.data.code === "PROCESS_OK")
                     {
-                        setErrorSubject(true);
-                        setSubject(undefined);
-                        setErrorCode(result.data.code);
+                        setSubject(Decrypt(result.data.data));
+                        setErrorSubject(false);
+                        setErrorCode(null);
                     }
                     else
                     {
-                        setErrorSubject(false);
-                        setSubject(Decrypt(result.data.data));
-                        setErrorCode(null);
+                        setSubject(undefined);
+                        setErrorSubject(true);
+                        setErrorCode(result.data.code);
                     }
 
                     setLoadingSubject(false);
@@ -227,6 +217,12 @@ const DetailedTeacherHomework = () => {
                         setDetailedHomework(Decrypt(result.data.data));
                         setErrorCode(null);
                     }
+                    else
+                    {
+                        setErrorDetailedHomework(true);
+                        setDetailedHomework(undefined);
+                        setErrorCode(result.data.code);
+                    }
 
                     setLoadingDetailedHomework(false);
                 })
@@ -272,17 +268,18 @@ const DetailedTeacherHomework = () => {
                 })
                 .then(result => {
                     console.log(result);
-                    console.log(Decrypt(result.data.data));
 
                     if (result.status === 200 && result.data.code === "PROCESS_OK")
                     {
-                        setErrorStudents(false);
                         setStudents(Decrypt(result.data.data));
-                    }
-                    else if (result.data.code === "STUDENTS_DOESNT_EXIST")
-                    {
                         setErrorStudents(false);
-                        setStudents([]);
+                        setErrorCode(null);
+                    }
+                    else
+                    {
+                        setStudents(undefined);
+                        setErrorStudents(true);
+                        setErrorCode(result.data.code);
                     }
 
                     setLoadingStudents(false);
@@ -337,7 +334,7 @@ const DetailedTeacherHomework = () => {
                     else
                     {
                         setErrorAuthorized(true);
-                        setAuthorized(false);
+                        setAuthorized(undefined);
                         setErrorCode(result.data.code);
                     }
 
@@ -345,7 +342,7 @@ const DetailedTeacherHomework = () => {
                 })
                 .catch(error => {
                     setErrorAuthorized(true);
-                    setAuthorized(false);
+                    setAuthorized(undefined);
 
                     if (error.response)
                     {   
@@ -788,11 +785,18 @@ const DetailedTeacherHomework = () => {
     }, [authorized, handleGetStudentsHomework]);
 
 
-
     return (
         <Paper elevation={0}>
         {
-            loadingAuthorized === true ? (
+            idHomework === null || idSubject === null || idUnit === null ? (
+                <Paper elevation={0}>
+                    <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto" }}>
+                        <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "calc(10% + 110px)" }}>
+                            <Typography>No ha enviado todos los parametros suficientes, verifique los datos enviados e intentelo nuevamente</Typography>
+                        </Paper>
+                    </Paper>
+                </Paper>
+            ) : loadingAuthorized === true ? (
                 <Paper elevation={0} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: "calc(10% + 110px)" }}>
                     <CircularProgress style={{ color: "#2074d4" }} />
                     <Typography style={{ marginTop: 15 }}>Verificando acceso al Contenido</Typography>
@@ -833,6 +837,38 @@ const DetailedTeacherHomework = () => {
                 <Paper elevation={0} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: "calc(10% + 110px)" }}>
                     <CircularProgress style={{ color: "#2074d4" }} />
                     <Typography style={{ marginTop: 15 }}>Cargando Acceso al Curso</Typography>
+                </Paper>
+            ) : authorized === undefined ? (
+                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto" }}>
+                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "calc(10% + 110px)" }}>
+                        <Typography>
+                        {
+                            errorCode !== null ? (
+                                errorCode === "NO_ADDED" ? (
+                                    "El identificador ingresado es incorrecto, o no estas asignado a este curso, intentelo nuevamente"
+                                ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                    "Recargue la página para inicar sesión nuevamente, debido a que la sesión se ha vencido"
+                                ) : (
+                                "Ha ocurrido un error al momento de verificar el Acceso al Contenido"
+                                )
+                            ) : (
+                                "Ha ocurrido un error al momento de verificar el Acceso al Contenido"
+                            )
+                        }
+                        </Typography>
+
+                        <React.Fragment>
+                        {
+                            errorCode !== null && (
+                                errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
+                                    <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetAuthorizedAccess()}>
+                                        <Typography variant="button">Recargar Verificar Acceso</Typography>
+                                    </Button>
+                                )
+                            )
+                        }
+                        </React.Fragment>
+                    </Paper>
                 </Paper>
             ) : authorized === false ? (
                 <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
@@ -884,6 +920,38 @@ const DetailedTeacherHomework = () => {
                         <Paper elevation={0} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: "calc(10% + 110px)" }}>
                             <CircularProgress style={{ color: "#2074d4" }} />
                             <Typography style={{ marginTop: 15 }}>Cargando datos de la Asignatura</Typography>
+                        </Paper>
+                    ) : subject === undefined ? (
+                        <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto" }}>
+                            <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "calc(10% + 110px)" }}>
+                                <Typography>
+                                {
+                                    errorCode !== null ? (
+                                        errorCode === "NO_ADDED" ? (
+                                            "El identificador ingresado es incorrecto, o no estas asignado a este curso, intentelo nuevamente"
+                                        ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                            "Recargue la página para inicar sesión nuevamente, debido a que la sesión se ha vencido"
+                                        ) : (
+                                            "Ha ocurrido un error al momento de verificar el Acceso al Contenido"
+                                        )
+                                    ) : (
+                                        "Ha ocurrido un error al momento de verificar el Acceso al Contenido"
+                                    )
+                                }
+                                </Typography>
+
+                                <React.Fragment>
+                                {
+                                    errorCode !== null && (
+                                        errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
+                                            <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetAuthorizedAccess()}>
+                                                <Typography variant="button">Recargar Verificar Acceso</Typography>
+                                            </Button>
+                                        )
+                                    )
+                                }
+                                </React.Fragment>
+                            </Paper>
                         </Paper>
                     ) : (
                         <Paper elevation={0}>
@@ -937,6 +1005,30 @@ const DetailedTeacherHomework = () => {
                                 <Paper elevation={0} style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: "calc(10% + 110px)" }}>
                                     <CircularProgress style={{ color: "#2074d4" }} />
                                     <Typography style={{ marginTop: 15 }}>Cargando información de la Tarea</Typography>
+                                </Paper>
+                            ) : detailedHomework === undefined ? (
+                                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto" }}>
+                                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "calc(10% + 110px)" }}>
+                                        <Typography>
+                                        {
+                                            errorCode === null ? (      
+                                                "Ha ocurrido un error al obtener la información de la tarea"
+                                            ) : (
+                                                errorCode === "HOMEWORK_NOT_FOUND" ? (
+                                                    "La tarea no existe, por favor, ingrese bien el identificador de la tarea e Intentelo nuevamente"
+                                                ) : (
+                                                    "Ha ocurrido un error al obtener la información de la tarea"
+                                                )
+                                            )
+                                        }
+                                        </Typography>
+
+                                        <React.Fragment>
+                                            <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetHomeworkInfo()}>
+                                                <Typography variant="button">Recargar Información de la Tarea</Typography>
+                                            </Button>
+                                        </React.Fragment>
+                                    </Paper>
                                 </Paper>
                             ) : (
                                 <React.Fragment>
@@ -994,8 +1086,10 @@ const DetailedTeacherHomework = () => {
                                                         ) : (
                                                             errorCode === "COURSE_ID_NULL" ? (
                                                                 "Verifique la Id del curso que se le envía"
+                                                            ) : errorCode === "STUDENTS_DOESNT_EXIST" ? (
+                                                                "Al parecer no hay estudiantes asignados a esta asignatura, compruebe los estudiantes e intentelo nuevamente"
                                                             ) : (
-                                                                "Ha ocurrido un error al obtener los alumnos de la asignatura"
+                                                                "Algo inesperado acaba de ocurrir al obtener los alumnos de la asignatura"
                                                             )
                                                         )
                                                     }
@@ -1016,7 +1110,21 @@ const DetailedTeacherHomework = () => {
                                         ) : students === undefined ? (
                                             <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto" }}>
                                                 <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: "calc(5% + 20px)" }}>
-                                                    <Typography>Ha ocurrido un error al intentar obtener a los alumnos</Typography>
+                                                    <Typography>
+                                                    {
+                                                        errorCode === null ? (      
+                                                            "Ha ocurrido un error al obtener los alumnos"
+                                                        ) : (
+                                                            errorCode === "COURSE_ID_NULL" ? (
+                                                                "Verifique la Id del curso que se le envía"
+                                                            ) : errorCode === "STUDENTS_DOESNT_EXIST" ? (
+                                                                "Al parecer no hay estudiantes asignados a esta asignatura, compruebe los estudiantes e intentelo nuevamente"
+                                                            ) : (
+                                                                "Algo inesperado acaba de ocurrir al obtener los alumnos de la asignatura"
+                                                            )
+                                                        )
+                                                    }
+                                                    </Typography>
 
                                                     <React.Fragment>
                                                         <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetStudentsHomework()}>
@@ -1066,8 +1174,8 @@ const DetailedTeacherHomework = () => {
                                                                                 <React.Fragment>
                                                                                     <React.Fragment>
                                                                                     {
-                                                                                        doc.homework.data.limitTime === true ? (
-                                                                                            <Typography style={doc.homework.data.inTime === true ? { color: "#50904E", marginRight: 190, marginLeft: 15 } : { color: "red", marginRight: 130 }}>{doc.homework.data.remainingTime}</Typography>
+                                                                                        detailedHomework[0].data.limitTime === true ? (
+                                                                                            <Typography style={doc.homework.data.inTime === true ? { color: "#50904E", marginRight: 190, marginLeft: 15 } : { color: "red", marginRight: 190 }}>{doc.homework.data.remainingTime}</Typography>
                                                                                         ) : (
                                                                                             <Typography style={{ marginRight: 190, marginLeft: 15 }}>Tarea enviada</Typography>
                                                                                         )

@@ -232,8 +232,6 @@ const ManageSubject = () => {
         [type, grade, letter, number, courseName, description, handleGetCourses, setSubjects, setErrorCode, setErrorPostSubject, setLoadingPostSubject, handleClearFields],
     );
 
-    
-
 
     // dialogs
     /**
@@ -277,7 +275,6 @@ const ManageSubject = () => {
         [setDeleteSubjectDialog],
     );
 
-
     // common callbacks
     const handleDeleteCourse = useCallback(
         async () => {
@@ -301,6 +298,7 @@ const ManageSubject = () => {
                     setErrorDeleteSubject(false);
                     setErrorCode(null);
                     handleHideDeleteCourseDialog();
+                    showMessage("Asignatura eliminada exitosamente", "succes");
                 }
                 else
                 {
@@ -330,9 +328,8 @@ const ManageSubject = () => {
                 }
             });
         },
-        [selectedSubject, setLoadingDeleteSubject, setErrorDeleteSubject, setErrorCode, handleHideDeleteCourseDialog],
+        [selectedSubject, setLoadingDeleteSubject, setErrorDeleteSubject, setErrorCode, handleHideDeleteCourseDialog, handleGetCourses],
     );
-
 
     // useEffects
     useEffect(() => {

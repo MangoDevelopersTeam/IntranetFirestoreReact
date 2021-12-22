@@ -1,19 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useHistory } from 'react-router-dom';
 
-import { Accordion, AccordionDetails, AccordionSummary, AppBar, Box, Breadcrumbs, Button, Card, CardContent, CircularProgress, Divider, FormControl, InputLabel, List, ListItem, ListItemText, makeStyles, MenuItem, Paper, Select, Tab, Tabs, Typography } from '@material-ui/core';
-import { ExpandMore, NavigateNext } from '@material-ui/icons';
+import { AppBar, Box, Breadcrumbs, Button, Card, CardContent, CircularProgress, Divider, ListItem, ListItemText, Paper, Tab, Tabs, Typography } from '@material-ui/core';
+import { NavigateNext } from '@material-ui/icons';
 
-import { clearAuthData } from '../../helpers/auth/handleGetLevel';
 import { Decrypt, Encrypt } from '../../helpers/cipher/cipher';
 
 import PropTypes from 'prop-types';
 
 import axios from 'axios';
-import history from '../../helpers/history/handleHistory';
-
-import { myArrayRegions } from './../../utils/allCourses'
-import { showMessage } from '../../helpers/message/handleMessage';
 
 const TabPanel = (props) => {
     const { children, value, index, ...other } = props;
@@ -44,58 +39,28 @@ const a11yProps = (index) => {
     };
 }
 
-const useStyles = makeStyles((theme) => ({
-    root: {
-      flexGrow: 1,
-    },
-    buttonOptions: {
-        flexGrow: 1,
-        marginTop: 15
-    },
-    appbarUsers: {
-        top: 65,
-        backgroundColor: theme.palette.background.paper,
-    }
-}));
-
 const Users = () => {
     // uses
-    // eslint-disable-next-line
-    const classes = useStyles();
     const history = useHistory();
 
     // useStates
-    const [value, setValue] = useState(0);
     const [students, setStudents] = useState(null);
-    const [teachers, setTeachers] = useState(null);
-    const [proxies, setProxies] = useState(null);
-
     const [callStudents, setCallStudents] = useState(true);
-    const [callTeachers, setCallTeachers] = useState(false);
-    const [callProxies, setCallProxies] = useState(false);
-
+    const [errorStudents, setErrorStudents] = useState(false);
     const [loadingStudents, setLoadingStudents] = useState(true);
+    const [errorCode, setErrorCode] = useState(null);
+    
+    const [teachers, setTeachers] = useState(null);
+    const [callTeachers, setCallTeachers] = useState(false);
+    const [errorTeachers, setErrorTeachers] = useState(false);
     const [loadingTeachers, setLoadingTeachers] = useState(false);
+
+    const [proxies, setProxies] = useState(null);
+    const [callProxies, setCallProxies] = useState(false);
+    const [errorProxies, setErrorProxies] = useState(false);
     const [loadingProxies, setLoadingProxies] = useState(false);
 
-    const [regions, setRegions] = useState(null);
-    const [communes, setCommunes] = useState(null);
-
-    const [region, setRegion] = useState("");
-    const [commune, setCommune] = useState("");
-
-
-    // functions
-    /**
-     * Función para manejar el cambio del indice del tab
-     * @param {Event} event evento que recibe
-     * @param {Number} newValue indice del tab
-     */
-    const handleChange = (event, newValue) => {
-        setValue(newValue);
-        handleGetUsersByType(newValue);
-    };
-
+    const [value, setValue] = useState(0);
 
     // useCallbacks
     /**
@@ -122,46 +87,101 @@ const Users = () => {
                 }
             })
             .then(result => {
-                if (result.data.code === "PROCESS_OK")
+                if (result.status === 200 && result.data.code === "PROCESS_OK")
                 {
                     if (type === "teacher")
                     {
-                        setLoadingTeachers(false);
                         setTeachers(Decrypt(result.data.data)); 
+                        setLoadingTeachers(false);
+                        setErrorTeachers(false);
+                        setErrorCode(null);
                     }
                     else if (type === "student")
                     {
-                        setLoadingStudents(false);
                         setStudents(Decrypt(result.data.data)); 
+                        setLoadingStudents(false);
+                        setErrorStudents(false);
+                        setErrorCode(null);
                     }
                     else if (type === "proxie")
                     {
-                        setLoadingProxies(false);
                         setProxies(Decrypt(result.data.data)); 
+                        setLoadingProxies(false);
+                        setErrorProxies(false);
+                        setErrorCode(null);
+                    }
+                }
+                else
+                {
+                    if (type === "teacher")
+                    {
+                        setTeachers(undefined); 
+                        setLoadingTeachers(false);
+                        setErrorTeachers(true);
+                        setErrorCode(result.data.code);
+                    }
+                    else if (type === "student")
+                    {
+                        setStudents(undefined); 
+                        setLoadingStudents(false);
+                        setErrorStudents(true);
+                        setErrorCode(result.data.code);
+                    }
+                    else if (type === "proxie")
+                    {
+                        setProxies(undefined); 
+                        setLoadingProxies(false);
+                        setErrorProxies(true);
+                        setErrorCode(result.data.code);
                     }
                 }
             })
             .catch(error => {
+                if (type === "teacher")
+                {
+                    setTeachers(undefined); 
+                    setLoadingTeachers(false);
+                    setErrorTeachers(true);
+                    setErrorCode(error.response.data.error.code);
+                }
+                else if (type === "student")
+                {
+                    setStudents(undefined); 
+                    setLoadingStudents(false);
+                    setErrorStudents(true);
+                    setErrorCode(error.response.data.error.code);
+                }
+                else if (type === "proxie")
+                {
+                    setProxies(undefined); 
+                    setLoadingProxies(false);
+                    setErrorProxies(true);
+                    setErrorCode(error.response.data.error.code);
+                }
+
                 console.log(error.response.data.error.message);
             })
             .finally(() => {
                 return () => {
-                    if (type === "teacher")
-                    {
-                        setTeachers(null); 
-                    }
-                    else if (type === "student")
-                    {
-                        setStudents(null); 
-                    }
-                    else if (type === "proxie")
-                    {
-                        setProxies(null); 
-                    }
+                    setStudents(null);
+                    setCallStudents(null);
+                    setErrorStudents(null);
+                    setLoadingStudents(null);
+                    setErrorCode(null);
+                    
+                    setTeachers(null);
+                    setCallTeachers(null);
+                    setErrorTeachers(null);
+                    setLoadingTeachers(null);
+
+                    setProxies(null);
+                    setCallProxies(null);
+                    setErrorProxies(null);
+                    setLoadingProxies(null);
                 }
             });     
         },
-        [setTeachers, setStudents, setProxies],
+        [setStudents, setCallStudents, setErrorStudents, setLoadingStudents, setErrorCode, setTeachers, setCallTeachers, setErrorTeachers, setLoadingTeachers, setProxies, setCallProxies, setErrorProxies, setLoadingProxies],
     );
 
     /**
@@ -189,91 +209,20 @@ const Users = () => {
     );
 
     /**
-     * useCallback para manejar el cambio de región
+     * Función para manejar el cambio del indice del tab
+     * @param {Event} event evento que recibe
+     * @param {Number} newValue indice del tab
      */
-    const handleChangeRegionCommune = useCallback(
-        async (region) => {
-            setCommune("");
-            setCommunes([]);
-
-            setRegion(region); 
-            let lambda = regions.find(x => x.id === region);
-
-            setCommunes(lambda.communes);
+    const handleChange = useCallback(
+        (event, newValue) => {
+            setValue(newValue);
+            handleGetUsersByType(newValue);
         },
-        [regions, setCommune, setCommunes, setRegion],
+        [setValue, handleGetUsersByType],
     );
 
-
-
-
-    const handleFilterUserByRegionCommune  = useCallback(
-        async () => {
-            if (region === "" || commune === "")
-            {
-                return showMessage("Complete los campos de busqueda", "info");
-            }
-
-            await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/filter-region-commune", {
-                params: {
-                    communeParam: Encrypt(commune),
-                    regionParam: Encrypt(region)   
-                }
-            })
-            .then(result => {
-                console.log(result);
-            })
-            .catch(error => {
-                console.log(error);
-            });
-            /* .finally(() => {
-                return () => {
-                    if (type === "teacher")
-                    {
-                        setTeachers(null); 
-                    }
-                    else if (type === "student")
-                    {
-                        setStudents(null); 
-                    }
-                    else if (type === "proxie")
-                    {
-                        setProxies(null); 
-                    }
-                }
-            }); */  
-        },
-        [region, commune],
-    )
-
-    
     // useEffects
     useEffect(() => {
-        /**
-         * Función para validar el token
-         * @returns no retorna nada
-         */
-        let callQuery = async () => {
-            let responseGetAccess = await axios.get("https://us-central1-open-intranet-api-rest.cloudfunctions.net/api/whoami");
-
-            if (await responseGetAccess.data.code === "TOKEN_MISSING" || await responseGetAccess.data.code === "FIREBASE_VERIFY_TOKEN_ERROR" || await responseGetAccess.data.code === "TOKEN_REVOKED" || await responseGetAccess.data.code === "TOKEN_INVALID")
-            {
-                clearAuthData();
-                history.push("/");
-
-                return;
-            }
-
-            return;
-        };
-
-        return callQuery();
-    }, []);
-
-    useEffect(() => {
-        /**
-         * Funión para obtener a los usuarios
-         */
         let callQuery = async () => {
             await handleGetUsers("student");
         }
@@ -285,21 +234,9 @@ const Users = () => {
         }
     }, [handleGetUsers, setStudents]);
 
-    useEffect(() => {
-        let callQuery = () => {
-            setRegions(myArrayRegions);
-        };
-
-        callQuery();
-
-        return () => {
-            setRegions(null);
-        };        
-    }, [setRegions]);
-
 
     return (
-        <div> 
+        <Paper elevation={0}> 
             <Paper style={{ padding: 20, marginBottom: 15 }} variant="outlined">
                 <Breadcrumbs separator={<NavigateNext fontSize="small" />}>
                     <Link to="/" style={{ textDecoration: "none", color: "#333" }}>
@@ -322,135 +259,329 @@ const Users = () => {
                     <TabPanel value={value} index={0}>
                     {
                         loadingStudents === true ? (
-                            <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                            <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: 30 }}>
                                 <CircularProgress style={{ color: "#2074d4" }} />
-                            </div>
-                        ) : (
-                            students === null ? (
-                                <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-                                    <CircularProgress style={{ color: "#2074d4" }} />
-                                </div>
-                            ) : (
-                                students.length > 0 ? (
-                                    <>
-                                    {
-                                        students.map(doc => (
-                                            <ListItem key={doc.id} button onClick={() => history.push(`/users/${doc.id}`)}>
-                                                <ListItemText primary={<Typography>{`${Decrypt(doc.data.name)} ${Decrypt(doc.data.surname)}`}</Typography>} secondary={<Typography>{Decrypt(doc.data.rut)}</Typography>} />
-                                            </ListItem>
-                                        ))
-                                    }
-
-                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                <Typography style={{ marginTop: 15 }}>Cargando Estudiantes</Typography>
+                            </Paper>
+                        ) : errorStudents === true ? (
+                            <React.Fragment>
+                                <Typography style={{ textAlign: "center" }}>
+                                {
+                                    errorCode !== null ? (
+                                        errorCode === "NO_USERS_ASSIGNED" ? (
+                                            "No hay usuarios creados aquí"
+                                        ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                            "La sesión ha expirado, recargue el navegador para inciar sesión nuevamente"
+                                        ) : (
+                                            "Ha ocurrido un error, intente obtener los usuarios nuevamente"
+                                        )
+                                    ) : (
+                                        "Ha ocurrido un error, intente obtener los usuarios nuevamente"
+                                    )
+                                }
+                                </Typography>
+                                
+                                <React.Fragment>
+                                {
+                                    errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
+                                        <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                                             <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                            <Button onClick={() => handleGetUsers("student")} style={{ color: "#2074d4" }}>Recargar Alumnos</Button>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Typography style={{ textAlign: "center" }}>No existen alumnos aún</Typography>
+                                            <Button onClick={async () => await handleGetUsers("student")} style={{ color: "#2074d4" }}>
+                                                <Typography variant="button">Recargar Alumnos</Typography>
+                                            </Button>
+                                        </Paper>
+                                    )
+                                }
+                                </React.Fragment>
+                            </React.Fragment>     
+                        ) : students === null ? (
+                            <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: 30 }}>
+                                <CircularProgress style={{ color: "#2074d4" }} />
+                                <Typography style={{ marginTop: 15 }}>Cargando Estudiantes</Typography>
+                            </Paper>
+                        ) : students === undefined ? (
+                            <React.Fragment>
+                                <Typography style={{ textAlign: "center" }}>
+                                {
+                                    errorCode !== null ? (
+                                        errorCode === "NO_USERS_ASSIGNED" ? (
+                                            "No hay usuarios creados aquí"
+                                        ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                            "La sesión ha expirado, recargue el navegador para inciar sesión nuevamente"
+                                        ) : (
+                                            "Ha ocurrido un error, intente obtener los usuarios nuevamente"
+                                        )
+                                    ) : (
+                                        "Ha ocurrido un error, intente obtener los usuarios nuevamente"
+                                    )
+                                }
+                                </Typography>
+                                
+                                <React.Fragment>
+                                {
+                                    errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
+                                        <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                            <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                            <Button onClick={async () => await handleGetUsers("student")} style={{ color: "#2074d4" }}>
+                                                <Typography variant="button">Recargar Alumnos</Typography>
+                                            </Button>
+                                        </Paper>
+                                    )
+                                }
+                                </React.Fragment>
+                            </React.Fragment>    
+                        ) : students.length <= 0 ? (
+                            <React.Fragment>
+                                <Typography style={{ textAlign: "center", marginTop: 15, marginBottom: 15 }}>No existen alumnos aún</Typography>
                                         
-                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                            <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                            <Button onClick={() => handleGetUsers("student")} style={{ color: "#2074d4" }}>Recargar Alumnos</Button>
-                                        </div>
-                                    </>
-                                )
-                            )
-                        )
+                                <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                    <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                    <Button onClick={async () => await handleGetUsers("student")} style={{ color: "#2074d4" }}>
+                                        <Typography variant="button">Recargar Alumnos</Typography>
+                                    </Button>
+                                </Paper>
+                            </React.Fragment>             
+                        ) : (
+                            <React.Fragment>
+                                <React.Fragment>
+                                {
+                                    students.map(doc => (
+                                        <ListItem key={doc.id} button onClick={() => history.push(`/users/${doc.id}`)}>
+                                            <ListItemText primary={<Typography>{`${Decrypt(doc.data.name)} ${Decrypt(doc.data.surname)}`}</Typography>} secondary={<Typography>{Decrypt(doc.data.rut)}</Typography>} />
+                                        </ListItem>
+                                    ))
+                                }   
+                                </React.Fragment>
+                            
+                                <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                    <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                    <Button onClick={async () => await handleGetUsers("student")} style={{ color: "#2074d4" }}>
+                                        <Typography variant="button">Recargar Alumnos</Typography>
+                                    </Button>
+                                </Paper>
+                            </React.Fragment>
+                        )        
                     }
                     </TabPanel>
 
                     <TabPanel value={value} index={1}>
                     {
                         loadingTeachers === true ? (
-                            <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                            <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: 30 }}>
                                 <CircularProgress style={{ color: "#2074d4" }} />
-                            </div>
-                        ) : (
-                            teachers === null ? (
-                                <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-                                    <CircularProgress style={{ color: "#2074d4" }} />
-                                </div>
-                            ) : (
-                                teachers.length > 0 ? (
-                                    <>
-                                    {
-                                        teachers.map(doc => (
-                                            <Link key={doc.id} to={`/users/${doc.id}`} style={{ textDecoration: "none", color: "#333" }}>
-                                                <ListItem button>
-                                                    <ListItemText primary={<Typography>{`${Decrypt(doc.data.name)} ${Decrypt(doc.data.surname)}`}</Typography>} secondary={<Typography>{Decrypt(doc.data.rut)}</Typography>} />
-                                                </ListItem>
-                                            </Link>
-                                        ))
-                                    }
-
-                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                <Typography style={{ marginTop: 15 }}>Cargando Profesores</Typography>
+                            </Paper>
+                        ) : errorTeachers === true ? (
+                            <React.Fragment>
+                                <Typography style={{ textAlign: "center" }}>
+                                {
+                                    errorCode !== null ? (
+                                        errorCode === "NO_USERS_ASSIGNED" ? (
+                                            "No hay usuarios creados aquí"
+                                        ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                            "La sesión ha expirado, recargue el navegador para inciar sesión nuevamente"
+                                        ) : (
+                                            "Ha ocurrido un error, intente obtener los usuarios nuevamente"
+                                        )
+                                    ) : (
+                                        "Ha ocurrido un error, intente obtener los usuarios nuevamente"
+                                    )
+                                }
+                                </Typography>
+                                
+                                <React.Fragment>
+                                {
+                                    errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
+                                        <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                                             <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                            <Button onClick={() => handleGetUsers("teacher")} style={{ color: "#2074d4" }}>Recargar Profesores</Button>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Typography style={{ textAlign: "center" }}>No existen profesores aún</Typography>
+                                            <Button onClick={async () => await handleGetUsers("teacher")} style={{ color: "#2074d4" }}>
+                                                <Typography variant="button">Recargar Profesores</Typography>
+                                            </Button>
+                                        </Paper>
+                                    )
+                                }
+                                </React.Fragment>
+                            </React.Fragment>     
+                        ) : teachers === null ? (
+                            <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: 30 }}>
+                                <CircularProgress style={{ color: "#2074d4" }} />
+                                <Typography style={{ marginTop: 15 }}>Cargando Profesores</Typography>
+                            </Paper>
+                        ) : teachers === undefined ? (
+                            <React.Fragment>
+                                <Typography style={{ textAlign: "center" }}>
+                                {
+                                    errorCode !== null ? (
+                                        errorCode === "NO_USERS_ASSIGNED" ? (
+                                            "No hay usuarios creados aquí"
+                                        ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                            "La sesión ha expirado, recargue el navegador para inciar sesión nuevamente"
+                                        ) : (
+                                            "Ha ocurrido un error, intente obtener los usuarios nuevamente"
+                                        )
+                                    ) : (
+                                        "Ha ocurrido un error, intente obtener los usuarios nuevamente"
+                                    )
+                                }
+                                </Typography>
+                                
+                                <React.Fragment>
+                                {
+                                    errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
+                                        <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                            <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                            <Button onClick={async () => await handleGetUsers("teacher")} style={{ color: "#2074d4" }}>
+                                                <Typography variant="button">Recargar Profesores</Typography>
+                                            </Button>
+                                        </Paper>
+                                    )
+                                }
+                                </React.Fragment>
+                            </React.Fragment>    
+                        ) : teachers.length <= 0 ? (
+                            <React.Fragment>
+                                <Typography style={{ textAlign: "center", marginTop: 15, marginBottom: 15 }}>No existen profesores aún</Typography>
                                         
-                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                            <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                            <Button onClick={() => handleGetUsers("teacher")} style={{ color: "#2074d4" }}>Recargar Profesores</Button>
-                                        </div>
-                                    </>
-                                )
-                            )
-                        )
+                                <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                    <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                    <Button onClick={async () => await handleGetUsers("teacher")} style={{ color: "#2074d4" }}>
+                                        <Typography variant="button">Recargar Profesores</Typography>
+                                    </Button>
+                                </Paper>
+                            </React.Fragment>             
+                        ) : (
+                            <React.Fragment>
+                                <React.Fragment>
+                                {
+                                    teachers.map(doc => (
+                                        <ListItem key={doc.id} button onClick={() => history.push(`/users/${doc.id}`)}>
+                                            <ListItemText primary={<Typography>{`${Decrypt(doc.data.name)} ${Decrypt(doc.data.surname)}`}</Typography>} secondary={<Typography>{Decrypt(doc.data.rut)}</Typography>} />
+                                        </ListItem>
+                                    ))
+                                }   
+                                </React.Fragment>
+                            
+                                <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                    <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                    <Button onClick={async () => await handleGetUsers("teacher")} style={{ color: "#2074d4" }}>
+                                        <Typography variant="button">Recargar Profesores</Typography>
+                                    </Button>
+                                </Paper>
+                            </React.Fragment>
+                        )        
                     }
                     </TabPanel>
 
                     <TabPanel value={value} index={2}>
                     {
                         loadingProxies === true ? (
-                            <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                            <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: 30 }}>
                                 <CircularProgress style={{ color: "#2074d4" }} />
-                            </div>
-                        ) : (
-                            proxies === null ? (
-                                <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-                                    <CircularProgress style={{ color: "#2074d4" }} />
-                                </div>
-                            ) : (
-                                proxies.length > 0 ? (
-                                    <>
-                                    {
-                                        proxies.map(doc => (
-                                            <Link key={doc.id} to={`/users/${doc.id}`} style={{ textDecoration: "none", color: "#333" }}>
-                                                <ListItem button>
-                                                    <ListItemText primary={<Typography>{`${Decrypt(doc.data.name)} ${Decrypt(doc.data.surname)}`}</Typography>} secondary={<Typography>{Decrypt(doc.data.rut)}</Typography>} />
-                                                </ListItem>
-                                            </Link>
-                                        ))
-                                    }
-
-                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                <Typography style={{ marginTop: 15 }}>Cargando Apoderados</Typography>
+                            </Paper>
+                        ) : errorProxies === true ? (
+                            <React.Fragment>
+                                <Typography style={{ textAlign: "center" }}>
+                                {
+                                    errorCode !== null ? (
+                                        errorCode === "NO_USERS_ASSIGNED" ? (
+                                            "No hay usuarios creados aquí"
+                                        ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                            "La sesión ha expirado, recargue el navegador para inciar sesión nuevamente"
+                                        ) : (
+                                            "Ha ocurrido un error, intente obtener los usuarios nuevamente"
+                                        )
+                                    ) : (
+                                        "Ha ocurrido un error, intente obtener los usuarios nuevamente"
+                                    )
+                                }
+                                </Typography>
+                                
+                                <React.Fragment>
+                                {
+                                    errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
+                                        <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                                             <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                            <Button onClick={() => handleGetUsers("proxie")} style={{ color: "#2074d4" }}>Recargar Apoderados</Button>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Typography style={{ textAlign: "center" }}>No existen apoderados aún</Typography>
+                                            <Button onClick={async () => await handleGetUsers("proxie")} style={{ color: "#2074d4" }}>
+                                                <Typography variant="button">Recargar Apoderados</Typography>
+                                            </Button>
+                                        </Paper>
+                                    )
+                                }
+                                </React.Fragment>
+                            </React.Fragment>     
+                        ) : proxies === null ? (
+                            <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: 30 }}>
+                                <CircularProgress style={{ color: "#2074d4" }} />
+                                <Typography style={{ marginTop: 15 }}>Cargando Apoderados</Typography>
+                            </Paper>
+                        ) : proxies === undefined ? (
+                            <React.Fragment>
+                                <Typography style={{ textAlign: "center" }}>
+                                {
+                                    errorCode !== null ? (
+                                        errorCode === "NO_USERS_ASSIGNED" ? (
+                                            "No hay usuarios creados aquí"
+                                        ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                            "La sesión ha expirado, recargue el navegador para inciar sesión nuevamente"
+                                        ) : (
+                                            "Ha ocurrido un error, intente obtener los usuarios nuevamente"
+                                        )
+                                    ) : (
+                                        "Ha ocurrido un error, intente obtener los usuarios nuevamente"
+                                    )
+                                }
+                                </Typography>
+                                
+                                <React.Fragment>
+                                {
+                                    errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
+                                        <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                            <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                            <Button onClick={async () => await handleGetUsers("proxie")} style={{ color: "#2074d4" }}>
+                                                <Typography variant="button">Recargar Apoderados</Typography>
+                                            </Button>
+                                        </Paper>
+                                    )
+                                }
+                                </React.Fragment>
+                            </React.Fragment>    
+                        ) : proxies.length <= 0 ? (
+                            <React.Fragment>
+                                <Typography style={{ textAlign: "center", marginTop: 15, marginBottom: 15 }}>No existen apoderados aún</Typography>
                                         
-                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                            <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                            <Button onClick={() => handleGetUsers("proxie")} style={{ color: "#2074d4" }}>Recargar Apoderados</Button>
-                                        </div>
-                                    </>
-                                )
-                            )
-                        )
+                                <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                    <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                    <Button onClick={async () => await handleGetUsers("proxie")} style={{ color: "#2074d4" }}>
+                                        <Typography variant="button">Recargar Apoderados</Typography>
+                                    </Button>
+                                </Paper>
+                            </React.Fragment>             
+                        ) : (
+                            <React.Fragment>
+                                <React.Fragment>
+                                {
+                                    proxies.map(doc => (
+                                        <ListItem key={doc.id} button onClick={() => history.push(`/users/${doc.id}`)}>
+                                            <ListItemText primary={<Typography>{`${Decrypt(doc.data.name)} ${Decrypt(doc.data.surname)}`}</Typography>} secondary={<Typography>{Decrypt(doc.data.rut)}</Typography>} />
+                                        </ListItem>
+                                    ))
+                                }   
+                                </React.Fragment>
+                            
+                                <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                    <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                    <Button onClick={async () => await handleGetUsers("proxie")} style={{ color: "#2074d4" }}>
+                                        <Typography variant="button">Recargar Apoderados</Typography>
+                                    </Button>
+                                </Paper>
+                            </React.Fragment>
+                        )        
                     }
                     </TabPanel>
                 </CardContent>
             </Card>              
-        </div>
+        </Paper>
     );
 };
 

@@ -187,6 +187,25 @@ controllers.getStudentsWithHomework = async (req, res) => {
         return;
     }
 
+    if (idSubject == "" || idUnit == "" || idFile == "")
+    {
+        code = "PARAMS_NULL";
+        message = "Asegurese de enviar los tipos de datos correctos"; 
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+
+        uid = null;
+        db = null;
+        code = null;
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
     await db.collection("courses").doc(idSubject).collection("students").get()
     .then(async result => {
         if (result.size <= 0)

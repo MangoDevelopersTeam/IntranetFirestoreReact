@@ -127,10 +127,15 @@ export const checkRut = (run) => {
     let dvEsperado = 11 - (suma % 11);
     
     // Casos Especiales (0 y K)
+
+    // eslint-disable-next-line
     dv = (dv == 'K') ? 10 : dv;
+    // eslint-disable-next-line
     dv = (dv == 0) ? 11 : dv;
     
     // Validar que el Cuerpo coincide con su Dígito Verificador
+    
+    // eslint-disable-next-line
     if (dvEsperado != dv) 
     { 
         return false; 

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { PersonAdd, PersonAddDisabled } from '@material-ui/icons';
-import { CircularProgress, Divider, FormGroup, IconButton, ListItem, ListItemSecondaryAction, ListItemText, Tooltip, Typography } from '@material-ui/core';
+import { CircularProgress, Divider, FormGroup, IconButton, ListItem, ListItemSecondaryAction, ListItemText, Paper, Tooltip, Typography } from '@material-ui/core';
 
 import { Decrypt, Encrypt } from '../../helpers/cipher/cipher';
 import { showMessage } from '../../helpers/message/handleMessage';
@@ -12,6 +12,11 @@ import axios from 'axios';
 const StudentListItem = ({ subjectId, course, student, studentsCourse, setStudentsCourse }) => {
     // useStates
     const [joined, setJoined] = useState(false);
+
+    console.log("subjectId", subjectId);
+    console.log("course", course);
+    console.log("student", student);
+    console.log("studentsCourse", studentsCourse);
 
     // useCallbacks
     /**
@@ -113,10 +118,13 @@ const StudentListItem = ({ subjectId, course, student, studentsCourse, setStuden
             }
         }
 
-        callQuery();
+        if (student !== null && studentsCourse !== null)
+        {
+            callQuery();
 
-        return () => {
-            setJoined(null);
+            return () => {
+                setJoined(null);
+            }
         }
     }, [studentsCourse, student]);
 
@@ -124,12 +132,12 @@ const StudentListItem = ({ subjectId, course, student, studentsCourse, setStuden
         <ListItem>
         {
             student === null ? (
-                <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
                     <CircularProgress style={{ color: "#2074d4" }} />
-                </div>
+                </Paper>
             ) : (
-                <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
-                    <div style={{ display: "flex", flexDirection: "row", width: "100%" }}>
+                <Paper elevation={0} style={{ display: "flex", flexDirection: "column", width: "100%" }}>
+                    <Paper elevation={0} style={{ display: "flex", flexDirection: "row", width: "100%" }}>
                         <ListItemText primary={<Typography>{`${Decrypt(Decrypt(student.data).name)} ${Decrypt(Decrypt(student.data).surname)}`}</Typography>} secondary={<Typography color="textSecondary">{Decrypt(Decrypt(student.data).rut)}</Typography>} security="true" />
 
                         <ListItemSecondaryAction security="true">
@@ -153,10 +161,10 @@ const StudentListItem = ({ subjectId, course, student, studentsCourse, setStuden
                             )   
                         }
                         </ListItemSecondaryAction>
-                    </div>
+                    </Paper>
 
                     <Divider style={{ width: "100%" }} />
-                </div>
+                </Paper>
             )
         }
         </ListItem>

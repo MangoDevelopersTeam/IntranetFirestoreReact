@@ -3,11 +3,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useHistory, useParams } from 'react-router-dom'
 
 import axios from 'axios';
-import { Avatar, Breadcrumbs, Button, Card, CardContent, CircularProgress, createTheme, ThemeProvider, Divider, Paper, Typography, useMediaQuery, useTheme, TextField, Grid, FormControlLabel, Checkbox, FormControl, InputLabel, Select, MenuItem } from '@material-ui/core';
+import { Avatar, Breadcrumbs, Button, Card, CardContent, CircularProgress, createTheme, ThemeProvider, Divider, Paper, Typography, TextField, Grid, FormControlLabel, Checkbox, FormControl, InputLabel, Select, MenuItem } from '@material-ui/core';
 import { Decrypt, Encrypt } from '../../helpers/cipher/cipher';
 import { NavigateNext, Person } from '@material-ui/icons';
 import { myArrayRegions } from '../../utils/allCourses';
-import { checkRun, checkRut } from '../../helpers/format/handleFormat';
+import { checkRut } from '../../helpers/format/handleFormat';
 import { user } from '../../classes/user';
 import { showMessage } from '../../helpers/message/handleMessage';
 
@@ -19,13 +19,10 @@ const InputTheme = createTheme({
     },
 });
 
-const HomeAdmin = () => {
+const UserDetail = () => {
     // uses
     const { id } = useParams();
     const history = useHistory();
-    const themeApp = useTheme();
-    const fullScreen = useMediaQuery(themeApp.breakpoints.down('sm'));
-
 
     // useStates
     const [userSelected, setUserSelected] = useState(null);
@@ -46,13 +43,9 @@ const HomeAdmin = () => {
     const [commune, setCommune] = useState("");
     const [communes, setCommunes] = useState([]);
 
-
     const [loadingProcessUser, setLoadingProcessUser] = useState(false);
     const [errorProcessUser, setErrorProcessUser] = useState(false);
-
     const [errorCode, setErrorCode] = useState(null);
-
-    
 
     // useCallbacks
     const handleGetDetailedUser = useCallback(
@@ -72,6 +65,8 @@ const HomeAdmin = () => {
             .then(result => {
                 if (result.status === 200 && result.data.code === "PROCESS_OK")
                 {
+                    console.log(Decrypt(Decrypt(result.data.data)[0].data.name))
+
                     setRut(Decrypt(Decrypt(result.data.data)[0].data.rut));
                     setName(Decrypt(Decrypt(result.data.data)[0].data.name));
                     setSurname(Decrypt(Decrypt(result.data.data)[0].data.surname));
@@ -228,7 +223,7 @@ const HomeAdmin = () => {
                 setErrorCode(null);
             });
         },
-        [id, rut, name, surname, editEmail, email, editPassword, password, passwordRepeat, editRegionCommune, region, commune, setLoadingProcessUser, setErrorProcessUser, setErrorCode],
+        [id, history, rut, name, surname, editEmail, email, editPassword, password, passwordRepeat, editRegionCommune, region, commune, setLoadingProcessUser, setErrorProcessUser, setErrorCode],
     );
 
     const handleDeleteUser = useCallback(
@@ -281,10 +276,8 @@ const HomeAdmin = () => {
                 setErrorCode(null);
             });
         },
-        [id, setLoadingProcessUser, setErrorProcessUser, setErrorCode],
+        [id, history, setLoadingProcessUser, setErrorProcessUser, setErrorCode],
     );
-
-
 
     const handleChangeRegionCommune = useCallback(
         (region) => {
@@ -574,4 +567,4 @@ const HomeAdmin = () => {
     );
 };
 
-export default HomeAdmin;
+export default UserDetail;

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { Menu, ChevronLeft, ChevronRight,  ExitToApp, People, Home, Notes, Build, GridOn, FormatListNumbered, Forum, Replay, Group } from '@material-ui/icons';
+import { Menu, ChevronLeft, ChevronRight,  ExitToApp, People, Home, Notes, GridOn, FormatListNumbered, Forum, Replay, Group } from '@material-ui/icons';
 import { Drawer, AppBar, Toolbar, List, CssBaseline, Typography, Divider, IconButton, ListItem, ListItemIcon, ListItemText, makeStyles, useTheme, Paper, CircularProgress } from '@material-ui/core';
 
 import { Decrypt } from '../helpers/cipher/cipher';

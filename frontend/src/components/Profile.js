@@ -1,26 +1,15 @@
 // Elementos de react
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useHistory, useParams } from 'react-router-dom';
+import { Link, useHistory } from 'react-router-dom';
 
 import axios from 'axios';
-import { Avatar, Breadcrumbs, Button, Card, CardContent, Paper, Typography, Divider, CircularProgress, createTheme, useMediaQuery, useTheme, Tooltip } from '@material-ui/core';
-import { Decrypt, Encrypt } from '../helpers/cipher/cipher';
+import { Avatar, Breadcrumbs, Button, Card, CardContent, Paper, Typography, Divider, CircularProgress, Tooltip } from '@material-ui/core';
+import { Decrypt } from '../helpers/cipher/cipher';
 import { Info, NavigateNext, Person } from '@material-ui/icons';
-
-const InputTheme = createTheme({
-    palette: {
-        primary: {
-            main: "#2074d4"
-        }
-    },
-});
 
 const Profile = () => {
     // uses
-    const themeApp = useTheme();
     const history = useHistory();
-    const fullScreen = useMediaQuery(themeApp.breakpoints.down('sm'));
-
 
     // useStates
     const [userSelected, setUserSelected] = useState(null);

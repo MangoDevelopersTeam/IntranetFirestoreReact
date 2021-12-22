@@ -572,7 +572,7 @@ const AnswerCard = ({ doc, access, question, handleGetAnswersQuestion }) => {
                 }
             });
         },
-        [selectedAnswer, selectedComment, question, handleGetCommentsAnswer, setLoadingDeleteComment, setErrorDeleteComment, setErrorCode, handleCloseDeleteCommentAnswerDialog],
+        [selectedAnswer, question, setLoadingDeleteComment, setErrorDeleteComment, setErrorCode, handleCloseDeleteAnswerDialog, handleGetAnswersQuestion],
     );
 
     const handleDeleteAnswer = useCallback(

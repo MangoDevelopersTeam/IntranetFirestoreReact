@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Button, Card, CardContent, CardHeader, CircularProgress, Dialog, Divider, DialogActions, DialogContent, DialogContentText, DialogTitle, IconButton, Paper, Tooltip, Typography, useMediaQuery, useTheme } from '@material-ui/core';
-import { Delete, Edit } from '@material-ui/icons';
+import { Delete } from '@material-ui/icons';
 import { blue } from '@material-ui/core/colors';
 
 import { Decrypt, Encrypt } from '../../helpers/cipher/cipher';

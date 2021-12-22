@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { ListItem, ListItemSecondaryAction, ListItemText, IconButton, Tooltip, Checkbox, FormGroup, FormControlLabel, CircularProgress } from '@material-ui/core';
+import { ListItem, ListItemSecondaryAction, ListItemText, IconButton, Tooltip, Checkbox, FormGroup, FormControlLabel, CircularProgress, Paper } from '@material-ui/core';
 import { PersonAdd, PersonAddDisabled } from '@material-ui/icons';
 
 import { showMessage } from '../../helpers/message/handleMessage';
@@ -14,7 +14,7 @@ const TeacherListItem = ({ subjectId, course, teacher, teachers, teachersCourse,
     const [helper, setHelper] = useState(false);
     const [length, setLength] = useState(0);
     const [called, setCalled] = useState(false);
-    
+
     // useCallbacks
     /**
      * useCalback para añadir profesor en el curso
@@ -176,7 +176,7 @@ const TeacherListItem = ({ subjectId, course, teacher, teachers, teachersCourse,
 
     // useEffects
     useEffect(() => {
-        let callQuery = async () => {
+        let callQuery = () => {
             let lambda = teachersCourse.find(x => x.id === teacher.id) === undefined ? false : true;
 
             if (lambda === true)
@@ -191,17 +191,20 @@ const TeacherListItem = ({ subjectId, course, teacher, teachers, teachersCourse,
             setLength(teachers.length);
         }
 
-        callQuery();
+        if (teachersCourse !== null && teacher !== null && teachers !== null)
+        {
+            callQuery();
 
-        return () => {
-            setJoined(null);
-            setLength(null);
+            return () => {
+                setJoined(null);
+                setLength(null);
+            }
         }
     }, [teachersCourse, teacher, teachers]);
 
     useEffect(() => {
         let callQuery = async () => {
-            let lambda = teachersCourse.find(x => Decrypt(x.data).helper === true && x.id === teacher.id) === undefined ? false : true;
+            let lambda = teachersCourse.find(x => x.data.helper === true && x.id === teacher.id) === undefined ? false : true;
 
             if (lambda === true)
             {
@@ -213,19 +216,26 @@ const TeacherListItem = ({ subjectId, course, teacher, teachers, teachersCourse,
             }
         }
 
-        return callQuery();
+        if (teacher !== null && teachersCourse !== null)
+        {
+            callQuery();
+
+            return () => {
+                setHelper(null);
+            }
+        }
     }, [teacher, teachersCourse]);
 
     return (
         <ListItem>
         {
             teacher === null ? (
-                <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
                     <CircularProgress style={{ color: "#2074d4" }} />
-                </div>
+                </Paper>
             ) : (
-                <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
-                    <div style={{ display: "flex", flexDirection: "row", width: "100%" }}>
+                <Paper elevation={0} style={{ display: "flex", flexDirection: "column", width: "100%" }}>
+                    <Paper elevation={0} style={{ display: "flex", flexDirection: "row", width: "100%" }}>
                         <ListItemText primary={`${Decrypt(Decrypt(teacher.data).name)} ${Decrypt(Decrypt(teacher.data).surname)}`} secondary={Decrypt(Decrypt(teacher.data).rut)} security="true" />
 
                         <ListItemSecondaryAction security="true">
@@ -259,12 +269,12 @@ const TeacherListItem = ({ subjectId, course, teacher, teachers, teachersCourse,
                             )   
                         }
                         </ListItemSecondaryAction>
-                    </div>
-                </div>
+                    </Paper>
+                </Paper>
             )
         }
         </ListItem>
-    )
-}
+    );
+};
 
-export default TeacherListItem
+export default TeacherListItem;

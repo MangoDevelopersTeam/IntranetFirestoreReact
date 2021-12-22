@@ -70,57 +70,6 @@ controllers.getCourses = async (req, res) => {
 
         return;
     });
-/* 
-    await db.collection("courses").get()
-    .then(result => {
-
-        code = "PROCESS_OK";
-        type = "success";
-        data = result.size;
-        status = 200;
-
-        if (result.docs.length > 0) 
-        {
-            let array = [];
-
-            result.docs.forEach(doc => {
-                array.push({
-                    id: doc.id,
-                    data: Encrypt(document.data()),
-                });
-            });
-
-            code = "PROCESS_OK";
-            type = "success";
-            data = Encrypt(array);
-            status = 200;
-        }
-        else
-        {
-            code = "COURSES_NOT_FOUND";
-            message = "No existen cursos creados aún";
-            type = "error";
-            status = 404;
-        }
-    })
-    .catch(error => {
-        code = error.code;
-        message = error.message;
-        type = "error";
-        code = 400;
-    })
-    .finally(() => {
-        res.status(status).send({ code: code, message: message, data: data, type: type });
-
-        db = null;
-        code = null;
-        message = null;
-        data = null
-        type = null;
-        status = null;
-
-        return;
-    }); */
 };
 
 /**
@@ -536,7 +485,7 @@ controllers.getTeachersCourse = async (req, res) => {
  * Función para obtener el arreglo de usuarios alumnos dentro de la asignatura
  * @param {Request} req objeto request
  * @param {Response} res objeto response
- * @returns arreglo de usuarios de alumnos ligados a la asignatura
+ * @returns arreglo de usuarios de alumnos ligados a la asignatura o un mensaje informativo
  */
 controllers.getStudentsCourse = async (req, res) => {
     let db = admin.firestore();

@@ -10,20 +10,23 @@ import axios from 'axios';
 
 
 const MyStudents = () => {
+    // uses
     const history = useHistory();
 
+    // useStates
     const [loadingStudents, setLoadingStudents] = useState(true);
     const [errorStudents, setErrorStudents] = useState(false);
     const [students, setStudents] = useState(null);
     const [errorCode, setErrorCode] = useState(null);
 
+    // useCallbacks
     const handleGetStudentsProxie = useCallback(
         async () => {
             setLoadingStudents(true);
 
             await axios.get(`${process.env.REACT_APP_API_URI}/get-my-students-proxie`)
             .then(result => {
-                console.log(result);
+                console.log("STUDENTS PROXIE RESPONSE ======>", result);
                 if (result.status === 200 && result.data.code === "PROCESS_OK")
                 {
                     setStudents(Decrypt(result.data.data));
@@ -66,6 +69,7 @@ const MyStudents = () => {
         [setStudents, setErrorCode, setErrorStudents, setLoadingStudents],
     );
     
+    // useEffects
     useEffect(() => {
         let callQuery = async () => {
             await handleGetStudentsProxie();
@@ -104,37 +108,35 @@ const MyStudents = () => {
                             </Paper>
                         ) : errorStudents === true ? (
                             <React.Fragment>
-                            {
-                                errorCode !== null && (
-                                    <React.Fragment>
-                                        <Typography style={{ textAlign: "center" }}>
-                                        {
-                                            errorCode === "NO_STUDENTS_ASSIGNED" ? (
-                                                "No tienes estudiantes asignados a ti aún"
-                                            ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
-                                                "La sesión ha expirado, recargue el navegador para inciar sesión nuevamente o bien"
-                                            ) : (
-                                                "Ha ocurrido un error, intente obtener los estudiantes nuevamente"
-                                            )
-                                        }
-                                        </Typography>
-
-                                        <React.Fragment>
-                                        {
-                                            errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
-                                                <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                                    <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                                    <Button onClick={async () => await handleGetStudentsProxie()} style={{ color: "#2074d4" }}>
-                                                        <Typography variant="button">Recargar Estudiantes</Typography>
-                                                    </Button>
-                                                </Paper>
-                                            )
-                                        }
-                                        </React.Fragment>
-                                    </React.Fragment>
-                                )
-                            }
-                            </React.Fragment>
+                                <Typography style={{ textAlign: "center" }}>
+                                {
+                                    errorCode !== null ? (
+                                        errorCode === "NO_STUDENTS_ASSIGNED" ? (
+                                            "No tienes estudiantes asignados a ti aún"
+                                        ) : errorCode === "FIREBASE_VERIFY_TOKEN_ERROR" ? (
+                                            "La sesión ha expirado, recargue el navegador para inciar sesión nuevamente o bien"
+                                        ) : (
+                                            "Ha ocurrido un error, intente obtener los estudiantes nuevamente"
+                                        )
+                                    ) : (
+                                        "Ha ocurrido un error, intente obtener los estudiantes nuevamente"
+                                    )
+                                }
+                                </Typography>
+                                
+                                <React.Fragment>
+                                {
+                                    errorCode !== "FIREBASE_VERIFY_TOKEN_ERROR" && (
+                                        <Paper elevation={0} itemType="div" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                            <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                            <Button onClick={async () => await handleGetStudentsProxie()} style={{ color: "#2074d4" }}>
+                                                <Typography variant="button">Recargar Estudiantes</Typography>
+                                            </Button>
+                                        </Paper>
+                                    )
+                                }
+                                </React.Fragment>
+                            </React.Fragment>        
                         ) : students === null ? (
                             <Paper elevation={0} itemType="div" style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", flexDirection: "column", marginTop: 30 }}>
                                 <CircularProgress style={{ color: "#2074d4" }} />
@@ -220,7 +222,7 @@ const MyStudents = () => {
                 </CardContent>
             </Card>
         </Paper>
-    )
-}
+    );
+};
 
 export default MyStudents;

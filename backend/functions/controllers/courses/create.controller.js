@@ -522,7 +522,7 @@ controllers.setTeachersCourse = async (req, res) => {
                 result.forEach(doc => {
                     array.push({
                         id: doc.id,
-                        data: Encrypt(doc.data())
+                        data: doc.data()
                     });
                 });
             }

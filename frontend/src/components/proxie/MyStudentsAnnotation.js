@@ -11,10 +11,12 @@ import axios from 'axios';
 
 
 const MyStudentsAnnotation = () => {
+    // uses
     const { id } = useParams();
     const themeApp = useTheme();
     const fullScreen = useMediaQuery(themeApp.breakpoints.down('sm'));
 
+    // useStates
     const [loadingExistStudent, setLoadingExistStudent] = useState(true);
     const [errorExistStudent, setErrorExistStudent] = useState(false);
     const [existStudent, setExistStudent] = useState(null);
@@ -36,6 +38,7 @@ const MyStudentsAnnotation = () => {
     const [moreInfoDialog, setMoreInfoDialog] = useState(false);
 
 
+    // useCallbacks
     const handleGetExistStudent = useCallback(
         async () => {
             if (id === null)
@@ -272,7 +275,6 @@ const MyStudentsAnnotation = () => {
     );
 
 
-
     const handleOpenMoreInfo = useCallback(
         async (doc) => {
             if (doc === null)
@@ -304,6 +306,7 @@ const MyStudentsAnnotation = () => {
     );
 
 
+    // useEffects
     useEffect(() => {
         let callQuery = async () => {
             await handleGetExistStudent();

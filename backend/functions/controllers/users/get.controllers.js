@@ -548,66 +548,136 @@ controllers.getUsersProfile = async (req, res) => {
     let type = "";
     let status = 0;
 
+    let userId = "";
     let { uid } = res.locals;
+    let { userIdParam } = req.query;
 
-    if (uid == null)
+
+    if (userIdParam != null)
     {
-        code = "PARAMS_BAD_FORMATING";
-        message = "El id esta mal formateado";
-        type = "error";
-        status = 400;
+        if (userIdParam.startsWith("U2FsdGVkX") == false)
+        {
+            code = "PARAMS_BAD_FORMATING";
+            message = "El id esta mal formateado";
+            type = "error";
+            status = 400;
 
-        res.status(status).send({ code: code, message: message, data: data, type: type });
+            res.status(status).send({ code: code, message: message, data: data, type: type });
                 
-        db = null;
-        data = null;
-        code = null;  
-        message = null;
-        type = null;
-        status = null;
+            db = null;
+            data = null;
+            code = null;  
+            message = null;
+            type = null;
+            status = null;
 
-        return;
-    }
+            return;
+        }
 
-    if (typeof(uid) != "string")
-    {
-        code = "BAD_TYPES_PARAM";
-        message = "Asegurese de enviar los tipos de datos correctos"; 
-        type = "error";
-        status = 400;
+        userId = Decrypt(userIdParam);
 
-        res.status(status).send({ code: code, message: message, data: data, type: type });
+        if (typeof(userId) != "string")
+        {
+            code = "BAD_TYPES_PARAM";
+            message = "Asegurese de enviar los tipos de datos correctos"; 
+            type = "error";
+            status = 400;
 
-        db = null;
-        data = null;
-        code = null;  
-        message = null;
-        type = null;
-        status = null;
+            res.status(status).send({ code: code, message: message, data: data, type: type });
 
-        return;
-    }
+            uid = null;
+            db = null;
+            code = null;
+            message = null;
+            type = null;
+            status = null;
 
-    if (uid == "")
-    {
-        code = "PARAMS_EMPTY";
-        message = "Los valores enviados no pueden ser vacios";
-        type = "error";
-        status = 400;
+            return;
+        }
 
-        res.status(status).send({ code: code, message: message, data: data, type: type });
+        if (userId == "")
+        {
+            code = "PARAMS_EMPTY";
+            message = "Los valores enviados no pueden ser vacios";
+            type = "error";
+            status = 400;
+
+            res.status(status).send({ code: code, message: message, data: data, type: type });
                 
-        db = null;
-        data = null;
-        code = null;  
-        message = null;
-        type = null;
-        status = null;
+            message = null;
+            status = null;
+            code = null;  
+            data = null;
+            type = null;
+            db = null;
 
-        return;
+            return;
+        }
+    }
+    else
+    {
+        userId = uid;
+
+        if (uid == null)
+        {
+            code = "PARAMS_BAD_FORMATING";
+            message = "El id esta mal formateado";
+            type = "error";
+            status = 400;
+
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+                    
+            db = null;
+            data = null;
+            code = null;  
+            message = null;
+            type = null;
+            status = null;
+
+            return;
+        }
+
+        if (typeof(uid) != "string")
+        {
+            code = "BAD_TYPES_PARAM";
+            message = "Asegurese de enviar los tipos de datos correctos"; 
+            type = "error";
+            status = 400;
+
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+
+            db = null;
+            data = null;
+            code = null;  
+            message = null;
+            type = null;
+            status = null;
+
+            return;
+        }
+
+        if (uid == "")
+        {
+            code = "PARAMS_EMPTY";
+            message = "Los valores enviados no pueden ser vacios";
+            type = "error";
+            status = 400;
+
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+                    
+            db = null;
+            data = null;
+            code = null;  
+            message = null;
+            type = null;
+            status = null;
+
+            return;
+        }
     }
 
-    await db.collection('users').doc(uid).get()
+
+    await db.collection('users').doc(userId).get()
     .then(result => {
         
         if (result.exists == true)

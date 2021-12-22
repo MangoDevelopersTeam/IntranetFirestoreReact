@@ -188,7 +188,12 @@ controllers.getUserCourses = async (req, res) => {
     }
 };
 
-
+/**
+ * Metodo para obtener el detalle del curso con sus unidades
+ * @param {import("express").Request} req objeto request
+ * @param {import("express").Response} res objeto response 
+ * @returns mensaje informativo o arreglo del curso con sus respectivas unidades
+ */
 controllers.getDetailedCourse = async (req, res) => {
     let { courseID } = req.query;
 
@@ -259,6 +264,25 @@ controllers.getDetailedCourse = async (req, res) => {
         return;
     }
 
+    if (idCourse == "")
+    {
+        code = "COURSE_ID_NULL";
+        message = "EL identificador no puede ser vacío";
+        type = "error";
+        status = 400;
+
+        res.status(status).send({ code: code, message: message, data: data, type: type });
+            
+        db = null;
+        data = null;
+        code = null;  
+        message = null;
+        type = null;
+        status = null;
+
+        return;
+    }
+
     let object = {
         subject: null,
         units: null
@@ -266,63 +290,7 @@ controllers.getDetailedCourse = async (req, res) => {
 
     await db.collection('courses').doc(idCourse).get()
     .then(async response => {
-        if (response.exists == true)
-        {
-            if (response.data().deleted == false)
-            {
-                let arraySub = [];
-
-                arraySub.push({
-                    id: response.id,
-                    data: response.data()
-                });
-                object.subject = Encrypt(arraySub);
-
-                await db.collection('courses').doc(idCourse).collection('units').orderBy("numberUnit", "asc").get()
-                .then(response => {
-                    let arrayUni = [];
-
-                    if (response.size > 0)
-                    {
-                        response.forEach(doc => {
-                            if (doc.data().deleted == false)
-                            {
-                                arrayUni.push({
-                                    id: doc.id,
-                                    data: doc.data()
-                                });
-                            }
-                        });
-                    }
-
-                    object.units = Encrypt(arrayUni);
-                })
-
-                code = "PROCESS_OK";
-                data = Encrypt(object);
-                type = "success";
-                status = 200;
-            }
-            else
-            {
-                code = "SUBJECT_NOT_FOUND";
-                message = "La asignatura no ha sido encontrada, asegurese que de la id sea correcta e intente nuevamente";
-                type = "error";
-                status = 404;
-
-                res.status(status).send({ code: code, message: message, data: data, type: type });
-                
-                message = null;
-                status = null;
-                code = null;  
-                data = null;
-                type = null;
-                db = null;
-
-                return;
-            }
-        }
-        else
+        if (response.exists == false)
         {
             code = "SUBJECT_NOT_FOUND";
             message = "La asignatura no ha sido encontrada, asegurese que de la id sea correcta e intente nuevamente";
@@ -330,32 +298,81 @@ controllers.getDetailedCourse = async (req, res) => {
             status = 404;
 
             res.status(status).send({ code: code, message: message, data: data, type: type });
-            
-            message = null;
-            status = null;
+
             code = null;  
             data = null;
+            message = null;
             type = null;
-            db = null;
+            status = null;
+            
+            return;
+        }
+
+        if (response.data().deleted == true)
+        {
+            code = "SUBJECT_NOT_FOUND";
+            message = "La asignatura no ha sido encontrada, asegurese que de la id sea correcta e intente nuevamente";
+            type = "error";
+            status = 404;
+
+            res.status(status).send({ code: code, message: message, data: data, type: type });
+                
+            code = null;  
+            data = null;
+            message = null;
+            type = null;
+            status = null;
 
             return;
         }
+
+        let arraySubject = [];
+
+        arraySubject.push({
+            id: response.id,
+            data: response.data()
+        });
+        object.subject = Encrypt(arraySubject);
+
+        await db.collection('courses').doc(idCourse).collection('units').orderBy("numberUnit", "asc").get()
+        .then(response => {
+            let arrayUnits = [];
+
+            if (response.size > 0)
+            {
+                response.forEach(doc => {
+                    if (doc.data().deleted == false)
+                    {
+                        arrayUnits.push({
+                            id: doc.id,
+                            data: doc.data()
+                        });
+                    }
+                });
+            }
+
+            object.units = Encrypt(arrayUnits);
+        })
+
+        code = "PROCESS_OK";
+        data = Encrypt(object);
+        type = "success";
+        status = 200;
     })
-    .catch(error =>{
+    .catch(error => {
         code = "FIREBASE_GET_COURSES_ERROR";
         message = error.message;
         type = "error";
         status = 400;
     })
-    .finally(()=>{
+    .finally(() => {
         res.status(status).send({ code: code, message: message, data: data, type: type });
             
-        message = null;
-        status = null;
         code = null;  
         data = null;
+        message = null;
         type = null;
-        db = null;
+        status = null;
 
         return;
     });

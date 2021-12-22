@@ -10,10 +10,12 @@ import axios from 'axios';
 
 
 const MyStudentsAnnotation = () => {
+    // uses
     const { id } = useParams();
     const themeApp = useTheme();
     const fullScreen = useMediaQuery(themeApp.breakpoints.down('sm'));
 
+    // useStates
     const [loadingExistStudent, setLoadingExistStudent] = useState(true);
     const [errorExistStudent, setErrorExistStudent] = useState(false);
     const [existStudent, setExistStudent] = useState(null);
@@ -42,6 +44,7 @@ const MyStudentsAnnotation = () => {
     const [gradesDialog, setGradesDialog] = useState(false);
 
 
+    // useCallbacks
     const handleGetExistStudent = useCallback(
         async () => {
             if (id === null)
@@ -337,7 +340,7 @@ const MyStudentsAnnotation = () => {
                 }
             });
         },
-        [setGrades, setErrorGrades, setErrorCode, setLoadingGrades],
+        [id, setGrades, setErrorGrades, setErrorCode, setLoadingGrades],
     );
 
     const calculateAverage = useCallback(
@@ -412,7 +415,7 @@ const MyStudentsAnnotation = () => {
     );
 
 
-
+    // useEffects
     useEffect(() => {
         let callQuery = async () => {
             await handleGetExistStudent();
@@ -919,7 +922,7 @@ const MyStudentsAnnotation = () => {
             }
             </React.Fragment>
         </Paper>
-    )
+    );
 };
 
 export default MyStudentsAnnotation;

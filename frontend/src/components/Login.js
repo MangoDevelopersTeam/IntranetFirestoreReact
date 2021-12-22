@@ -35,7 +35,6 @@ const Login = () => {
     
 
     // useCallbacks
-    /* ------ SIGNIN CALLBACKS ------ */
     /**
      * useCallback para manejar el inicio de sesión
      */
@@ -121,7 +120,6 @@ const Login = () => {
         async () => {
             await axios.get(`${process.env.REACT_APP_API_URI}/get-numbers-admin`)
             .then(result => {
-                console.log(result);
                 if (result.status === 200 && result.data.code === "PROCESS_OK")
                 {
                     if (result.data.data > 0)
@@ -149,9 +147,7 @@ const Login = () => {
         },
         [setEnable],
     );
-    /* ------ SIGNIN CALLBACKS ------ */
 
-    /* ------ RESET PASSWORD CALLBACKS ------ */
     /**
      * useCallback para cerrar el dialogo de resetear contraseña
      */
@@ -218,7 +214,6 @@ const Login = () => {
         },
         [emailResetPassword, handleCloseResetPassword],
     );
-    /* ------ RESET PASSWORD CALLBACKS ------ */
 
 
     // useEffects

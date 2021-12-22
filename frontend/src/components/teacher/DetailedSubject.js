@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useHistory, useParams } from 'react-router-dom';
 
 import { ThemeProvider, useTheme } from '@material-ui/styles';
-import { Book, Delete, Edit, ExpandMore, InsertDriveFile, NavigateNext, PostAdd, Queue, Unarchive } from '@material-ui/icons';
-import { Accordion, AccordionDetails, AccordionSummary, Breadcrumbs, Button, Card, CardContent, Checkbox, CircularProgress, createTheme, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, FormControlLabel, Grid, IconButton, Input, LinearProgress, List, ListItem, ListItemIcon, ListItemSecondaryAction, ListItemText, Paper, TextField, Tooltip, Typography, useMediaQuery, withStyles } from '@material-ui/core';
+import { Book, Delete, Edit, ExpandMore, InsertDriveFile, NavigateNext, PostAdd, Queue } from '@material-ui/icons';
+import { Accordion, AccordionDetails, AccordionSummary, Breadcrumbs, Button, Card, CardContent, Checkbox, CircularProgress, createTheme, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, FormControlLabel, Grid, IconButton, LinearProgress, List, ListItem, ListItemIcon, ListItemSecondaryAction, ListItemText, Paper, TextField, Tooltip, Typography, useMediaQuery } from '@material-ui/core';
 
 import { Decrypt, Encrypt } from '../../helpers/cipher/cipher';
 import { showMessage } from '../../helpers/message/handleMessage';
@@ -34,6 +34,7 @@ const DetailedSubject = () => {
     const themeApp = useTheme();
     const fullScreen = useMediaQuery(themeApp.breakpoints.down('sm'));
     const user = useSelector(SELECT_USER);
+    const history = useHistory();
 
 
 
@@ -41,6 +42,7 @@ const DetailedSubject = () => {
     const [subject, setSubject] = useState(null);
     const [errorSubject, setErrorSubject] = useState(false);
     const [loadingSubject, setLoadingSubject] = useState(true);
+    // eslint-disable-next-line
     const [errorCode, setErrorCode] = useState(null);
 
     const [unitFiles, setUnitFiles] = useState(null);
@@ -61,6 +63,7 @@ const DetailedSubject = () => {
 
     const [studentsDialog, setStudentsDialog] = useState(false);
     const [unitsFileDialog, setUnitsFileDialog] = useState(false);
+    // eslint-disable-next-line
     const [errorFileDialog, setErrorFileDialog] = useState(false);
     const [homeworkDialog, setHomeworkDialog] = useState(false);
 
@@ -74,8 +77,6 @@ const DetailedSubject = () => {
     const [unitName, setUnitName] = useState(null);
     const [unitNumber, setUnitNumber] = useState(null);
     const [unitId, setUnitId] = useState(null);
-    const [unitLimitTime, setUnitLimitTime] = useState(null);
-    const [unitLimitDate, setUnitLimitDate] = useState(null);
 
     const [name, setName] = useState("");
     const [file, setFile] = useState(null);
@@ -93,7 +94,6 @@ const DetailedSubject = () => {
 
 
     // useCallbacks
-    /* ------ SUBJECT CALLBACK ------ */
     /**
      * useCallback para obtener el detalle de la asignatura
      */
@@ -219,11 +219,9 @@ const DetailedSubject = () => {
         },
         [id, subject, setErrorCode ,setUnitFiles, setErrorUnitFiles, setLoadingUnitFiles],
     );
-    /* ------ SUBJECT CALLBACK ------ */
 
 
 
-    /* ------ ACCESS CALLBACKS ------ */
     /**
      * useCallback para verificar si el alumno o profesor tiene asignación a este recurso
      */
@@ -332,11 +330,9 @@ const DetailedSubject = () => {
         },
         [setAccess, setErrorAccess, setErrorCode, setLoadingAccess],
     );
-    /* ------ ACCESS CALLBACKS ------ */
 
 
 
-    /* ------ STUDENTS CALLBACK ------ */
     /**
      * useCallback para obtener los estudiantes de la asignatura relacionadas con el curso
      */
@@ -416,11 +412,9 @@ const DetailedSubject = () => {
         },
         [subject, setStudents, setLoadingStudents, handleGetStudentsCourse],
     );
-    /* ------ STUDENTS CALLBACK ------ */
 
 
 
-    /* ------ DIALOG CALLBACKS ------ */
     /**
      * useCallback para mostrar el dialogo de estudiantes
      */
@@ -553,7 +547,7 @@ const DetailedSubject = () => {
             setHomeworkDialog(true);
         },
         [setSelectedUnit, setHomeworkDialog],
-    )
+    );
 
     const handleCloseHomewordDialog = useCallback(
         (event, reason) => {
@@ -572,12 +566,9 @@ const DetailedSubject = () => {
             setHomeworkDialog(false);
         },
         [setSelectedUnit, setName, setFile, setDescription, setLimitDate, setLimitTime, setHomeworkDialog],
-    )
-    /* ------ DIALOG CALLBACKS ------ */
+    );
 
 
-
-    /* ------ HANDLE FILE CALLBACKS ------ */
     /**
      * useCallback para cancelar la suba del archivo
      */
@@ -1049,10 +1040,8 @@ const DetailedSubject = () => {
         },
         [id, setErrorCode, setErrorUnitFiles, setLoadingUnitFiles, handleGetUnitFiles],
     );
-    /* ------ HANDLE FILE CALLBACKS ------ */
 
 
-    /* ------ HOMEWORK CALLBACKS ------ */
     const handleUploadHomework = useCallback(
         async () => {
             if (id === null || selectedUnit === null || user === null)
@@ -1170,8 +1159,6 @@ const DetailedSubject = () => {
         },
         [id, selectedUnit, user, file, name, description, limitTime, limitDate, handleVerifyFileExtension, handleClearFileParams, handleGetUnitFiles],
     );
-    /* ------ HOMEWORK CALLBACKS ------ */
-
 
 
     // useEffects
@@ -1251,592 +1238,575 @@ const DetailedSubject = () => {
                         <Typography style={{ marginTop: 15 }}>Cargando Acceso</Typography>
                     </Paper>
                 </Paper>
-            ) : (
-                authorized === false ? (
-                    <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
-                        <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                            <Typography>No tienes acceso a esta asignatura, contactese con el administrador</Typography>
-                        </Paper>
+            ) : authorized === false ? (
+                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
+                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <Typography>No tienes acceso a esta asignatura, contactese con el administrador</Typography>
                     </Paper>
-                ) : (
-                    loadingSubject === true || loadingAccess === true ? (
-                        <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
-                            <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                <CircularProgress style={{ color: "#2074d4" }} />
-                                <Typography style={{ marginTop: 15 }}>Cargando Datos</Typography>
-                            </Paper>
-                        </Paper>
-                    ) : (
-                        errorSubject === true || errorAuthorized === true || errorAccess === true ? (
-                            <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
-                                <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                    <Typography>Ha ocurrido un error al momento de cargar la asignatura</Typography>
-                                    <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={() => handleGetDetailedSubject}>
-                                        <Typography>Recargar Contenido</Typography>
-                                    </Button>
-                                </Paper>
-                            </Paper>
-                        ) : (
-                            subject === null || access === null ? (
-                                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
-                                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                        <CircularProgress style={{ color: "#2074d4" }} />
-                                        <Typography style={{ marginTop: 15 }}>Cargando</Typography>
-                                    </Paper>
-                                </Paper>
-                            ) : (
-                                <React.Fragment>
-                                    <Paper style={{ padding: 20, marginBottom: 15 }} variant="outlined">
-                                        <Breadcrumbs separator={<NavigateNext fontSize="small" />}>
-                                            <Link to="/" style={{ textDecoration: "none", color: "#333" }}>
-                                                Home
-                                            </Link>
-                                            <Link to="/my-subjects" style={{ textDecoration: "none", color: "#333" }}>
-                                                Mis Asignaturas
-                                            </Link>
-                                            <Typography style={{ color: "#2074d4" }}>{Decrypt(subject.subject)[0].data.code}</Typography>
-                                        </Breadcrumbs>
-                                    </Paper>
+                </Paper>
+            ) : loadingSubject === true || loadingAccess === true ? (
+                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
+                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <CircularProgress style={{ color: "#2074d4" }} />
+                        <Typography style={{ marginTop: 15 }}>Cargando Datos</Typography>
+                    </Paper>
+                </Paper>
+            ) : errorSubject === true || errorAuthorized === true || errorAccess === true ? (
+                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
+                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <Typography>Ha ocurrido un error al momento de cargar la asignatura</Typography>
+                        <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={() => handleGetDetailedSubject}>
+                            <Typography>Recargar Contenido</Typography>
+                        </Button>
+                    </Paper>
+                </Paper>
+            ) : subject === null || access === null ? (
+                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: "calc(10% + 110px)" }}>
+                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <CircularProgress style={{ color: "#2074d4" }} />
+                        <Typography style={{ marginTop: 15 }}>Cargando</Typography>
+                    </Paper>
+                </Paper>
+            ) : (
+                <React.Fragment>
+                    <Paper style={{ padding: 20, marginBottom: 15 }} variant="outlined">
+                        <Breadcrumbs separator={<NavigateNext fontSize="small" />}>
+                            <Link to="/" style={{ textDecoration: "none", color: "#333" }}>
+                                Home
+                            </Link>
+                            <Link to="/my-subjects" style={{ textDecoration: "none", color: "#333" }}>
+                                Mis Asignaturas
+                            </Link>
+                            <Typography style={{ color: "#2074d4" }}>{Decrypt(subject.subject)[0].data.code}</Typography>
+                        </Breadcrumbs>
+                    </Paper>
 
-                                    <Grid container spacing={2}>
-                                        <Grid item container md={9} style={{ marginTop: 15 }}>
-                                            <Card variant="outlined" style={{ width: "100%" }}>
-                                                <CardContent>
-                                                    <Typography variant="h5" color="textSecondary">{Decrypt(Decrypt(subject.subject)[0].data.courseName)}</Typography>
-                                                    <Typography variant="subtitle1" style={{ marginBottom: 15 }}>{Decrypt(Decrypt(subject.subject)[0].data.description)}</Typography>
+                    <Grid container spacing={2}>
+                        <Grid item container md={9} style={{ marginTop: 15 }}>
+                            <Card variant="outlined" style={{ width: "100%" }}>
+                                <CardContent>
+                                    <Typography variant="h5" color="textSecondary">{Decrypt(Decrypt(subject.subject)[0].data.courseName)}</Typography>
+                                    <Typography variant="subtitle1" style={{ marginBottom: 15 }}>{Decrypt(Decrypt(subject.subject)[0].data.description)}</Typography>
 
-                                                    <List>
-                                                    {
-                                                        Decrypt(subject.units).map(doc => (
-                                                            <Paper elevation={0} key={doc.id}>
-                                                                <ListItem>
-                                                                    <ListItemText primary={`Unidad ${doc.data.numberUnit} : ${doc.data.unit}`} />
-                                                                </ListItem>
-
-                                                                <Paper elevation={0}>
-                                                                {
-                                                                    editor === true && (
-                                                                        <React.Fragment>
-                                                                            <Tooltip title={<Typography>{`Añadir archivos en la unidad ${doc.data.numberUnit}`}</Typography>}>
-                                                                                <IconButton onClick={() => handleOpenFilesUnitDialog(doc.id, doc.data.unit, doc.data.numberUnit)}>
-                                                                                    <Queue />
-                                                                                </IconButton>
-                                                                            </Tooltip>
-
-                                                                            <Tooltip title={<Typography>{`Crear tarea o actividad en la unidad ${doc.data.numberUnit}`}</Typography>}>
-                                                                                <IconButton style={{ marginLeft: 10 }} onClick={() => handleOpenHomeWorkDialog(doc)}>
-                                                                                    <PostAdd />
-                                                                                </IconButton>
-                                                                            </Tooltip>
-                                                                        </React.Fragment>
-                                                                    )
-                                                                }
-                                                                </Paper>
-
-                                                                <Paper elevation={0}>
-                                                                {
-                                                                    loadingUnitFiles === true ? (
-                                                                        <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: 5 }}>
-                                                                            <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                                                                <CircularProgress style={{ color: "#2074d4" }} />
-                                                                                <Typography style={{ marginTop: 15 }}>Cargando</Typography>
-                                                                            </Paper>
-                                                                        </Paper>
-                                                                    ) : (
-                                                                        errorUnitFiles === true ? (
-                                                                            <Paper elevation={0} style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
-                                                                                <Typography style={{ textAlign: "center" }}>Ha ocurrido un error al obtener los archivos de la unidad</Typography>
-                                                                                <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetUnitFiles()}>Recargar archivos de la unidad</Button>
-                                                                            </Paper>
-                                                                        ) : (
-                                                                            unitFiles === null ? (
-                                                                                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: 5 }}>
-                                                                                    <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                                                                        <CircularProgress style={{ color: "#2074d4" }} />
-                                                                                        <Typography style={{ marginTop: 15 }}>Cargando Archivos</Typography>
-                                                                                    </Paper>
-                                                                                </Paper>
-                                                                            ) : (
-                                                                                <ListItem>
-                                                                                    <List>
-                                                                                    {
-                                                                                        unitFiles.filter(x => x.idUnit === doc.id)[0].data.length > 0 && (
-                                                                                            unitFiles.filter(x => x.idUnit === doc.id)[0].data.map(docFile => (
-                                                                                                <Paper elevation={0} key={docFile.id}>          
-                                                                                                {
-                                                                                                    docFile.data.type === "FILE" ? (
-                                                                                                        <ListItem button component="a" target="_blank" href={Decrypt(docFile.data.url)} style={{ height: "fit-content", marginBottom: 5, color: "#000" }}>
-                                                                                                            <ListItemIcon>
-                                                                                                                <Tooltip title={<Typography>Archivo/Documento de Estudio</Typography>}>
-                                                                                                                    <InsertDriveFile />
-                                                                                                                </Tooltip>    
-                                                                                                            </ListItemIcon>
-
-                                                                                                            <ListItemText primary={<Typography>{Decrypt(docFile.data.name)}</Typography>} style={{ marginRight: 70 }} />
-                                                                                                            {
-                                                                                                                Decrypt(access) === "teacher" && (
-                                                                                                                    editor === true && (
-                                                                                                                        <ListItemSecondaryAction>
-                                                                                                                            <React.Fragment>
-                                                                                                                                <Tooltip title={<Typography>Eliminar este Archivo</Typography>}>
-                                                                                                                                    <IconButton edge="end" onClick={() => handleRemoveFile(docFile.id, doc.id)}>
-                                                                                                                                        <Delete />
-                                                                                                                                    </IconButton>
-                                                                                                                                </Tooltip>
-                                                                                                                                <Tooltip title={<Typography>Editar este Archivo</Typography>}>
-                                                                                                                                    <IconButton edge="end" onClick={() => handleOpenEditFileUnitDialog(doc.id, doc.data.unit, doc.data.numberUnit, docFile, doc)} style={{ marginLeft: 15 }}>
-                                                                                                                                        <Edit />
-                                                                                                                                    </IconButton>
-                                                                                                                                </Tooltip>
-                                                                                                                            </React.Fragment>
-                                                                                                                        </ListItemSecondaryAction>
-                                                                                                                    )
-                                                                                                                )
-                                                                                                            }
-                                                                                                        </ListItem>
-                                                                                                    ) : docFile.data.type === "HOMEWORK" ? ( 
-                                                                                                        <ListItem button style={{ height: "fit-content", marginBottom: 5, color: "#000" }}>
-                                                                                                            <Link to={`/subject/homework/${docFile.id}?subject=${id}&unit=${doc.id}`} style={{ textDecoration: "none" }}>
-                                                                                                                <ListItemIcon>
-                                                                                                                    <Tooltip title={<Typography>Tarea/Actividad</Typography>}>
-                                                                                                                        <Book />
-                                                                                                                    </Tooltip>
-                                                                                                                </ListItemIcon>
-
-                                                                                                                <ListItemText primary={<Typography>{Decrypt(docFile.data.name)}</Typography>} style={{ marginRight: 70 }} />
-                                                                                                            </Link>
-                                                                                                                {
-                                                                                                                    Decrypt(access) === "teacher" && (
-                                                                                                                        editor === true && (
-                                                                                                                            <ListItemSecondaryAction>
-                                                                                                                                <React.Fragment>
-                                                                                                                                    <Tooltip title={<Typography>Eliminar esta Tarea</Typography>}>
-                                                                                                                                        <IconButton edge="end" onClick={() => handleRemoveFile(docFile.id, doc.id)}>
-                                                                                                                                            <Delete />
-                                                                                                                                        </IconButton>
-                                                                                                                                    </Tooltip>
-                                                                                                                                    <Tooltip title={<Typography>Editar esta Tarea</Typography>}>
-                                                                                                                                        <IconButton edge="end" onClick={() => handleOpenEditFileUnitDialog(doc.id, doc.data.unit, doc.data.numberUnit, docFile, doc)} style={{ marginLeft: 15 }}>
-                                                                                                                                            <Edit />
-                                                                                                                                        </IconButton>
-                                                                                                                                    </Tooltip>
-                                                                                                                                </React.Fragment>
-                                                                                                                            </ListItemSecondaryAction>
-                                                                                                                        )
-                                                                                                                    )
-                                                                                                                }
-                                                                                                        </ListItem>
-                                                                                                    ) : (
-                                                                                                        <React.Fragment>  
-                                                                                                        </React.Fragment>
-                                                                                                    )   
-                                                                                                }                                                        
-                                                                                                </Paper>
-                                                                                            ))
-                                                                                        )
-                                                                                    }
-                                                                                    </List>
-                                                                                </ListItem>
-                                                                            )
-                                                                        )
-                                                                    )                                       
-                                                                }
-                                                                </Paper>
-
-                                                                <Divider style={{ marginTop: 5, marginBottom: 15 }} /> 
-                                                            </Paper>
-                                                        ))
-                                                    }
-                                                    </List>
-                                                </CardContent>
-                                            </Card>
-                                        </Grid>
-
-                                        <Grid item container md={3} style={{ marginTop: 15 }}>
-                                            <Card variant="outlined" style={{ width: "100%" }}>
-                                                <CardContent>
-                                                    <React.Fragment>
-                                                    {
-                                                        Decrypt(access) === "teacher" && (
-                                                            <Paper elevation={0}>
-                                                                <Button fullWidth style={{ color: "#2074d4", marginBottom: 15 }} onClick={() => handleOpenStudentsDialog()}>
-                                                                    <Typography variant="button">Asignar Estudiantes</Typography>
-                                                                </Button>
-
-                                                                <Button fullWidth style={{ color: "#34495E", marginBottom: 15 }} onClick={() => setEditor(!editor)}>
-                                                                {
-                                                                    editor === false ? (
-                                                                        <Typography variant="button">Abrir editor para subir archivos</Typography>
-                                                                    ) : (
-                                                                        <Typography variant="button">Cerrar Editor para subir archivos</Typography>
-                                                                    )
-                                                                }
-                                                                </Button>
-
-                                                                <Link to={`/subject/students/${id}`} style={{ textDecoration: "none", marginBottom: 15 }}>
-                                                                    <Button fullWidth style={{ color: "#2074d4" }}>
-                                                                        <Typography variant="button">Ver Estudiantes</Typography>
-                                                                    </Button>
-                                                                </Link>
-                                                            </Paper>
-                                                        )
-                                                    }
-                                                    </React.Fragment>
-                                                
-                                                    <React.Fragment>
-                                                    {
-                                                        Decrypt(access) === "student" && (
-                                                            <React.Fragment>
-                                                                <Link to={`/subject/my-grades/${id}`} style={{ textDecoration: "none", marginBottom: 15 }}>
-                                                                    <Button fullWidth style={{ color: "#2074d4", marginBottom: 15 }}>
-                                                                        <Typography variant="button">Ver mis calificaciones</Typography>
-                                                                    </Button>
-                                                                </Link>
-                                                            </React.Fragment>
-                                                        )
-                                                    }
-                                                    </React.Fragment>
-                                                </CardContent>
-                                            </Card>
-                                        </Grid>
-                                    </Grid>
-                                    
-                                    <React.Fragment>
+                                    <List>
                                     {
-                                        Decrypt(access) === "teacher" && (
-                                            <React.Fragment>
-                                                <Dialog open={studentsDialog} maxWidth={"md"} fullWidth={true} onClose={handleCloseStudentsDialog} fullScreen={fullScreen} scroll="paper">
+                                        Decrypt(subject.units).map(doc => (
+                                            <Paper elevation={0} key={doc.id}>
+                                                <ListItem>
+                                                    <ListItemText primary={`Unidad ${doc.data.numberUnit} : ${doc.data.unit}`} />
+                                                </ListItem>
+
+                                                <Paper elevation={0}>
                                                 {
-                                                    subject === null ? (
-                                                        <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-                                                            <CircularProgress style={{ color: "#2074d4" }} />
-                                                        </div>
-                                                    ) : (
+                                                    editor === true && (
                                                         <React.Fragment>
-                                                            <DialogTitle>Asignar estudiantes a la asignatura {Decrypt(Decrypt(subject.subject)[0].data.courseName)}</DialogTitle>
-                                                            <DialogContent>
-                                                                <DialogContentText>Asigna estudiantes del curso {Decrypt(subject.subject)[0].data.grade} {`${Decrypt(subject.subject)[0].data.grade} ${Decrypt(subject.subject)[0].data.number}º${Decrypt(subject.subject)[0].data.letter}`} para la asignatura {Decrypt(subject.subject)[0].data.type}</DialogContentText>
+                                                            <Tooltip title={<Typography>{`Añadir archivos en la unidad ${doc.data.numberUnit}`}</Typography>}>
+                                                                <IconButton onClick={() => handleOpenFilesUnitDialog(doc.id, doc.data.unit, doc.data.numberUnit)}>
+                                                                    <Queue />
+                                                                </IconButton>
+                                                            </Tooltip>
 
-                                                                <Accordion variant="outlined">
-                                                                    <AccordionSummary expandIcon={<ExpandMore />}>
-                                                                        <Typography>Ver Alumnos</Typography>
-                                                                    </AccordionSummary>
-                                                                    <AccordionDetails>
-                                                                        <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
-                                                                        {
-                                                                            loadingStudents === true ? (
-                                                                                <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-                                                                                    <CircularProgress style={{ color: "#2074d4" }} />
-                                                                                </div>
-                                                                            ) : (
-                                                                                students !== null && studentsCourse !== null ? (
-                                                                                    students.length > 0 ? (
-                                                                                        <React.Fragment>
-                                                                                            <List style={{ width: "100%" }}>
-                                                                                                {
-                                                                                                    console.log("data is", Decrypt(subject.subject)[0].data)
-                                                                                                }
-                                                                                            {
-                                                                                                students.map(doc => (
-                                                                                                    <StudentListItem key={doc.id} subjectId={id} course={Decrypt(subject.subject)[0]} student={doc} students={students} studentsCourse={studentsCourse} setStudentsCourse={setStudentsCourse} />
-                                                                                                ))
-                                                                                            }
-                                                                                            </List> 
-
-                                                                                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                                                                                <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                                                                                <Button onClick={async () => await handleGetStudents()} style={{ color: "#2074d4" }}>
-                                                                                                    <Typography>Recargar Estudiantes</Typography>
-                                                                                                </Button>
-                                                                                            </div>
-                                                                                        </React.Fragment>
-                                                                                    ) : (
-                                                                                        <React.Fragment>
-                                                                                            <Typography style={{ textAlign: "center" }}>No existen alumnos a esta asignatura del curso</Typography>
-                                                                                                    
-                                                                                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                                                                                <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
-                                                                                                <Button onClick={async () => await handleGetStudents()} style={{ color: "#2074d4" }}>Recargar Estudiantes</Button>
-                                                                                            </div>
-                                                                                        </React.Fragment>
-                                                                                    )
-                                                                                ) : (
-                                                                                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-                                                                                        <CircularProgress style={{ color: "#2074d4" }} />
-                                                                                    </div>
-                                                                                )
-                                                                            )
-                                                                        }
-                                                                        </div>
-                                                                    </AccordionDetails>
-                                                                </Accordion>                                       
-                                                            </DialogContent>
-                                                            <DialogActions>
-                                                                <Button color="inherit" onClick={() => setStudentsDialog(false)}>
-                                                                    <Typography>Cerrar Esta Ventana</Typography>
-                                                                </Button>
-                                                            </DialogActions>
+                                                            <Tooltip title={<Typography>{`Crear tarea o actividad en la unidad ${doc.data.numberUnit}`}</Typography>}>
+                                                                <IconButton style={{ marginLeft: 10 }} onClick={() => handleOpenHomeWorkDialog(doc)}>
+                                                                    <PostAdd />
+                                                                </IconButton>
+                                                            </Tooltip>
                                                         </React.Fragment>
                                                     )
                                                 }
-                                                </Dialog>
+                                                </Paper>
 
-                                                <Dialog open={unitsFileDialog} maxWidth={"md"} onClose={handleCloseFilesUnitDialog} fullScreen={fullScreen} scroll="paper">
+                                                <Paper elevation={0}>
                                                 {
-                                                    unitId === null || unitName === null || unitNumber === null ? (
-                                                        <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-                                                            <CircularProgress style={{ color: "#2074d4" }} />
-                                                        </div>
-                                                    ) : (
-                                                        <React.Fragment>
-                                                            <DialogTitle>Asigna archivos de estudio para la unidad Nº{unitNumber} : {unitName}</DialogTitle>
-                                                            <DialogContent>
-                                                                <div style={{ display: "flex", flexDirection: "column" }}>
-                                                                    {
-                                                                        loadingUpload === true ? (
-                                                                            <div style={{ display: "flex", alignItems: "center", flexDirection: "column" }}>
-                                                                                <CircularProgress style={{ color: "#2074d4" }} />
-                                                                                <Typography style={{ textAlign: "center", marginTop: 15 }}>El archivo se esta subiendo, espere un momento</Typography>
-                                                                            </div>
-                                                                        ) : (
-                                                                            <React.Fragment>
-                                                                                <Typography style={{ color: "#2074d4" }}>Datos del Archivo</Typography>
-                                                                                <Divider style={{ height: 2, marginBottom: 15, backgroundColor: "#2074d4" }} />
-                                                                                    
-                                                                                <ThemeProvider theme={InputTheme}>
-                                                                                    <TextField type="text" label="Nombre"      variant="outlined" security="true" value={name} fullWidth onChange={(e) => setName(e.target.value)} style={{ marginBottom: 15 }} />
-                                                                                    <TextField type="text" label="Descripción" variant="outlined" security="true" value={description} fullWidth onChange={(e) => setDescription(e.target.value)} style={{ marginBottom: 15 }} />
-                                                                                    <TextField type="file" variant="outlined"  security="true" fullWidth onChange={handleSetFile} style={{ marginBottom: 15 }} />
-                                                                                </ThemeProvider>
-                                                                            </React.Fragment>
-                                                                        )
-                                                                    }
-                                                                
-                                                                    <Typography style={{ marginTop: 15, color: "#2074d4" }}>Progreso de la Carga</Typography>
-                                                                    <Divider style={{ height: 2, backgroundColor: "#2074d4" }} />
-
-                                                                    <ThemeProvider theme={InputTheme}>
-                                                                        <div style={{ display: "flex", justifyContent: "center", marginTop: 15 }}>
-                                                                            <Typography>{`${progress}%`}</Typography>
-                                                                            <LinearProgress variant="determinate" style={{ marginLeft: "auto", marginTop: 8, width: "calc(100% - 50px)" }} value={progress} />
-                                                                        </div>
-                                                                    </ThemeProvider>
-                                                                </div>
-                                                            </DialogContent>
-                                                            <DialogActions>
-                                                            {
-                                                                cancel === true ? (
-                                                                    <Button style={{ color: "#34495E" }} onClick={() => handleCancelUpload()}>
-                                                                        <Typography>Cancelar Subida</Typography>
-                                                                    </Button>
-                                                                ) : (
-                                                                    <React.Fragment>
-                                                                        <Button style={{ color: "#2074d4" }} onClick={() => handleUploadFile()}>
-                                                                            <Typography>Subir Archivo</Typography>
-                                                                        </Button>
-
-                                                                        <Button color="inherit" onClick={() => handleCloseFilesUnitDialog()}>
-                                                                            <Typography>Cerrar Esta Ventana</Typography>
-                                                                         </Button>
-                                                                    </React.Fragment>                    
-                                                                )
-                                                            }
-                                                            </DialogActions>
-                                                        </React.Fragment>
-                                                    )
-                                                }
-                                                </Dialog>
-
-                                                <Dialog open={editUnitFileDialog} maxWidth={"md"} onClose={handleCloseEditFileUnitDialog} fullScreen={fullScreen} scroll="paper">
-                                                {
-                                                    unitId === null || unitName === null || unitNumber === null ? (
-                                                        <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: 15 }}>
-                                                            <CircularProgress style={{ color: "#2074d4" }} />
+                                                    loadingUnitFiles === true ? (
+                                                        <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: 5 }}>
+                                                            <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                                <CircularProgress style={{ color: "#2074d4" }} />
+                                                                <Typography style={{ marginTop: 15 }}>Cargando</Typography>
+                                                            </Paper>
+                                                        </Paper>
+                                                    ) : errorUnitFiles === true ? (
+                                                        <Paper elevation={0} style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+                                                            <Typography style={{ textAlign: "center" }}>Ha ocurrido un error al obtener los archivos de la unidad</Typography>
+                                                            <Button style={{ color: "#2074d4", marginTop: 15 }} onClick={async () => await handleGetUnitFiles()}>Recargar archivos de la unidad</Button>
+                                                        </Paper>
+                                                    ) : unitFiles === null ? (
+                                                        <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: "auto", marginTop: 5 }}>
+                                                            <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                                <CircularProgress style={{ color: "#2074d4" }} />
+                                                                <Typography style={{ marginTop: 15 }}>Cargando Archivos</Typography>
+                                                            </Paper>
                                                         </Paper>
                                                     ) : (
                                                         <React.Fragment>
-                                                            <DialogTitle>Editar Archivo de la unidad Nº{unitNumber} : {unitName}</DialogTitle>
-                                                            <DialogContent>
-                                                                <Paper elevation={0} style={{ display: "flex", flexDirection: "column" }}>
-                                                                    <React.Fragment>
-                                                                    {
-                                                                        loadingUpload === true ? (
-                                                                            <div style={{ display: "flex", alignItems: "center", flexDirection: "column" }}>
-                                                                                <CircularProgress style={{ color: "#2074d4" }} />
-                                                                                <Typography style={{ textAlign: "center", marginTop: 15 }}>El archivo se esta subiendo, espere un momento</Typography>
-                                                                            </div>
-                                                                        ) : (
-                                                                            <React.Fragment>
-                                                                                <Typography style={{ color: "#2074d4" }}>Datos del Archivo</Typography>
-                                                                                <Divider style={{ height: 2, marginBottom: 15, backgroundColor: "#2074d4" }} />
-                                                                                                                
-                                                                                <ThemeProvider theme={InputTheme}>
-                                                                                    <TextField type="text" label="Nombre"      variant="outlined" security="true" value={name} fullWidth onChange={(e) => setName(e.target.value)} style={{ marginBottom: 15 }} />
-                                                                                    <TextField type="text" label="Descripción" variant="outlined" security="true" value={description} fullWidth onChange={(e) => setDescription(e.target.value)} style={{ marginBottom: 15 }} />
-                                                                                </ThemeProvider>
-
-                                                                                <FormControlLabel
-                                                                                    control={<Tooltip title={editFile === true ? "Si desea mantener el archivo, quite esta opción" : "Si desea cambiar el archivo, seleccione esta opción"}>
-                                                                                                <Checkbox style={{ color: "#2074d4" }} security="true" checked={editFile} onChange={(e) => setEditFile(e.target.checked)} />
-                                                                                            </Tooltip>}
-                                                                                    label="Editar Archivo Subido"
-                                                                                />
-
-                                                                                <div>
-                                                                                {
-                                                                                    editFile === true && (
-                                                                                        <React.Fragment>
-                                                                                            <Typography style={{ marginTop: 15, color: "#2074d4" }}>Archivo Actual Subido</Typography>
-                                                                                            <Divider style={{ height: 2, marginBottom: 10, backgroundColor: "#2074d4" }} />
-
-                                                                                            <ThemeProvider theme={InputTheme}>
-                                                                                                <div style={{ display: "flex", flexDirection: "row", alignItems: "center", marginBottom: 15 }}>
-                                                                                                    <Typography style={{ marginRight: 10 }}>Archivo Actual Subido :</Typography>
-                                                                                                    <Typography style={{ color: "black" }} component="a" target="_blank" href={actualUrlFile}>{decodeURI(actualUrlFile.split(RegExp("%2..*%2F(.*?)alt"))[1].replace("?", ""))}</Typography>
-                                                                                                </div>
-                                                                                                    
-                                                                                                <TextField type="file" variant="outlined" security="true" fullWidth onChange={handleSetFile} style={{ marginBottom: 15 }} />
-                                                                                            </ThemeProvider>
-                                                                                        </React.Fragment>
-                                                                                    )
-                                                                                }
-                                                                                </div>
-                                                                            </React.Fragment>
-                                                                        )
-                                                                    }
-                                                                    </React.Fragment>
-
-                                                                    <React.Fragment>
-                                                                    {
-                                                                        editFile === true && (
-                                                                            <React.Fragment>
-                                                                                <Typography style={{ marginTop: 15, color: "#2074d4" }}>Progreso de la Carga</Typography>
-                                                                                <Divider style={{ height: 2, backgroundColor: "#2074d4" }} />
-                                                                                                            
-                                                                                <ThemeProvider theme={InputTheme}>
-                                                                                    <div style={{ display: "flex", justifyContent: "center", marginTop: 15 }}>
-                                                                                        <Typography>{`${progress}%`}</Typography>
-                                                                                        <LinearProgress variant="determinate" style={{ marginLeft: "auto", marginTop: 8, width: "calc(100% - 50px)" }} value={progress} />
-                                                                                    </div>
-                                                                                </ThemeProvider>
-                                                                            </React.Fragment>
-                                                                        )
-                                                                    }
-                                                                    </React.Fragment> 
-                                                                </Paper>
-                                                            </DialogContent>
-                                                            <DialogActions>
+                                                            <List>
                                                             {
-                                                                cancel === true ? (
-                                                                    <Button style={{ color: "#34495E" }} onClick={() => handleCancelUpload()}>
-                                                                        <Typography variant="button">Cancelar Editar Archivo</Typography>
-                                                                    </Button>
-                                                                ) : (
-                                                                    <React.Fragment>
-                                                                        <Button style={{ color: "#2074d4" }} onClick={() => handleEditFile()}>
-                                                                            <Typography variant="button">Editar Archivo</Typography>
-                                                                        </Button>
+                                                                unitFiles.filter(x => x.idUnit === doc.id)[0].data.length > 0 && (
+                                                                    unitFiles.filter(x => x.idUnit === doc.id)[0].data.map(docFile => (
+                                                                        <React.Fragment key={docFile.id}>          
+                                                                        {
+                                                                            docFile.data.type === "FILE" ? (
+                                                                                <ListItem button role={undefined} component="a" target="_blank" href={Decrypt(docFile.data.url)} style={{ height: "fit-content", marginBottom: 5, color: "#000" }}>
+                                                                                    <ListItemIcon>
+                                                                                        <Tooltip title={<Typography>Archivo/Documento de Estudio</Typography>}>
+                                                                                            <InsertDriveFile />
+                                                                                        </Tooltip>    
+                                                                                    </ListItemIcon>
 
-                                                                        <Button color="inherit" onClick={handleCloseEditFileUnitDialog}>
-                                                                            <Typography variant="button">Cerrar Esta Ventana</Typography>
-                                                                        </Button>
-                                                                    </React.Fragment>                    
+                                                                                    <ListItemText primary={<Typography>{Decrypt(docFile.data.name)}</Typography>} style={{ marginRight: 70 }} />
+                                                                                    
+                                                                                    <ListItemSecondaryAction>
+                                                                                    {
+                                                                                        Decrypt(access) === "teacher" && (
+                                                                                            editor === true && (
+                                                                                                <React.Fragment>
+                                                                                                    <Tooltip title={<Typography>Eliminar este Archivo</Typography>}>
+                                                                                                        <IconButton edge="end" onClick={() => handleRemoveFile(docFile.id, doc.id)}>
+                                                                                                            <Delete />
+                                                                                                        </IconButton>
+                                                                                                    </Tooltip>
+                                                                                                    <Tooltip title={<Typography>Editar este Archivo</Typography>}>
+                                                                                                        <IconButton edge="end" onClick={() => handleOpenEditFileUnitDialog(doc.id, doc.data.unit, doc.data.numberUnit, docFile, doc)} style={{ marginLeft: 15 }}>
+                                                                                                            <Edit />
+                                                                                                        </IconButton>
+                                                                                                    </Tooltip>
+                                                                                               </React.Fragment> 
+                                                                                            )
+                                                                                        )
+                                                                                    }
+                                                                                    </ListItemSecondaryAction>
+                                                                                </ListItem>
+                                                                            ) : docFile.data.type === "HOMEWORK" ? ( 
+                                                                                <ListItem button onClick={() => history.push(`/subject/homework/${docFile.id}?subject=${id}&unit=${doc.id}`)} style={{ height: "fit-content", marginBottom: 5, color: "#000" }}>
+                                                                                    <ListItemIcon>
+                                                                                        <Tooltip title={<Typography>Tarea/Actividad</Typography>}>
+                                                                                            <Book />
+                                                                                        </Tooltip>
+                                                                                    </ListItemIcon>
+
+                                                                                    <ListItemText primary={<Typography>{Decrypt(docFile.data.name)}</Typography>} style={{ marginRight: 70 }} />
+                                                                         
+                                                                                    <ListItemSecondaryAction>
+                                                                                    {
+                                                                                        Decrypt(access) === "teacher" && (
+                                                                                            editor === true && (
+                                                                                                <React.Fragment>
+                                                                                                    <Tooltip title={<Typography>Eliminar esta Tarea</Typography>}>
+                                                                                                        <IconButton edge="end" onClick={() => handleRemoveFile(docFile.id, doc.id)}>
+                                                                                                            <Delete />
+                                                                                                        </IconButton>
+                                                                                                    </Tooltip>
+                                                                                                    <Tooltip title={<Typography>Editar esta Tarea</Typography>}>
+                                                                                                        <IconButton edge="end" onClick={() => handleOpenEditFileUnitDialog(doc.id, doc.data.unit, doc.data.numberUnit, docFile, doc)} style={{ marginLeft: 15 }}>
+                                                                                                            <Edit />
+                                                                                                        </IconButton>
+                                                                                                    </Tooltip>
+                                                                                                </React.Fragment>
+                                                                                            )
+                                                                                        )
+                                                                                    }
+                                                                                    </ListItemSecondaryAction>
+                                                                                </ListItem>
+                                                                            ) : (
+                                                                                <React.Fragment>  
+                                                                                </React.Fragment>
+                                                                            )   
+                                                                        }                                                        
+                                                                        </React.Fragment>
+                                                                    ))
                                                                 )
                                                             }
-                                                            </DialogActions>
+                                                            </List>
                                                         </React.Fragment>
+                                                    )                                                      
+                                                }
+                                                </Paper>
+
+                                                <Divider style={{ marginTop: 5, marginBottom: 15 }} /> 
+                                            </Paper>
+                                        ))
+                                    }
+                                    </List>
+                                </CardContent>
+                            </Card>
+                        </Grid>
+
+                        <Grid item container md={3} style={{ marginTop: 15 }}>
+                            <Card variant="outlined" style={{ width: "100%" }}>
+                                <CardContent>
+                                    <React.Fragment>
+                                    {
+                                        Decrypt(access) === "teacher" && (
+                                            <Paper elevation={0}>
+                                                <Button fullWidth style={{ color: "#2074d4", marginBottom: 15 }} onClick={() => handleOpenStudentsDialog()}>
+                                                    <Typography variant="button">Asignar Estudiantes</Typography>
+                                                </Button>
+
+                                                <Button fullWidth style={{ color: "#34495E", marginBottom: 15 }} onClick={() => setEditor(!editor)}>
+                                                {
+                                                    editor === false ? (
+                                                        <Typography variant="button">Abrir editor para subir archivos</Typography>
+                                                    ) : (
+                                                        <Typography variant="button">Cerrar Editor para subir archivos</Typography>
                                                     )
                                                 }
-                                                </Dialog>
+                                                </Button>
 
-                                                <Dialog open={homeworkDialog} maxWidth={"md"} fullWidth onClose={handleCloseHomewordDialog} fullScreen={fullScreen} scroll="paper">
-                                                    <DialogTitle>{`Crear tarea o una actividad en la unidad ${selectedUnit === null ? `seleccionada` : `Nº${selectedUnit.data.numberUnit} : ${selectedUnit.data.unit}`}`}</DialogTitle>
-                                                    <DialogContent>
-                                                        <React.Fragment>
-                                                            <Paper>
-                                                            {
-                                                                selectedUnit === null ? (
-                                                                    <Paper elevation={0} style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                                                                        <Typography style={{ marginTop: 15 }}>Cargando Datos del Estudiante Seleccionado</Typography>
-                                                                    </Paper>
-                                                                ) : (
-                                                                    loadingUpload === true ? (
-                                                                        <Paper elevation={0} style={{ display: "flex", alignItems: "center", flexDirection: "column" }}>
-                                                                            <CircularProgress style={{ color: "#2074d4" }} />
-                                                                            <Typography style={{ textAlign: "center", marginTop: 15 }}>El archivo se esta subiendo, espere un momento</Typography>
-                                                                        </Paper>
-                                                                    ) : (
-                                                                        <Paper elevation={0}>
-                                                                            <ThemeProvider theme={InputTheme}>
-                                                                                <Typography style={{ color: "#2074d4" }}>Datos de la Tarea</Typography>
-                                                                                <Divider style={{ height: 2, marginBottom: 15, backgroundColor: "#2074d4" }} />
-                                                                                            
-                                                                                <TextField type="text" label="Nombre" variant="outlined" security="true" value={name} fullWidth onChange={(e) => setName(e.target.value)} style={{ marginBottom: 15 }} />
-                                                                                <TextField type="text" label="Descripción" variant="outlined" security="true" value={description} fullWidth multiline onChange={(e) => setDescription(e.target.value)} style={{ marginBottom: 15 }} />
-                                                                                <TextField type="file" label="" variant="outlined" security="true" fullWidth onChange={handleSetFile} style={{ marginBottom: 15 }} />
-
-                                                                                <FormControlLabel
-                                                                                    control={<Tooltip title={limitTime === true ? "Si desea no establecer un limite de tiempo, quite esta opción" : "Si desea establecer un limite de tiempo, seleccione esta opción"}>
-                                                                                                <Checkbox style={{ color: "#2074d4" }} security="true" checked={limitTime} onChange={(e) => setLimitTime(e.target.checked)} />
-                                                                                            </Tooltip>}
-                                                                                    label="Establecer un limite de tiempo de subida" />
-                                                                            
-                                                                                <Paper elevation={0}>
-                                                                                {
-                                                                                    limitTime === true && (
-                                                                                        <TextField type="datetime-local" label="Fecha Límite" variant="outlined" security="true" value={limitDate} fullWidth onChange={(e) => setLimitDate(e.target.value)} style={{ marginBottom: 15, marginTop: 15 }} />
-                                                                                    )
-                                                                                }
-                                                                                </Paper>
-                                                                            </ThemeProvider>
-                                                                        </Paper>
-                                                                    )
-                                                                )
-                                                            }
-                                                            </Paper>
-
-                                                            <Typography style={{ marginTop: 15, color: "#2074d4" }}>Progreso de la Carga</Typography>
-                                                            <Divider style={{ height: 2, backgroundColor: "#2074d4" }} />
-
-                                                            <ThemeProvider theme={InputTheme}>
-                                                                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", marginTop: 15 }}>
-                                                                    <Typography>{`${progress}%`}</Typography>
-                                                                    <LinearProgress variant="determinate" style={{ marginLeft: "auto", marginTop: 8, width: "calc(100% - 50px)" }} value={progress} />
-                                                                </Paper>
-                                                            </ThemeProvider>
-                                                        </React.Fragment>
-                                                    </DialogContent>
-                                                    <DialogActions>
-                                                        <React.Fragment>
-                                                        {
-                                                            cancel === true ? (
-                                                                <Button style={{ color: "#34495E" }} onClick={() => handleCancelUpload()}>
-                                                                    <Typography variant="button">Cancelar Operación</Typography>
-                                                                </Button>
-                                                            ) : (
-                                                                <Paper elevation={0}>
-                                                                    <Button style={{ color: "#2074d4" }} onClick={async () => await handleUploadHomework()}>
-                                                                        <Typography variant="button">Crear Elemento</Typography>
-                                                                    </Button>
-
-                                                                    <Button color="inherit" onClick={handleCloseHomewordDialog}>
-                                                                        <Typography variant="button">Cerrar Esta Ventana</Typography>
-                                                                    </Button>
-                                                                </Paper>                    
-                                                            )
-                                                        }
-                                                        </React.Fragment>                    
-                                                    </DialogActions>
-                                                </Dialog>
+                                                <Button onClick={() => history.push(`/subject/students/${id}`)} fullWidth style={{ color: "#2074d4" }}>
+                                                    <Typography variant="button">Ver Estudiantes</Typography>
+                                                </Button>    
+                                            </Paper>
+                                        )
+                                    }
+                                    </React.Fragment>
+                                                
+                                    <React.Fragment>
+                                    {
+                                        Decrypt(access) === "student" && (
+                                            <React.Fragment>
+                                                <Button onClick={() => history.push(`/subject/my-grades/${id}`)} fullWidth style={{ color: "#2074d4", marginBottom: 15 }}>
+                                                    <Typography variant="button">Ver mis calificaciones</Typography>
+                                                </Button>
                                             </React.Fragment>
                                         )
                                     }
                                     </React.Fragment>
-                                </React.Fragment>
-                            )
+                                </CardContent>
+                            </Card>
+                        </Grid>
+                    </Grid>
+                                    
+                    <React.Fragment>
+                    {
+                        Decrypt(access) === "teacher" && (
+                            <React.Fragment>
+                                <Dialog open={studentsDialog} maxWidth={"md"} fullWidth={true} onClose={handleCloseStudentsDialog} fullScreen={fullScreen} scroll="paper">
+                                {
+                                    subject === null ? (
+                                        <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                            <CircularProgress style={{ color: "#2074d4" }} />
+                                        </Paper>
+                                    ) : (
+                                        <React.Fragment>
+                                            <DialogTitle>Asignar estudiantes a la asignatura {Decrypt(Decrypt(subject.subject)[0].data.courseName)}</DialogTitle>
+                                            <DialogContent>
+                                                <DialogContentText>Asigna estudiantes del curso {Decrypt(subject.subject)[0].data.grade} {`${Decrypt(subject.subject)[0].data.grade} ${Decrypt(subject.subject)[0].data.number}º${Decrypt(subject.subject)[0].data.letter}`} para la asignatura {Decrypt(subject.subject)[0].data.type}</DialogContentText>
+
+                                                <Accordion variant="outlined">
+                                                    <AccordionSummary expandIcon={<ExpandMore />}>
+                                                        <Typography>Ver Alumnos</Typography>
+                                                    </AccordionSummary>
+                                                    <AccordionDetails>
+                                                        <Paper elevation={0} style={{ display: "flex", flexDirection: "column", width: "100%" }}>
+                                                        {
+                                                            loadingStudents === true ? (
+                                                                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                                                    <CircularProgress style={{ color: "#2074d4" }} />
+                                                                </Paper>
+                                                            ) : students !== null && studentsCourse !== null ? (
+                                                                    students.length > 0 ? (
+                                                                        <React.Fragment>
+                                                                            <List style={{ width: "100%" }}>
+                                                                            {
+                                                                                students.map(doc => (
+                                                                                    <StudentListItem key={doc.id} subjectId={id} course={Decrypt(subject.subject)[0]} student={doc} students={students} studentsCourse={studentsCourse} setStudentsCourse={setStudentsCourse} />
+                                                                                ))
+                                                                            }
+                                                                            </List> 
+
+                                                                            <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                                                <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                                                <Button onClick={async () => await handleGetStudents()} style={{ color: "#2074d4" }}>
+                                                                                    <Typography variant="button">Recargar Estudiantes</Typography>
+                                                                                </Button>
+                                                                            </Paper>
+                                                                        </React.Fragment>
+                                                                    ) : (
+                                                                        <React.Fragment>
+                                                                            <Typography style={{ textAlign: "center" }}>No existen alumnos a esta asignatura del curso</Typography>
+                                                                                    
+                                                                            <Paper elevation={0} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                                                                <Divider style={{ width: 270, marginBottom: 15, marginTop: 15 }} />
+                                                                                <Button onClick={async () => await handleGetStudents()} style={{ color: "#2074d4" }}>
+                                                                                    <Typography variant="button">Recargar Estudiantes</Typography>
+                                                                                </Button>
+                                                                            </Paper>
+                                                                        </React.Fragment>
+                                                                    )
+                                                            ) : (
+                                                                <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                                                    <CircularProgress style={{ color: "#2074d4" }} />
+                                                                </Paper>
+                                                            )        
+                                                        }
+                                                        </Paper>
+                                                    </AccordionDetails>
+                                                </Accordion>                                       
+                                            </DialogContent>
+                                            <DialogActions>
+                                                <Button color="inherit" onClick={() => setStudentsDialog(false)}>
+                                                    <Typography>Cerrar Esta Ventana</Typography>
+                                                </Button>
+                                            </DialogActions>
+                                        </React.Fragment>
+                                    )
+                                }
+                                </Dialog>
+
+                                <Dialog open={unitsFileDialog} maxWidth={"md"} onClose={handleCloseFilesUnitDialog} fullScreen={fullScreen} scroll="paper">
+                                {
+                                    unitId === null || unitName === null || unitNumber === null ? (
+                                        <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                            <CircularProgress style={{ color: "#2074d4" }} />
+                                        </Paper>
+                                    ) : (
+                                        <React.Fragment>
+                                            <DialogTitle>Asigna archivos de estudio para la unidad Nº{unitNumber} : {unitName}</DialogTitle>
+                                            <DialogContent>
+                                                <Paper elevation={0} style={{ display: "flex", flexDirection: "column" }}>
+                                                    <React.Fragment>
+                                                    {
+                                                        loadingUpload === true ? (
+                                                            <Paper elevation={0} style={{ display: "flex", alignItems: "center", flexDirection: "column" }}>
+                                                                <CircularProgress style={{ color: "#2074d4" }} />
+                                                                <Typography style={{ textAlign: "center", marginTop: 15 }}>El archivo se esta subiendo, espere un momento</Typography>
+                                                            </Paper>
+                                                        ) : (
+                                                            <React.Fragment>
+                                                                <Typography style={{ color: "#2074d4" }}>Datos del Archivo</Typography>
+                                                                <Divider style={{ height: 2, marginBottom: 15, backgroundColor: "#2074d4" }} />
+                                                                    
+                                                                <ThemeProvider theme={InputTheme}>
+                                                                    <TextField type="text" label="Nombre"      variant="outlined" security="true" value={name} fullWidth onChange={(e) => setName(e.target.value)} style={{ marginBottom: 15 }} />
+                                                                    <TextField type="text" label="Descripción" variant="outlined" security="true" value={description} fullWidth onChange={(e) => setDescription(e.target.value)} style={{ marginBottom: 15 }} />
+                                                                    <TextField type="file" variant="outlined"  security="true" fullWidth onChange={handleSetFile} style={{ marginBottom: 15 }} />
+                                                                </ThemeProvider>
+                                                            </React.Fragment>
+                                                        )
+                                                    }
+                                                    </React.Fragment>
+
+                                                    <Typography style={{ marginTop: 15, color: "#2074d4" }}>Progreso de la Carga</Typography>
+                                                    <Divider style={{ height: 2, backgroundColor: "#2074d4" }} />
+
+                                                    <ThemeProvider theme={InputTheme}>
+                                                        <Paper elevation={0} style={{ display: "flex", justifyContent: "center", marginTop: 15 }}>
+                                                            <Typography>{`${progress}%`}</Typography>
+                                                            <LinearProgress variant="determinate" style={{ marginLeft: "auto", marginTop: 8, width: "calc(100% - 50px)" }} value={progress} />
+                                                        </Paper>
+                                                    </ThemeProvider>
+                                                </Paper>
+                                            </DialogContent>
+                                            <DialogActions>
+                                            {
+                                                cancel === true ? (
+                                                    <Button style={{ color: "#34495E" }} onClick={() => handleCancelUpload()}>
+                                                        <Typography>Cancelar Subida</Typography>
+                                                    </Button>
+                                                ) : (
+                                                    <React.Fragment>
+                                                        <Button style={{ color: "#2074d4" }} onClick={() => handleUploadFile()}>
+                                                            <Typography>Subir Archivo</Typography>
+                                                        </Button>
+
+                                                        <Button color="inherit" onClick={() => handleCloseFilesUnitDialog()}>
+                                                            <Typography>Cerrar Esta Ventana</Typography>
+                                                         </Button>
+                                                    </React.Fragment>                    
+                                                )
+                                            }
+                                            </DialogActions>
+                                        </React.Fragment>
+                                    )
+                                }
+                                </Dialog>
+
+                                <Dialog open={editUnitFileDialog} maxWidth={"md"} onClose={handleCloseEditFileUnitDialog} fullScreen={fullScreen} scroll="paper">
+                                {
+                                    unitId === null || unitName === null || unitNumber === null ? (
+                                        <Paper elevation={0} style={{ display: "flex", justifyContent: "center", alignItems: "center", margin: 15 }}>
+                                            <CircularProgress style={{ color: "#2074d4" }} />
+                                        </Paper>
+                                    ) : (
+                                        <React.Fragment>
+                                            <DialogTitle>Editar Archivo de la unidad Nº{unitNumber} : {unitName}</DialogTitle>
+                                            <DialogContent>
+                                                <Paper elevation={0} style={{ display: "flex", flexDirection: "column" }}>
+                                                    <React.Fragment>
+                                                    {
+                                                        loadingUpload === true ? (
+                                                            <Paper elevation={0} style={{ display: "flex", alignItems: "center", flexDirection: "column" }}>
+                                                                <CircularProgress style={{ color: "#2074d4" }} />
+                                                                <Typography style={{ textAlign: "center", marginTop: 15 }}>El archivo se esta subiendo, espere un momento</Typography>
+                                                            </Paper>
+                                                        ) : (
+                                                            <React.Fragment>
+                                                                <Typography style={{ color: "#2074d4" }}>Datos del Archivo</Typography>
+                                                                <Divider style={{ height: 2, marginBottom: 15, backgroundColor: "#2074d4" }} />
+                                                                                                                
+                                                                <ThemeProvider theme={InputTheme}>
+                                                                    <TextField type="text" label="Nombre"      variant="outlined" security="true" value={name} fullWidth onChange={(e) => setName(e.target.value)} style={{ marginBottom: 15 }} />
+                                                                    <TextField type="text" label="Descripción" variant="outlined" security="true" value={description} fullWidth onChange={(e) => setDescription(e.target.value)} style={{ marginBottom: 15 }} />
+                                                                </ThemeProvider>
+
+                                                                <FormControlLabel
+                                                                    control={<Tooltip title={editFile === true ? "Si desea mantener el archivo, quite esta opción" : "Si desea cambiar el archivo, seleccione esta opción"}>
+                                                                                <Checkbox style={{ color: "#2074d4" }} security="true" checked={editFile} onChange={(e) => setEditFile(e.target.checked)} />
+                                                                            </Tooltip>}
+                                                                    label="Editar Archivo Subido"
+                                                                />
+
+                                                                <React.Fragment>
+                                                                {
+                                                                    editFile === true && (
+                                                                        <React.Fragment>
+                                                                            <Typography style={{ marginTop: 15, color: "#2074d4" }}>Archivo Actual Subido</Typography>
+                                                                            <Divider style={{ height: 2, marginBottom: 10, backgroundColor: "#2074d4" }} />
+
+                                                                            <ThemeProvider theme={InputTheme}>
+                                                                                <Paper elevation={0} style={{ display: "flex", flexDirection: "row", alignItems: "center", marginBottom: 15 }}>
+                                                                                    <Typography style={{ marginRight: 10 }}>Archivo Actual Subido :</Typography>
+                                                                                    <Typography style={{ color: "black" }} component="a" target="_blank" href={actualUrlFile}>{decodeURI(actualUrlFile.split(RegExp("%2..*%2F(.*?)alt"))[1].replace("?", ""))}</Typography>
+                                                                                </Paper>
+                                                                                    
+                                                                                <TextField type="file" variant="outlined" security="true" fullWidth onChange={handleSetFile} style={{ marginBottom: 15 }} />
+                                                                            </ThemeProvider>
+                                                                        </React.Fragment>
+                                                                    )
+                                                                }
+                                                                </React.Fragment>
+                                                            </React.Fragment>
+                                                        )
+                                                    }
+                                                    </React.Fragment>
+
+                                                    <React.Fragment>
+                                                    {
+                                                        editFile === true && (
+                                                            <React.Fragment>
+                                                                <Typography style={{ marginTop: 15, color: "#2074d4" }}>Progreso de la Carga</Typography>
+                                                                <Divider style={{ height: 2, backgroundColor: "#2074d4" }} />
+
+                                                                <ThemeProvider theme={InputTheme}>
+                                                                    <Paper elevation={0} style={{ display: "flex", justifyContent: "center", marginTop: 15 }}>
+                                                                        <Typography>{`${progress}%`}</Typography>
+                                                                        <LinearProgress variant="determinate" style={{ marginLeft: "auto", marginTop: 8, width: "calc(100% - 50px)" }} value={progress} />
+                                                                    </Paper>
+                                                                </ThemeProvider>
+                                                            </React.Fragment>
+                                                        )
+                                                    }
+                                                    </React.Fragment> 
+                                                </Paper>
+                                            </DialogContent>
+                                            <DialogActions>
+                                            {
+                                                cancel === true ? (
+                                                    <Button style={{ color: "#34495E" }} onClick={() => handleCancelUpload()}>
+                                                        <Typography variant="button">Cancelar Editar Archivo</Typography>
+                                                    </Button>
+                                                ) : (
+                                                    <React.Fragment>
+                                                        <Button style={{ color: "#2074d4" }} onClick={() => handleEditFile()}>
+                                                            <Typography variant="button">Editar Archivo</Typography>
+                                                        </Button>
+
+                                                        <Button color="inherit" onClick={handleCloseEditFileUnitDialog}>
+                                                            <Typography variant="button">Cerrar Esta Ventana</Typography>
+                                                        </Button>
+                                                    </React.Fragment>                    
+                                                )
+                                            }
+                                            </DialogActions>
+                                        </React.Fragment>
+                                    )
+                                }
+                                </Dialog>
+
+                                <Dialog open={homeworkDialog} maxWidth={"md"} fullWidth onClose={handleCloseHomewordDialog} fullScreen={fullScreen} scroll="paper">
+                                    <DialogTitle>{`Crear tarea o una actividad en la unidad ${selectedUnit === null ? `seleccionada` : `Nº${selectedUnit.data.numberUnit} : ${selectedUnit.data.unit}`}`}</DialogTitle>
+                                        <DialogContent>
+                                            <React.Fragment>
+                                                <Paper elevation={0}>
+                                                {
+                                                    selectedUnit === null ? (
+                                                        <Paper elevation={0} style={{ flex: 1, height: "calc(100% - 30px)", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                                            <Typography style={{ marginTop: 15 }}>Cargando Datos del Estudiante Seleccionado</Typography>
+                                                        </Paper>
+                                                    ) : (
+                                                        loadingUpload === true ? (
+                                                            <Paper elevation={0} style={{ display: "flex", alignItems: "center", flexDirection: "column" }}>
+                                                                <CircularProgress style={{ color: "#2074d4" }} />
+                                                                <Typography style={{ textAlign: "center", marginTop: 15 }}>El archivo se esta subiendo, espere un momento</Typography>
+                                                            </Paper>
+                                                        ) : (
+                                                            <Paper elevation={0}>
+                                                                <ThemeProvider theme={InputTheme}>
+                                                                    <Typography style={{ color: "#2074d4" }}>Datos de la Tarea</Typography>
+                                                                    <Divider style={{ height: 2, marginBottom: 15, backgroundColor: "#2074d4" }} />
+
+                                                                    <TextField type="text" label="Nombre" variant="outlined" security="true" value={name} fullWidth onChange={(e) => setName(e.target.value)} style={{ marginBottom: 15 }} />
+                                                                    <TextField type="text" label="Descripción" variant="outlined" security="true" value={description} fullWidth multiline onChange={(e) => setDescription(e.target.value)} style={{ marginBottom: 15 }} />
+                                                                    <TextField type="file" label="" variant="outlined" security="true" fullWidth onChange={handleSetFile} style={{ marginBottom: 15 }} />
+
+                                                                    <FormControlLabel
+                                                                        control={<Tooltip title={limitTime === true ? "Si desea no establecer un limite de tiempo, quite esta opción" : "Si desea establecer un limite de tiempo, seleccione esta opción"}>
+                                                                                <Checkbox style={{ color: "#2074d4" }} security="true" checked={limitTime} onChange={(e) => setLimitTime(e.target.checked)} />
+                                                                            </Tooltip>}
+                                                                        label="Establecer un limite de tiempo de subida" />
+                                                                            
+                                                                    <Paper elevation={0}>
+                                                                    {
+                                                                        limitTime === true && (
+                                                                            <TextField type="datetime-local" label="Fecha Límite" variant="outlined" security="true" value={limitDate} fullWidth onChange={(e) => setLimitDate(e.target.value)} style={{ marginBottom: 15, marginTop: 15 }} />
+                                                                        )
+                                                                    }
+                                                                    </Paper>
+                                                                </ThemeProvider>
+                                                            </Paper>
+                                                        )
+                                                    )
+                                                }
+                                                </Paper>
+
+                                                <Typography style={{ marginTop: 15, color: "#2074d4" }}>Progreso de la Carga</Typography>
+                                                <Divider style={{ height: 2, backgroundColor: "#2074d4" }} />
+
+                                                <ThemeProvider theme={InputTheme}>
+                                                    <Paper elevation={0} style={{ display: "flex", justifyContent: "center", marginTop: 15 }}>
+                                                        <Typography>{`${progress}%`}</Typography>
+                                                        <LinearProgress variant="determinate" style={{ marginLeft: "auto", marginTop: 8, width: "calc(100% - 50px)" }} value={progress} />
+                                                    </Paper>
+                                                </ThemeProvider>
+                                            </React.Fragment>
+                                        </DialogContent>
+                                        <DialogActions>
+                                            <React.Fragment>
+                                            {
+                                                cancel === true ? (
+                                                    <Button style={{ color: "#34495E" }} onClick={() => handleCancelUpload()}>
+                                                        <Typography variant="button">Cancelar Operación</Typography>
+                                                    </Button>
+                                                ) : (
+                                                    <Paper elevation={0}>
+                                                        <Button style={{ color: "#2074d4" }} onClick={async () => await handleUploadHomework()}>
+                                                            <Typography variant="button">Crear Elemento</Typography>
+                                                        </Button>
+
+                                                        <Button color="inherit" onClick={handleCloseHomewordDialog}>
+                                                            <Typography variant="button">Cerrar Esta Ventana</Typography>
+                                                        </Button>
+                                                    </Paper>                    
+                                                )
+                                            }
+                                        </React.Fragment>                    
+                                    </DialogActions>
+                                </Dialog>
+                            </React.Fragment>
                         )
-                    )
-                )
+                    }
+                    </React.Fragment>
+                </React.Fragment>
             )
         }
         </Paper>
