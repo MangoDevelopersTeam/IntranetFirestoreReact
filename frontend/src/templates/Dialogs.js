@@ -238,19 +238,22 @@ const Dialogs = () => {
      */
     const handleAddCourse = useCallback(
         async (course) => {
-            if (await courses.find(x => x === course))
+            if (courses !== null)
             {
-                let index = courses.indexOf(course);
+                if (await courses.find(x => x === course))
+                {
+                    let index = courses.indexOf(course);
 
-                if (index > -1) {
-                    courses.splice(index, 1);
-                    return document.getElementById(`${course}`).checked = false;
+                    if (index > -1) {
+                        courses.splice(index, 1);
+                        return document.getElementById(`${course}`).checked = false;
+                    }
                 }
-            }
-            else
-            {
-                courses.push(course);
-                return document.getElementById(`${course}`).checked = true;
+                else
+                {
+                    courses.push(course);
+                    return document.getElementById(`${course}`).checked = true;
+                } 
             }
         },
         [courses],
@@ -337,20 +340,26 @@ const Dialogs = () => {
      */
     const handleAddStudent = useCallback(
         async (userId) => {
-            if (await students.find(x => x === userId))
+            if (students !== null)
             {
-                let index = students.indexOf(userId);
+                if (await students.find(x => x === userId))
+                {
+                    let index = students.indexOf(userId);
 
-                if (index > -1) {
-                    students.splice(index, 1);
-                    return document.getElementById(userId).checked = false;
+                    if (index > -1) {
+                        students.splice(index, 1);
+                        console.log(students);
+                        return document.getElementById(userId).checked = false;
+                    }
+                }
+                else
+                {
+                    students.push(userId);
+                    console.log(students);
+                    return document.getElementById(userId).checked = true;
                 }
             }
-            else
-            {
-                students.push(userId);
-                return document.getElementById(userId).checked = true;
-            }
+            
         },
         [students],
     );
@@ -390,7 +399,7 @@ const Dialogs = () => {
 
                 if (level === "proxie")
                 {
-                    if (students.length <= 0)
+                    if (students.length <= 0 || students === null)
                     {
                         return showMessage("Debe seleccionar al menos un alumno para asignarlo al apoderado", "info");
                     }

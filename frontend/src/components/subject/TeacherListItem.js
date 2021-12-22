@@ -191,7 +191,7 @@ const TeacherListItem = ({ subjectId, course, teacher, teachers, teachersCourse,
             setLength(teachers.length);
         }
 
-        if (teachersCourse !== null && teacher !== null && teachers !== null)
+        if (teachersCourse !== null && teacher !== null && teachers !== null && teachersCourse !== undefined && teacher !== undefined && teachers !== undefined)
         {
             callQuery();
 
@@ -216,7 +216,7 @@ const TeacherListItem = ({ subjectId, course, teacher, teachers, teachersCourse,
             }
         }
 
-        if (teacher !== null && teachersCourse !== null)
+        if (teacher !== null && teachersCourse !== null && teacher !== undefined && teachersCourse !== undefined)
         {
             callQuery();
 

@@ -103,7 +103,7 @@ const StudentListItem = ({ subjectId, course, student, studentsCourse, setStuden
     // useEffects
     useEffect(() => {
         let callQuery = async () => {
-            if (student !== null && studentsCourse !== null)
+            if (student !== null && studentsCourse !== null && studentsCourse !== undefined && student !== undefined)
             {
                 let lambda = studentsCourse.find(x => x.id === student.id) === undefined ? false : true;
 
@@ -118,7 +118,7 @@ const StudentListItem = ({ subjectId, course, student, studentsCourse, setStuden
             }
         }
 
-        if (student !== null && studentsCourse !== null)
+        if (student !== null && studentsCourse !== null && studentsCourse !== undefined)
         {
             callQuery();
 

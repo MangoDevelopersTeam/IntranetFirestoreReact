@@ -156,7 +156,8 @@ const Subject = () => {
             })
             .then(result => {
                 if (result.status === 200 && result.data.code === "PROCESS_OK")
-                {
+                {   
+                    console.log("Teachers course", Decrypt(result.data.data));
                     setTeachersCourse(Decrypt(result.data.data));
                     setErrorTeachersCourse(false);
                 }
@@ -395,6 +396,7 @@ const Subject = () => {
             .then(result => {
                 if (result.data.code === "PROCESS_OK")
                 {    
+                    console.log("Teachers", Decrypt(result.data.data));
                     setTeachers(Decrypt(result.data.data));
                     setErrorTeachers(false);
                 }
@@ -455,7 +457,7 @@ const Subject = () => {
      */
     const handleShowTeacherDialog = useCallback(
         async () => {
-            if (course === null)
+            if (course === null || course === undefined)
             {
                 return;
             }
@@ -491,7 +493,7 @@ const Subject = () => {
      */
     const handleShowStudentsDialog = useCallback(
         async () => {
-            if (course === null)
+            if (course === null || course === undefined)
             {
                 return;
             }
@@ -531,7 +533,7 @@ const Subject = () => {
      */
     const handleShowUnitsDialog = useCallback(
         () => {
-            if (course === null)
+            if (course === null || course === undefined)
             {
                 return;
             }
@@ -562,7 +564,7 @@ const Subject = () => {
      */
     const handleShowEditUnitDialog = useCallback(
         (unit) => {
-            if (course === null || unit === null)
+            if (course === null || unit === null || course === undefined)
             {
                 return;
             }
@@ -616,8 +618,8 @@ const Subject = () => {
             if (unitsFields < 5)
             {
                 setUnitsFields(unitsFields + 1);
-
-                let unitsSize = unitsCourse !== null ? unitsCourse.length : 0;
+                console.log("units", unitsCourse);
+                let unitsSize = (unitsCourse !== null && unitsCourse !== undefined) ? unitsCourse.length : 0;
 
                 let unitsContainer = document.getElementById("units");
                 let div = document.createElement('div');
@@ -661,7 +663,7 @@ const Subject = () => {
      */
     const handleCheckUnitField = useCallback(
         () => {
-            let unitsSize = unitsCourse !== null ? unitsCourse.length : 0;
+            let unitsSize = (unitsCourse !== null && unitsCourse !== undefined) ? unitsCourse.length : 0;
             let i = unitsFields - 1
 
             for (i; i >= 0; i--)
@@ -695,7 +697,7 @@ const Subject = () => {
                 return showMessage("Completa los campos de texto", "info");
             }
 
-            let unitsSize = unitsCourse !== null ? unitsCourse.length : 0;
+            let unitsSize = (unitsCourse !== null && unitsCourse !== undefined) ? unitsCourse.length : 0;
             let array = [];
 
             for (let i = 0; i < unitsFields; i++)
@@ -1372,11 +1374,11 @@ const Subject = () => {
                                             <Paper elevation={0} itemType="div" style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
                                                 <CircularProgress style={{ color: "#2074d4" }} />
                                             </Paper>
-                                        ) : teachersCourse === null ? (
+                                        ) : teachers === null ? (
                                             <Paper elevation={0} itemType="div" style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
                                                 <CircularProgress style={{ color: "#2074d4" }} />
                                             </Paper>
-                                        ) : teachersCourse === undefined ? (
+                                        ) : teachers === undefined ? (
                                             <React.Fragment>
                                                 <Typography style={{ textAlign: "center" }}>
                                                     Algo inesperado acaba de ocurrir al obtener los docentes del sistema
@@ -1451,7 +1453,7 @@ const Subject = () => {
                         </DialogContent>
                         <DialogActions>
                             <Button color="inherit" onClick={handleCloseUnitsDialog}>Cerrar Ventana</Button>
-                            <Button onClick={() => handleAddUnits()} style={{ color: "#2074d4" }}>Crear Unidades</Button>
+                            <Button onClick={async () => await handleAddUnits()} style={{ color: "#2074d4" }}>Crear Unidades</Button>
                         </DialogActions>
                     </Dialog>
 
