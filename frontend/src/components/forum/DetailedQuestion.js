@@ -731,18 +731,24 @@ const DetailedQuestion = () => {
                                                 </Paper>
                                             ) : (
                                                 <React.Fragment>
-                                                    <Paper elevation={0} itemType="div" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15 }}>
-                                                        <Typography component="p" variant="h5">
-                                                            Tu Respuesta
-                                                        </Typography>
-                                                        <Button variant="outlined" onClick={async () => handlePostAnswerComment()}>
-                                                            <Typography variant="button">Guarda tu respuesta</Typography>
-                                                        </Button>
-                                                    </Paper>
+                                                {
+                                                    Decrypt(access) === "student" && (
+                                                        <React.Fragment>
+                                                            <Paper elevation={0} itemType="div" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15 }}>
+                                                                <Typography component="p" variant="h5">
+                                                                    Tu Respuesta
+                                                                </Typography>
+                                                                <Button variant="outlined" onClick={async () => handlePostAnswerComment()}>
+                                                                    <Typography variant="button">Guarda tu respuesta</Typography>
+                                                                </Button>
+                                                            </Paper>
 
-                                                    <ThemeProvider theme={InputTheme}>
-                                                        <TextField value={answer} onChange={(e) => setAnswer(e.target.value)} label="Tu respuesta" type="text" variant="outlined" multiline fullWidth />
-                                                    </ThemeProvider>
+                                                            <ThemeProvider theme={InputTheme}>
+                                                                <TextField value={answer} onChange={(e) => setAnswer(e.target.value)} label="Tu respuesta" type="text" variant="outlined" multiline fullWidth />
+                                                            </ThemeProvider>
+                                                        </React.Fragment>
+                                                    )
+                                                }
                                                 </React.Fragment>
                                             )
                                         }
